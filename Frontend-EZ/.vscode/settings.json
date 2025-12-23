@@ -1,0 +1,14 @@
+{
+  // Disable the built-in CSS/SCSS/LESS validators (they don't understand Tailwind's directives)
+  "css.validate": false,
+  "scss.validate": false,
+  "less.validate": false,
+
+  // Encourage Tailwind IntelliSense (if installed) to work with these file types
+  "tailwindCSS.includeLanguages": {
+    "javascript": "javascript",
+    "javascriptreact": "javascript",
+    "typescriptreact": "typescriptreact",
+    "html": "html"
+  }
+}
