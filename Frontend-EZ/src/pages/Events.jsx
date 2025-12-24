@@ -1,10 +1,30 @@
-import React, { useState } from 'react'
-import events from '../data/events'
+import React, { useState, useEffect } from 'react'
+import API from '../services/api'
 import EventCard from '../components/EventCard'
 
 export default function Events(){
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
+
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    API.get('/events')
+      .then(res => {
+        if (!mounted) return
+        // normalize id for frontend components
+        const data = res.data.map(e => ({ ...e, id: e.id || e._id }))
+        setEvents(data)
+      })
+      .catch(() => {
+        // fallback: keep empty list
+      })
+      .finally(() => mounted && setLoading(false))
+
+    return () => (mounted = false)
+  }, [])
 
   // Extract unique categories from events
   const categories = ['All', ...new Set(events.map(e => e.category).filter(Boolean))]
@@ -92,10 +112,12 @@ export default function Events(){
         </div>
 
         {/* Grid */}
-        {filtered.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-20">Loading events...</div>
+        ) : filtered.length > 0 ? (
           <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map(e => (
-              <EventCard key={e.id} event={e} />
+              <EventCard key={e.id || e._id} event={e} />
             ))}
           </div>
         ) : (

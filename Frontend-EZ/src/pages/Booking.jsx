@@ -116,8 +116,8 @@ export default function Booking(){
         </div>
         <div>
           <label className="block text-sm font-medium">Quantity</label>
-          <input required type="number" min="1" max={available} value={quantity} onChange={e=>setQuantity(Number(e.target.value))} className="mt-1 p-2 border rounded w-24" />
-          <div className="text-sm text-gray-500 mt-1">{available} seats available</div>
+          <input required type="number" min="1" max={available === Infinity ? undefined : available} value={quantity} onChange={e=>setQuantity(Number(e.target.value))} className="mt-1 p-2 border rounded w-24" />
+          <div className="text-sm text-gray-500 mt-1">{available === Infinity ? 'Available' : `${available} seats available`}</div>
         </div>
 
         <div className="pt-2">
