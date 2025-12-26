@@ -6,12 +6,23 @@ export function AuthProvider({ children }){
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('authUser') || 'null'))
 
   useEffect(()=>{
-    if(user) localStorage.setItem('authUser', JSON.stringify(user))
-    else localStorage.removeItem('authUser')
+    if(user) {
+      localStorage.setItem('authUser', JSON.stringify(user))
+      if(user.token) localStorage.setItem('token', user.token)
+    }
+    else {
+      localStorage.removeItem('authUser')
+      localStorage.removeItem('token')
+    }
   }, [user])
 
   function login(userObj){
-    setUser(userObj)
+    // userObj expected to include token and role
+    const enriched = {
+      ...userObj,
+      isAdmin: userObj.role === 'admin' || userObj.isAdmin
+    }
+    setUser(enriched)
   }
 
   function logout(){
@@ -19,10 +30,8 @@ export function AuthProvider({ children }){
   }
 
   function signup(userObj){
-    const stored = JSON.parse(localStorage.getItem('users') || '[]')
-    stored.push(userObj)
-    localStorage.setItem('users', JSON.stringify(stored))
-    setUser(userObj)
+    // signup will be handled by API; simply store the returned user
+    login(userObj)
   }
 
   return (

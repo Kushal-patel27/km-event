@@ -6,6 +6,11 @@ export const createBooking = async (req, res) => {
   const { eventId, quantity } = req.body;
 
   try {
+    // Ensure user is authenticated
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
     const event = await Event.findById(eventId);
     if (!event)
       return res.status(404).json({ message: "Event not found" });
@@ -22,16 +27,25 @@ export const createBooking = async (req, res) => {
       totalAmount,
     });
 
-
     // Reduce tickets
     event.availableTickets -= quantity;
     await event.save();
 
-    // Generate QR
-    const qrData = `BOOKING:${booking._id}`;
-    const qrCode = await generateQR(qrData);
+    // Generate unique QR codes (one per ticket)
+    const qrCodes = [];
+    for (let i = 0; i < quantity; i++) {
+      const qrId = `${booking._id}-${i + 1}`;
+      const qrData = JSON.stringify({
+        bid: booking._id.toString(),
+        idx: i + 1,
+        evt: eventId.toString(),
+      });
+      const image = await generateQR(qrData);
+      qrCodes.push({ id: qrId, image });
+    }
 
-    booking.qrCode = qrCode;
+    booking.qrCodes = qrCodes;
+    booking.qrCode = qrCodes.length > 0 ? qrCodes[0].image : undefined; // legacy: first QR as string
     await booking.save();
 
     res.status(201).json(booking);
@@ -43,7 +57,7 @@ export const createBooking = async (req, res) => {
 export const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ user: req.user._id })
-      .populate("event", "title location date");
+      .populate("event", "title location date image category price totalTickets availableTickets");
 
     res.json(bookings);
   } catch (error) {
@@ -64,4 +78,38 @@ export const getEventBookingsForOrganizer = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getAllBookings = async (req, res) => {
+  try {
+    // only allow admin
+    if (!req.user || req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' })
+    const bookings = await Booking.find().populate('user', 'name email role').populate('event', 'title location date price')
+    res.json(bookings)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+export const deleteBooking = async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' })
+    const { id } = req.params
+    const booking = await Booking.findById(id)
+    if (!booking) return res.status(404).json({ message: 'Booking not found' })
+
+    // Restore tickets to the event if it still exists
+    if (booking.event) {
+      const event = await Event.findById(booking.event)
+      if (event && typeof event.availableTickets === 'number') {
+        event.availableTickets = Math.max(0, event.availableTickets + (Number(booking.quantity) || 0))
+        await event.save()
+      }
+    }
+
+    await Booking.deleteOne({ _id: id })
+    res.json({ message: 'Booking deleted' })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
 

@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import API from '../services/api'
 import EventCard from '../components/EventCard'
 
 export default function Events(){
-  const [query, setQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [query, setQuery] = useState(searchParams.get('search') || '')
   const [selectedCategory, setSelectedCategory] = useState('All')
 
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Update query from URL params
+    const urlSearch = searchParams.get('search')
+    if (urlSearch) {
+      setQuery(urlSearch)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     let mounted = true
@@ -15,7 +25,7 @@ export default function Events(){
       .then(res => {
         if (!mounted) return
         // normalize id for frontend components
-        const data = res.data.map(e => ({ ...e, id: e.id || e._id }))
+        const data = res.data.map(e => ({ ...e, id: e.id || e._id, availableTickets: e.availableTickets }))
         setEvents(data)
       })
       .catch(() => {

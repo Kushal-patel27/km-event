@@ -17,21 +17,10 @@ export default function Login() {
     setError("");
 
     try {
-      const res = await API.post("/auth/login", {
-        email,
-        password,
-      });
-
-      // save token
-      localStorage.setItem("token", res.data.token);
-
-      // update auth context
-      login({
-        name: res.data.name,
-        email: res.data.email,
-      });
-
-      navigate("/");
+        const res = await API.post("/auth/login", { email, password })
+        // save token & set auth context with role
+        login({ name: res.data.name, email: res.data.email, token: res.data.token, role: res.data.role })
+        navigate("/")
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     }

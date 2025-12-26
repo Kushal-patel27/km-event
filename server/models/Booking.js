@@ -15,7 +15,13 @@ const bookingSchema = new mongoose.Schema(
     },
     quantity: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
-    qrCode: { type: String },
+    qrCode: { type: String }, // legacy single QR image
+    qrCodes: [
+      {
+        id: { type: String },
+        image: { type: String }
+      }
+    ],
     status: {
       type: String,
       default: "confirmed",

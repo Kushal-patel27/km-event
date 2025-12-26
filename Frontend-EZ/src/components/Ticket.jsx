@@ -2,21 +2,23 @@ import React from 'react'
 import Logo from './Logo'
 
 export default function Ticket({ booking }) {
-  const { event, user, id, seats, quantity, date } = booking
+  const { event, user, id, _id, seats, quantity, date, qrCode } = booking
   
   // Determine individual tickets based on seats array or quantity
   let ticketItems = []
+  const baseId = _id || id || Date.now().toString()
+
   if (Array.isArray(seats) && seats.length > 0) {
     ticketItems = seats.map(seat => ({
       seatLabel: seat.toString(),
-      qrId: `${id}-${seat}`
+      qrId: `${baseId}-${seat}`
     }))
   } else {
     const count = quantity || (typeof seats === 'number' ? seats : 1)
     for (let i = 0; i < count; i++) {
       ticketItems.push({
         seatLabel: count > 1 ? `#${i + 1}` : 'General',
-        qrId: `${id}-${i + 1}`
+        qrId: `${baseId}-${i + 1}`
       })
     }
   }
@@ -24,13 +26,16 @@ export default function Ticket({ booking }) {
   return (
     <div className="flex flex-col gap-8 w-full max-w-3xl mx-auto">
       {ticketItems.map((item) => {
-        // Generate unique QR code for each ticket
-        const qrData = JSON.stringify({ 
-          bid: item.qrId, 
-          uid: user?.id,
-          evt: event?.id 
-        })
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`
+        // Prefer backend-provided QR image (data URL) if available,
+        // otherwise fall back to generating one via external API.
+        const qrUrl = qrCode || (() => {
+          const qrData = JSON.stringify({ 
+            bid: item.qrId, 
+            uid: user?.id,
+            evt: event?.id 
+          })
+          return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`
+        })()
 
         return (
           <div key={item.qrId} className="relative bg-white w-full rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-200 print:shadow-none print:border-gray-900 break-inside-avoid">
@@ -100,7 +105,7 @@ export default function Ticket({ booking }) {
                   <img src={qrUrl} alt="QR Code" className="w-32 h-32 object-contain mix-blend-multiply" />
                 </div>
                 <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold mb-1">Scan Entry</p>
-                <p className="text-xl font-mono font-bold tracking-widest">{item.qrId.toString().split('-').pop().toUpperCase()}</p>
+                <p className="text-xl font-mono font-bold tracking-widest">{item.qrId.toString().toUpperCase()}</p>
               </div>
             </div>
           </div>

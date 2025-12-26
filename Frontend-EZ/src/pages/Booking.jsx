@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react'
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
-import events from '../data/events'
+import API from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import { seatsAvailable, getBookedSeatsForEvent, generateSeatLayout } from '../utils/bookings'
 import SeatPicker from '../components/SeatPicker'
 import formatINR from '../utils/currency'
@@ -8,9 +9,11 @@ import formatINR from '../utils/currency'
 export default function Booking(){
   const { id } = useParams()
   const navigate = useNavigate()
-  const event = events.find(e => e.id === id)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const { user: authUser } = useAuth()
+  const storedToken = localStorage.getItem('token')
+  const [event, setEvent] = useState(null)
+  const [name, setName] = useState(authUser?.name || '')
+  const [email, setEmail] = useState(authUser?.email || '')
   const [quantity, setQuantity] = useState(1)
   const [available, setAvailable] = useState(Infinity)
   const [error, setError] = useState('')
@@ -18,12 +21,32 @@ export default function Booking(){
   const [selectedSeats, setSelectedSeats] = useState([])
   const [offer, setOffer] = useState(null)
   const [idVerified, setIdVerified] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const location = useLocation()
 
+  // Require login to book
+  useEffect(() => {
+    if (!authUser && !storedToken) {
+      navigate('/login', { state: { from: location.pathname } })
+    }
+  }, [authUser, storedToken, navigate, location])
+
   useEffect(()=>{
-    setAvailable(seatsAvailable(event))
-  }, [event])
+    setLoading(true)
+    API.get(`/events/${id}`)
+      .then(res => {
+        const e = res.data
+        // normalize id
+        e.id = e.id || e._id
+        setEvent(e)
+        setAvailable(seatsAvailable(e))
+      })
+      .catch(() => {
+        setError("Failed to load event details.")
+      })
+      .finally(() => setLoading(false))
+  }, [id])
 
   useEffect(()=>{
     // reset selected seats when quantity changes
@@ -59,11 +82,14 @@ export default function Booking(){
 
   const finalTotal = subTotal - discountAmount
 
-  if(!event) return <div>Event not found</div>
+  if(loading) return <div className="text-center p-10">Loading...</div>
+  if(!event) return <div className="text-center p-10">{error || 'Event not found'}</div>
 
   if(available === 0) return <div className="max-w-xl mx-auto bg-white p-6 rounded shadow text-center">This event is sold out.</div>
 
-  function handleSubmit(e){
+  const hasSeatLayout = event && isFinite(event.capacity) && event.capacity > 0
+
+  async function handleSubmit(e){
     e.preventDefault()
     setError('')
     if(quantity < 1) return setError('Quantity must be at least 1')
@@ -81,12 +107,50 @@ export default function Booking(){
       return setError('Please verify your ID eligibility for this offer.')
     }
 
+    // If the user is authenticated and has a token, try to create booking on backend
+    const token = (authUser && authUser.token) || storedToken
+    if (token) {
+      try {
+        const payload = { eventId: event.id, quantity }
+        if (selectSeats) payload.seats = selectedSeats.map(Number)
+        const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
+        const res = await API.post('/bookings', payload, config)
+        // backend returns booking in res.data with _id and qrCode; augment with event and user info
+        const serverBooking = {
+          ...res.data,
+          event,
+          user: { name, email, id: authUser?.email || email },
+          date: event.date,
+          originalPrice: subTotal,
+          discount: discountAmount,
+          total: finalTotal,
+        }
+        sessionStorage.removeItem('appliedOffer')
+        navigate('/booking-success', { state: { booking: serverBooking } })
+        return
+      } catch (err) {
+        console.error('Backend booking failed', err)
+        const errorMsg = err.response?.data?.message || err.message
+        // If auth error, clear invalid token and redirect to login
+        if (err.response?.status === 401) {
+          localStorage.removeItem('token')
+          setError('Please log in to book tickets')
+          setTimeout(() => navigate('/login', { state: { from: location.pathname } }), 2000)
+          return
+        }
+        // For other errors, show message but allow fallback
+        setError(`Booking failed: ${errorMsg}`)
+        return // Don't fall back to local booking if backend fails with specific error
+      }
+    }
+
+    // Local fallback for unauthenticated users or if backend fails
     const booking = { id: Date.now(), eventId: event.id, name, email, quantity, total: finalTotal, originalPrice: subTotal, discount: discountAmount, offerCode: (offer && isOfferValid) ? offer.code : null, seats: selectSeats ? selectedSeats.map(Number) : undefined }
     const stored = JSON.parse(localStorage.getItem('bookings') || '[]')
     stored.push(booking)
     localStorage.setItem('bookings', JSON.stringify(stored))
     sessionStorage.removeItem('appliedOffer') // Clear offer after use
-    
+
     // Navigate to success page with booking data for the ticket
     navigate('/booking-success', { 
       state: { 
@@ -102,69 +166,201 @@ export default function Booking(){
   }
 
   return (
-    <div className="max-w-xl mx-auto bg-white p-6 rounded shadow">
-      <h2 className="text-xl font-semibold">Book: {event.title}</h2>
-      <p className="text-sm text-gray-500">{event.date} • {event.location}</p>
-      <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-        <div>
-          <label className="block text-sm font-medium">Name</label>
-          <input required value={name} onChange={e=>setName(e.target.value)} className="mt-1 p-2 border rounded w-full" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">Email</label>
-          <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} className="mt-1 p-2 border rounded w-full" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">Quantity</label>
-          <input required type="number" min="1" max={available === Infinity ? undefined : available} value={quantity} onChange={e=>setQuantity(Number(e.target.value))} className="mt-1 p-2 border rounded w-24" />
-          <div className="text-sm text-gray-500 mt-1">{available === Infinity ? 'Available' : `${available} seats available`}</div>
-        </div>
-
-        <div className="pt-2">
-          <label className="inline-flex items-center gap-2">
-            <input type="checkbox" checked={selectSeats} onChange={e=>setSelectSeats(e.target.checked)} />
-            <span className="text-sm">Select specific seats</span>
-          </label>
-        </div>
-
-        {selectSeats && (
-          <div className="pt-4">
-            <div className="text-sm text-gray-600 mb-2">Choose {quantity} seat(s)</div>
-            <SeatPicker layout={generateSeatLayout(event.capacity, 10)} booked={getBookedSeatsForEvent(event.id)} selected={selectedSeats} onToggle={setSelectedSeats} maxSelectable={Number(quantity)} />
-          </div>
-        )}
-
-        {offer && (
-          <div className={`p-3 rounded border ${isOfferValid ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
-            <div className="flex justify-between items-center">
-              <span className={`font-bold ${isOfferValid ? 'text-green-800' : 'text-yellow-800'}`}>{offer.title}</span>
-              {isOfferValid && <span className="text-green-700 font-bold">-{formatINR(discountAmount)}</span>}
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-3xl mx-auto px-6">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Event Header */}
+          <div className="bg-gradient-to-r from-indigo-600 to-blue-500 text-white p-6">
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">{event.title}</h2>
+            <div className="flex flex-wrap gap-4 text-sm opacity-90">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {new Date(event.date).toLocaleString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {event.location}
+              </div>
             </div>
-            <div className="text-sm mt-1 text-gray-600">{offerMessage}</div>
-            
-            {isOfferValid && offer.requiresId && (
-              <div className="mt-2">
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input type="checkbox" checked={idVerified} onChange={e => setIdVerified(e.target.checked)} className="rounded text-indigo-600" />
-                  I confirm I have a valid Student ID
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
+            {/* Personal Info */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Your Information
+              </h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                  <input 
+                    required 
+                    value={name} 
+                    onChange={e=>setName(e.target.value)} 
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" 
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                  <input 
+                    required 
+                    type="email" 
+                    value={email} 
+                    onChange={e=>setEmail(e.target.value)} 
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" 
+                    placeholder="john@example.com"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Ticket Quantity */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+                Tickets
+              </h3>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Number of Tickets</label>
+                  <input 
+                    required 
+                    type="number" 
+                    min="1" 
+                    max={available === Infinity ? undefined : available} 
+                    value={quantity} 
+                    onChange={e=>setQuantity(Number(e.target.value))} 
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" 
+                  />
+                </div>
+                <div className="flex-1 text-right pt-6">
+                  <span className="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium">
+                    {available === Infinity ? '∞ Available' : `${available} Left`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Seat Selection */}
+            {hasSeatLayout && (
+              <div className="border-t pt-6">
+                <label className="inline-flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    checked={selectSeats} 
+                    onChange={e=>setSelectSeats(e.target.checked)}
+                    className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500 transition"
+                  />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-600 transition">Select specific seats</span>
                 </label>
               </div>
             )}
-            <button type="button" onClick={() => {setOffer(null); sessionStorage.removeItem('appliedOffer')}} className="text-xs text-gray-500 underline mt-2 hover:text-gray-800">Remove Offer</button>
-          </div>
-        )}
 
-        {error && <div className="text-sm text-red-600">{error}</div>}
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-lg font-bold">Total: {formatINR(finalTotal)}
-            {discountAmount > 0 && <span className="text-sm font-normal text-gray-400 line-through ml-2">{formatINR(subTotal)}</span>}
-          </div>
-          <div className="space-x-2">
-            <Link to={`/event/${event.id}`} className="text-gray-600">Back</Link>
-            <button className="bg-indigo-600 text-white px-4 py-2 rounded">Confirm Booking</button>
-          </div>
+            {selectSeats && (
+              <div className="bg-gray-50 rounded-xl p-6">
+                <div className="text-sm text-gray-600 mb-4 font-medium">Choose {quantity} seat(s)</div>
+                <SeatPicker 
+                  layout={generateSeatLayout(event.capacity, 10)} 
+                  booked={getBookedSeatsForEvent(event.id)} 
+                  selected={selectedSeats} 
+                  onToggle={setSelectedSeats} 
+                  maxSelectable={Number(quantity)} 
+                />
+              </div>
+            )}
+
+            {/* Offer Display */}
+            {offer && (
+              <div className={`rounded-xl p-4 border-2 ${isOfferValid ? 'bg-green-50 border-green-300' : 'bg-yellow-50 border-yellow-300'}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className={`font-bold text-lg ${isOfferValid ? 'text-green-800' : 'text-yellow-800'}`}>{offer.title}</div>
+                    <div className="text-sm text-gray-600 mt-1">{offerMessage}</div>
+                  </div>
+                  {isOfferValid && <span className="text-green-700 font-bold text-xl">-{formatINR(discountAmount)}</span>}
+                </div>
+                
+                {isOfferValid && offer.requiresId && (
+                  <label className="flex items-center gap-3 mt-3 p-3 bg-white rounded-lg cursor-pointer border border-green-200">
+                    <input 
+                      type="checkbox" 
+                      checked={idVerified} 
+                      onChange={e => setIdVerified(e.target.checked)} 
+                      className="w-4 h-4 rounded text-green-600" 
+                    />
+                    <span className="text-sm text-gray-700 font-medium">I confirm I have a valid Student ID</span>
+                  </label>
+                )}
+                <button 
+                  type="button" 
+                  onClick={() => {setOffer(null); sessionStorage.removeItem('appliedOffer')}} 
+                  className="text-xs text-gray-500 underline mt-3 hover:text-gray-800 transition"
+                >
+                  Remove Offer
+                </button>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Total & Actions */}
+            <div className="border-t pt-6 space-y-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-gray-600 font-medium">Subtotal</span>
+                <span className="text-gray-900 font-semibold">{formatINR(subTotal)}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex items-baseline justify-between text-green-600">
+                  <span className="font-medium">Discount</span>
+                  <span className="font-semibold">-{formatINR(discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex items-baseline justify-between text-2xl pt-3 border-t">
+                <span className="font-bold text-gray-900">Total</span>
+                <span className="font-bold text-indigo-600">{formatINR(finalTotal)}</span>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Link 
+                to={`/event/${event.id}`} 
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-center"
+              >
+                ← Back to Event
+              </Link>
+              <button 
+                type="submit"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition"
+              >
+                Confirm Booking →
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
   )
 }

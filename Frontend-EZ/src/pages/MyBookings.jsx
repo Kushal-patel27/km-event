@@ -1,82 +1,330 @@
-import React, {useEffect, useState} from 'react'
-import events from '../data/events'
-import { Link } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import API from '../services/api'
+import { getEventImage } from '../utils/images'
+import Ticket from '../components/Ticket'
 import { useAuth } from '../context/AuthContext'
 import formatINR from '../utils/currency'
-import Ticket from '../components/Ticket'
 
-export default function MyBookings(){
-  const { user } = useAuth()
+export default function MyBookings() {
   const [bookings, setBookings] = useState([])
-  const [viewTicket, setViewTicket] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [activeEventId, setActiveEventId] = useState(null)
 
-  useEffect(()=>{
-    const stored = JSON.parse(localStorage.getItem('bookings') || '[]')
-    if(user && user.email){
-      const mine = stored.filter(b => String(b.email).toLowerCase() === String(user.email).toLowerCase())
-      setBookings(mine)
-    } else {
-      setBookings([])
+  const navigate = useNavigate()
+  const { user: authUser } = useAuth()
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          navigate('/login')
+          return
+        }
+
+        const res = await API.get('/bookings/my', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        setBookings(res.data || [])
+      } catch (err) {
+        console.error(err)
+        setError('Failed to load bookings.')
+      } finally {
+        setLoading(false)
+      }
     }
-  },[user])
 
-  if(!user) return (
-    <div className="max-w-2xl mx-auto text-center">
-      Please <Link to="/login" className="text-indigo-600">log in</Link> to view your bookings.
-    </div>
-  )
+    fetchBookings()
+  }, [navigate])
 
-  if(bookings.length === 0) return <div className="max-w-2xl mx-auto text-center">You have no bookings yet. <Link to="/events" className="text-indigo-600">Browse events</Link></div>
+  // Group bookings by event
+  const groupedByEvent = bookings.reduce((acc, booking) => {
+    const event = booking.event
+    if (!event || !event._id) return acc
+
+    if (!acc[event._id]) {
+      acc[event._id] = {
+        event,
+        bookings: [],
+        totalTickets: 0,
+        totalAmount: 0
+      }
+    }
+
+    acc[event._id].bookings.push(booking)
+    acc[event._id].totalTickets += booking.quantity
+    acc[event._id].totalAmount += booking.totalAmount || booking.total || 0
+
+    return acc
+  }, {})
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading your bookings...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Bookings</h2>
+          <p className="text-red-600 mb-6">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (bookings.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-indigo-100 text-indigo-600 mb-6">
+            <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">No Bookings Yet</h2>
+          <p className="text-gray-600 mb-8 text-lg">You haven't booked any events yet. Discover amazing events and book your tickets now!</p>
+          <Link
+            to="/events"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-blue-500 text-white font-bold rounded-xl hover:shadow-xl transform hover:-translate-y-0.5 transition-all shadow-lg"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            Browse Events
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">My Bookings</h1>
-      <div className="space-y-4">
-        {bookings.map(b => {
-          const event = events.find(e => e.id === b.eventId) || {title: 'Unknown event', price: 0}
-          const isViewing = viewTicket === b.id
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="mb-10">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-3">
+            My Bookings
+          </h1>
+          <p className="text-gray-600 text-lg">View and manage all your event tickets in one place</p>
+        </div>
 
-          return (
-            <div key={b.id} className="bg-white border p-4 rounded shadow-sm">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-semibold text-lg">{event.title}</div>
-                  <div className="text-sm text-gray-500">{b.quantity} × {formatINR(event.price ?? event.price)} — {b.name}</div>
-                  {b.seats && b.seats.length>0 && (
-                    <div className="text-sm text-gray-600 mt-1">Seats: {b.seats.join(', ')}</div>
-                  )}
-                </div>
-                <div className="text-right flex flex-col items-end gap-2">
-                  <div className="font-bold text-indigo-600">{formatINR(b.total)}</div>
-                  <button 
-                    onClick={() => setViewTicket(isViewing ? null : b.id)}
-                    className="text-sm px-3 py-1 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100 transition font-medium"
-                  >
-                    {isViewing ? 'Hide Ticket' : 'View Ticket'}
-                  </button>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-indigo-100">
+            <div className="flex items-center gap-4">
+              <div className="bg-indigo-100 rounded-xl p-3">
+                <svg className="w-8 h-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Total Events</div>
+                <div className="text-3xl font-bold text-gray-900">{Object.keys(groupedByEvent).length}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-purple-100">
+            <div className="flex items-center gap-4">
+              <div className="bg-purple-100 rounded-xl p-3">
+                <svg className="w-8 h-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Total Tickets</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {Object.values(groupedByEvent).reduce((sum, g) => sum + g.totalTickets, 0)}
                 </div>
               </div>
-              
-              {isViewing && (
-                <div className="mt-6 border-t pt-6">
-                  <Ticket booking={{
-                    id: b.id,
-                    event,
-                    user: { name: b.name, email: b.email, id: b.email },
-                    seats: b.seats, // Pass the array if it exists
-                    quantity: b.quantity, // Pass quantity as fallback
-                    date: event.date
-                  }} />
-                  <div className="text-center mt-4">
-                    <button onClick={() => window.print()} className="text-sm text-gray-500 hover:text-gray-900 underline">
-                      Print Ticket
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-blue-100">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-100 rounded-xl p-3">
+                <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600">Total Spent</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {formatINR(Object.values(groupedByEvent).reduce((sum, g) => sum + g.totalAmount, 0))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bookings List */}
+        <div className="space-y-6">
+          {Object.values(groupedByEvent).map(({ event, bookings, totalTickets, totalAmount }) => {
+            const isOpen = activeEventId === event._id
+            const eventDate = new Date(event.date)
+            const isPast = eventDate < new Date()
+
+            return (
+              <div
+                key={event._id}
+                className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300"
+              >
+                {/* EVENT SUMMARY */}
+                <div
+                  onClick={() => setActiveEventId(isOpen ? null : event._id)}
+                  className="cursor-pointer p-6 flex justify-between items-start hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-start gap-3 mb-3">
+                      {isPast ? (
+                        <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold uppercase rounded-full">Past Event</span>
+                      ) : (
+                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase rounded-full">Upcoming</span>
+                      )}
+                    </div>
+                    
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                      {event.title}
+                    </h3>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {eventDate.toLocaleString('en-US', { 
+                          weekday: 'short',
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {event.location}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-6">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                        </svg>
+                        <span className="text-sm text-gray-600">Tickets:</span>
+                        <span className="font-bold text-gray-900">{totalTickets}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-sm text-gray-600">Total Paid:</span>
+                        <span className="font-bold text-indigo-600">{formatINR(totalAmount)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-sm text-gray-600">Bookings:</span>
+                        <span className="font-bold text-gray-900">{bookings.length}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <img
+                      src={getEventImage(event)}
+                      alt={event.title}
+                      className="w-32 h-24 object-cover rounded-xl shadow-md"
+                    />
+                    <button className="text-gray-400 hover:text-gray-600 transition">
+                      <svg className={`w-6 h-6 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
-          )
-        })}
+
+                {/* BOOKINGS LIST */}
+                {isOpen && (
+                  <div className="border-t bg-gradient-to-br from-gray-50 to-indigo-50 p-6 space-y-6">
+                    <h4 className="text-lg font-bold text-gray-900 mb-4">Booking Details</h4>
+                    {bookings.map(booking => {
+                      const ticketBooking = {
+                        ...booking,
+                        event,
+                        date: event.date,
+                        user:
+                          booking.user && typeof booking.user === 'object'
+                            ? booking.user
+                            : authUser,
+                        id: booking._id
+                      }
+
+                      return (
+                        <div
+                          key={booking._id}
+                          className="bg-white rounded-xl p-6 shadow-md border border-gray-100"
+                        >
+                          <div className="mb-4 flex flex-wrap gap-4 text-sm">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                              </svg>
+                              <span className="text-gray-600">Quantity:</span>
+                              <span className="font-bold text-gray-900">{booking.quantity}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-gray-600">Status:</span>
+                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase">{booking.status}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-gray-600">Amount:</span>
+                              <span className="font-bold text-indigo-600">{formatINR(booking.totalAmount || 0)}</span>
+                            </div>
+                          </div>
+
+                          <Ticket booking={ticketBooking} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

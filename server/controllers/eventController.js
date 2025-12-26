@@ -45,3 +45,45 @@ export const getMyEvents = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const updateEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    // Only organizer or admin can update
+    if (String(event.organizer) !== String(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Not authorized to update this event" });
+    }
+
+    // Keep availableTickets in sync if totalTickets/capacity change
+    const updates = { ...req.body };
+    if (updates.capacity) updates.totalTickets = updates.capacity;
+    if (updates.totalTickets && !updates.availableTickets) {
+      // If totalTickets changed, reset availableTickets unless provided
+      updates.availableTickets = updates.totalTickets;
+    }
+
+    const updated = await Event.findByIdAndUpdate(req.params.id, updates, { new: true });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id)
+    if (!event) return res.status(404).json({ message: 'Event not found' })
+
+    // Organizer or admin can delete
+    if (String(event.organizer) !== String(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to delete this event' })
+    }
+
+    await event.deleteOne()
+    res.json({ message: 'Event deleted' })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}

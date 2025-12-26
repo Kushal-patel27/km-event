@@ -18,22 +18,9 @@ export default function Signup() {
     setError("");
 
     try {
-      const res = await API.post("/auth/register", {
-        name,
-        email,
-        password,
-      });
-
-      // save token
-      localStorage.setItem("token", res.data.token);
-
-      // update auth context
-      signup({
-        name: res.data.name,
-        email: res.data.email,
-      });
-
-      navigate("/");
+      const res = await API.post('/auth/register', { name, email, password })
+      signup({ name: res.data.name, email: res.data.email, token: res.data.token, role: res.data.role })
+      navigate('/')
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     }

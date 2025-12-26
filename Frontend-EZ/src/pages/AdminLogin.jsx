@@ -1,6 +1,7 @@
 import React, {useState} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import API from '../services/api'
 
 export default function AdminLogin(){
   const [password, setPassword] = useState('')
@@ -10,13 +11,18 @@ export default function AdminLogin(){
 
   function handleSubmit(e){
     e.preventDefault()
-    // simple local admin password
-    if(password === 'admin123'){
-      login({ name: 'Admin', email: 'admin@local', isAdmin: true })
-      navigate('/admin')
-    } else {
-      setError('Invalid admin password')
-    }
+    setError('')
+    // call backend login
+    (async ()=>{
+      try {
+        const res = await API.post('/auth/login', { email: 'admin@local', password })
+        if(res.data.role !== 'admin') return setError('Not an admin account')
+        login({ name: res.data.name, email: res.data.email, token: res.data.token, role: res.data.role })
+        navigate('/admin')
+      } catch (err) {
+        setError(err.response?.data?.message || 'Invalid admin credentials')
+      }
+    })()
   }
 
   return (

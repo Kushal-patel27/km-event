@@ -12,9 +12,15 @@ export function totalBookedForEvent(eventId){
 }
 
 export function seatsAvailable(event){
-  if(!event || typeof event.capacity !== 'number') return Infinity
-  const booked = totalBookedForEvent(event.id)
-  return Math.max(0, event.capacity - booked)
+  if(!event) return Infinity
+  const avail = Number(event.availableTickets)
+  if(!Number.isNaN(avail)) return avail
+  const cap = Number(event.capacity)
+  if(!Number.isNaN(cap)){
+    const booked = totalBookedForEvent(event.id)
+    return Math.max(0, cap - booked)
+  }
+  return Infinity
 }
 
 export function getBookedSeatsForEvent(eventId){

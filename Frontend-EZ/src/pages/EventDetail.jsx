@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
 import formatINR from "../utils/currency";
 import { getEventImage } from "../utils/images";
@@ -9,11 +8,8 @@ import { seatsAvailable } from "../utils/bookings";
 export default function EventDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [event, setEvent] = useState(null);
-  const [qty, setQty] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
@@ -23,48 +19,19 @@ export default function EventDetail() {
       .then((res) => {
         if (!mounted) return;
         const e = res.data;
-        // normalize id
-        e.id = e.id || e._id;
-        setEvent(e);
+        const normalized = {
+          ...e,
+          id: e.id || e._id,
+          capacity: e.capacity ?? e.totalTickets ?? 0,
+          availableTickets: e.availableTickets ?? e.totalTickets ?? 0,
+        };
+        setEvent(normalized);
       })
       .catch(() => alert("Failed to load event"))
       .finally(() => mounted && setFetching(false));
 
     return () => (mounted = false);
   }, [id]);
-
-  const bookHandler = async () => {
-    if (!user) {
-      alert("Please login to book tickets");
-      navigate("/login");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-
-      await API.post(
-        "/bookings",
-        {
-          eventId: event._id || event.id,
-          quantity: qty,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      alert("🎉 Booking successful!");
-      navigate("/my-bookings");
-    } catch (err) {
-      alert(err.response?.data?.message || "Booking failed");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (fetching) return <div className="text-center mt-10">Loading event...</div>;
   if (!event) return <div className="text-center mt-10">Event not found</div>;
@@ -73,61 +40,87 @@ export default function EventDetail() {
   const available = seatsAvailable(event);
 
   return (
-    <>
-      <div className="max-w-3xl mx-auto p-6">
-        <img
-          src={getEventImage(event) || event.image || "/event-placeholder.jpg"}
-          alt={event.title}
-          className="w-full h-64 object-cover rounded mb-4"
-        />
-
-        <h1 className="text-2xl font-bold">{event.title}</h1>
-
-        <p className="text-sm text-gray-500">
-          {new Date(event.date).toDateString()} • {event.location}
-        </p>
-
-        <div className="mt-2">
-          <span className="text-sm font-medium">Category:</span>{" "}
-          <span className="text-sm text-gray-600">{event.category || "-"}</span>
-
-          <span className="ml-4 text-sm font-medium">Capacity:</span>{" "}
-          <span className="text-sm text-gray-600">{event.capacity}</span>
-
-          <span className="ml-4 text-sm font-medium">Available:</span>{" "}
-          <span className="text-sm text-indigo-600">{available === Infinity ? 'Open' : available}</span>
-        </div>
-
-        <p className="mt-4">{event.description}</p>
-
-        <div className="mt-4 text-sm text-gray-600">
-          <div>Organizer: {event.organizer?.name || "-"}</div>
-          <div>Email: {event.organizer?.email || "-"}</div>
-        </div>
-
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-lg font-bold">{formatINR(event.price)}</div>
-
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              max={available === Infinity ? undefined : available}
-              value={qty}
-              onChange={(e) => setQty(Number(e.target.value))}
-              className="border rounded p-2 w-20"
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-4xl mx-auto px-6">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Image */}
+          <div className="relative w-full aspect-video overflow-hidden">
+            <img
+              src={event.image || getEventImage(event) || "/event-placeholder.jpg"}
+              alt={event.title}
+              className="w-full h-full object-cover"
             />
+            {event.category && (
+              <div className="absolute top-4 left-4 bg-indigo-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg shadow-lg">
+                {event.category}
+              </div>
+            )}
+          </div>
 
-            <button
-              onClick={bookHandler}
-              disabled={loading || available === 0}
-              className="bg-indigo-600 text-white px-4 py-2 rounded disabled:opacity-50"
-            >
-              {loading ? "Booking..." : "Book Tickets"}
-            </button>
+          {/* Content */}
+          <div className="p-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{event.title}</h1>
+
+            {/* Date & Location */}
+            <div className="space-y-2 mb-6">
+              <div className="flex items-center text-gray-600">
+                <svg className="w-5 h-5 mr-3 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {new Date(event.date).toLocaleString('en-US', { 
+                  weekday: 'short', 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+              <div className="flex items-center text-gray-600">
+                <svg className="w-5 h-5 mr-3 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {event.location}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="flex gap-6 mb-6 pb-6 border-b">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Capacity:</span>
+                <span className="text-sm text-gray-900 font-semibold">{event.capacity}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Available:</span>
+                <span className="text-sm text-indigo-600 font-semibold">{available === Infinity ? 'Open' : available}</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-3">About this event</h2>
+              <p className="text-gray-700 leading-relaxed">{event.description}</p>
+            </div>
+
+            {/* Price & Book Button */}
+            <div className="flex items-center justify-between pt-6 border-t">
+              <div>
+                <div className="text-sm text-gray-600 mb-1">Price per ticket</div>
+                <div className="text-3xl font-bold text-indigo-600">{formatINR(event.price)}</div>
+              </div>
+
+              <button
+                onClick={() => navigate(`/book/${eventId}`)}
+                disabled={available === 0}
+                className="bg-gradient-to-r from-indigo-600 to-blue-500 text-white px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {available === 0 ? "Sold Out" : "Book Tickets"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
