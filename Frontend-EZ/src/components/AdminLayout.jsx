@@ -44,7 +44,7 @@ export default function AdminLayout({ title = 'Admin', children }){
               )}
             </button>
             <Link to="/" className="hidden md:block">
-              <Logo />
+              <Logo dark={isDarkMode} />
             </Link>
             <div className="font-bold text-lg">Admin Panel</div>
           </div>

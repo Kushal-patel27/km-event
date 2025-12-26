@@ -29,29 +29,29 @@ export default function Navbar(){
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 ">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link to="/" className="hover:opacity-90 transition-opacity">
-              <Logo />
+            <Link to="/" className="h-full flex items-center hover:opacity-90 transition-opacity">
+              <Logo dark={isDarkMode} />
             </Link>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 font-medium transition">
+            <Link to="/" className={`font-medium transition ${location.pathname === '/' ? 'text-red-600 dark:text-red-500' : 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500'}`}>
               Home
             </Link>
-            <Link to="/events" className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 font-medium transition">
+            <Link to="/events" className={`font-medium transition ${location.pathname === '/events' ? 'text-red-600 dark:text-red-500' : 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500'}`}>
               Events
             </Link>
             {user && (
-              <Link to="/my-bookings" className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 font-medium transition">
+              <Link to="/my-bookings" className={`font-medium transition ${location.pathname === '/my-bookings' ? 'text-red-600 dark:text-red-500' : 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500'}`}>
                 My Bookings
               </Link>
             )}
             {user && user.isAdmin && (
-              <Link to="/admin" className="text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500 font-medium transition">
+              <Link to="/admin" className={`font-medium transition ${location.pathname.startsWith('/admin') ? 'text-red-600 dark:text-red-500' : 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500'}`}>
                 Admin
               </Link>
             )}
@@ -197,14 +197,14 @@ export default function Navbar(){
               <Link
                 to="/"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+                className={`px-4 py-2 rounded-lg transition ${location.pathname === '/' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
               >
                 Home
               </Link>
               <Link
                 to="/events"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+                className={`px-4 py-2 rounded-lg transition ${location.pathname === '/events' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
               >
                 Events
               </Link>
@@ -212,7 +212,7 @@ export default function Navbar(){
                 <Link
                   to="/my-bookings"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+                  className={`px-4 py-2 rounded-lg transition ${location.pathname === '/my-bookings' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                 >
                   My Bookings
                 </Link>
@@ -221,7 +221,7 @@ export default function Navbar(){
                 <Link
                   to="/admin"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+                  className={`px-4 py-2 rounded-lg transition ${location.pathname.startsWith('/admin') ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                 >
                   Admin
                 </Link>

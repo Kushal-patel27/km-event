@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import API from '../services/api'
 import Slider from '../components/Slider'
 import EventCard from '../components/EventCard'
+import SkeletonCard from '../components/SkeletonCard'
 import { useAuth } from '../context/AuthContext'
 
 export default function Home() {
@@ -21,6 +22,10 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true
+    let timeoutId
+    const MIN_LOAD_MS = 1500
+    const start = Date.now()
+
     async function loadEvents() {
       try {
         const res = await API.get('/events')
@@ -40,11 +45,19 @@ export default function Home() {
       } catch (err) {
         if (mounted) setError('Unable to load events')
       } finally {
-        if (mounted) setLoading(false)
+        const elapsed = Date.now() - start
+        const remaining = Math.max(0, MIN_LOAD_MS - elapsed)
+        timeoutId = setTimeout(() => {
+          if (mounted) setLoading(false)
+        }, remaining)
       }
     }
+
     loadEvents()
-    return () => (mounted = false)
+    return () => {
+      mounted = false
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [])
 
   return (
@@ -53,17 +66,26 @@ export default function Home() {
       {/* ================= HERO / CINEMATIC CAROUSEL ================= */}
       <section className="relative min-h-[95vh] overflow-hidden">
         {loading ? (
-          <div className="absolute inset-0 bg-[#111827] animate-pulse" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0B0F19] via-[#111827] to-[#1a1f2e] flex items-center justify-center">
+            <div className="text-center">
+              <img 
+                src="/assets/logo.png" 
+                alt="K&M Events" 
+                className="w-40 h-40 md:w-48 md:h-48 mx-auto object-contain animate-pulse drop-shadow-2xl"
+              />
+               <p className="mt-6 text-gray-400 text-sm md:text-base animate-pulse">Loading events...</p> 
+            </div>
+          </div>
         ) : (
           <motion.div
             className="absolute inset-0 flex"
-            animate={{ x: ['0%', '-100%', '-200%', '0%'] }}
-            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+            animate={{ x: ['0%', `-${featured.length * 100}%`] }}
+            transition={{ duration: featured.length * 4, repeat: Infinity, ease: 'linear' }}
           >
-            {featured.map((e, i) => (
+            {[...featured, ...featured].map((e, i) => (
               <div
                 key={i}
-                className="min-w-full bg-cover bg-center relative"
+                className="min-w-full bg-contain bg-center bg-no-repeat relative"
                 style={{ backgroundImage: `url(${e.image})` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/30" />
@@ -73,41 +95,44 @@ export default function Home() {
         )}
 
         {/* Hero Content */}
-        <div className="relative z-10 min-h-[95vh] flex items-center px-6 lg:px-12">
-          <div className="max-w-3xl">
-            <h1 className="text-5xl md:text-6xl xl:text-7xl font-extrabold leading-tight mb-6">
-              Book Your Next <br />
-              <span className="text-rose-500">Live Experience</span>
-            </h1>
+        <div className="relative z-10 min-h-[95vh] flex items-end pb-16 sm:pb-20 md:pb-24 w-full">
+          <div className="px-4 sm:px-6 lg:px-12 w-full">
+            <div className="max-w-3xl">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-extrabold leading-tight mb-4 sm:mb-6">
+                Book Your Next <br className="hidden sm:block" />
+                <span className="text-rose-500">Live Experience</span>
+              </h1>
 
-            <p className="text-lg md:text-xl text-gray-300 mb-10">
-              Concerts, comedy shows & festivals — book instantly with QR tickets.
-            </p>
+              <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-10">
+                <span className="hidden sm:inline">Concerts, comedy shows & festivals — book instantly with QR tickets.</span>
+                <span className="sm:hidden">Book events instantly with QR tickets.</span>
+              </p>
 
-            <div className="flex gap-4">
-              <Link
-                to="/events"
-                className="px-8 py-4 bg-rose-600 hover:bg-rose-700 rounded-xl text-lg font-bold shadow-lg"
-              >
-                Explore Events
-              </Link>
-
-              {!user && (
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <Link
-                  to="/signup"
-                  className="px-8 py-4 border border-white/30 rounded-xl text-lg hover:bg-white/10"
+                  to="/events"
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-rose-600 hover:bg-rose-700 rounded-xl text-base sm:text-lg font-bold shadow-lg text-center sm:text-left"
                 >
-                  Create Account
+                  Explore Events
                 </Link>
-              )}
+
+                {!user && (
+                  <Link
+                    to="/signup"
+                    className="px-6 sm:px-8 py-3 sm:py-4 border border-white/30 rounded-xl text-base sm:text-lg hover:bg-white/10 text-center sm:text-left"
+                  >
+                    Create Account
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ================= EVENTS ================= */}
-      <section className="px-4 lg:px-12 py-24">
-        <div className="max-w-screen-2xl mx-auto">
+      <section className="py-24">
+        <div className="px-6 lg:px-12">
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-4xl md:text-5xl font-extrabold">
               Popular Events
@@ -123,10 +148,7 @@ export default function Home() {
           {loading ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-80 rounded-2xl bg-[#161A23] animate-pulse border border-white/5"
-                />
+                <SkeletonCard key={i} />
               ))}
             </div>
           ) : (

@@ -24,7 +24,7 @@ export default function App(){
     <DarkModeProvider>
       <div className="min-h-screen flex flex-col">
         {!isAdminRoute && <Navbar />}
-        <main className={isAdminRoute ? "flex-1" : "flex-1 container mx-auto px-4 py-8"}>
+        <main className={isAdminRoute ? "flex-1" : "flex-1"}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/event/:id" element={<EventDetail />} />

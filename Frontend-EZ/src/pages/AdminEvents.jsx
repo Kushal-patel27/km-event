@@ -25,7 +25,7 @@ function toInputDateTime(value) {
   }
 }
 
-function EventForm({ initial = {}, onSave, onCancel }) {
+function EventForm({ initial = {}, onSave, onCancel, busy = false }) {
   const [form, setForm] = useState({
     title: '',
     location: '',
@@ -73,14 +73,17 @@ function EventForm({ initial = {}, onSave, onCancel }) {
   }
 
   return (
-    <form onSubmit={save} className="space-y-3">
-      <div>
-        <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Title" className="w-full p-2 border rounded" />
-        {errors.title && <div className="text-xs text-red-600 mt-1">{errors.title}</div>}
+    <form onSubmit={save} className="space-y-4">
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Title*</label>
+        <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Summer Music Fest" className="w-full p-2 border rounded" />
+        {errors.title && <div className="text-xs text-red-600">{errors.title}</div>}
       </div>
-      <div>
+
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Date & Time*</label>
         <div className="flex gap-2 items-center">
-          <input type="datetime-local" value={form.date} onChange={e => { setForm({ ...form, date: e.target.value }); setDateSaved(false) }} placeholder="Date/Time" className="w-full p-2 border rounded" />
+          <input type="datetime-local" value={form.date} onChange={e => { setForm({ ...form, date: e.target.value }); setDateSaved(false) }} className="w-full p-2 border rounded" />
           <button type="button" onClick={() => {
             if (!form.date || isNaN(new Date(form.date))) {
               setErrors(prev => ({ ...prev, date: 'Invalid date/time' }))
@@ -91,44 +94,78 @@ function EventForm({ initial = {}, onSave, onCancel }) {
             }
           }} className="px-3 py-2 border rounded text-sm">Save</button>
         </div>
-        {errors.date && <div className="text-xs text-red-600 mt-1">{errors.date}</div>}
-        {dateSaved && !errors.date && <div className="text-xs text-green-600 mt-1">Date saved</div>}
+        {errors.date && <div className="text-xs text-red-600">{errors.date}</div>}
+        {dateSaved && !errors.date && <div className="text-xs text-green-600">Date saved</div>}
+        <div className="text-xs text-gray-500">Use your local timezone; we store ISO for consistency.</div>
       </div>
-      <div>
-        <input list="citySuggestions" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="City / Venue" className="w-full p-2 border rounded" />
-        <datalist id="citySuggestions">
-          {CITY_SUGGESTIONS.map(city => <option key={city} value={city} />)}
-        </datalist>
-        {errors.location && <div className="text-xs text-red-600 mt-1">{errors.location}</div>}
-        <textarea value={form.locationDetails} onChange={e => setForm({ ...form, locationDetails: e.target.value })} placeholder="Venue name, hall/floor, full address" className="mt-2 w-full p-2 border rounded" rows={2} />
-        <div className="text-xs text-gray-500 mt-1">Include venue, street, landmark to avoid confusion.</div>
-      </div>
-      <div className="flex gap-2">
-        <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="p-2 border rounded w-1/2">
-          <option value="">Select Category</option>
-          {CATEGORIES.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        <input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Or type category" className="p-2 border rounded w-1/2" />
-      </div>
-      <div className="flex gap-2">
-        <div className="w-1/2">
-          <input type="number" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} placeholder="Price" className="p-2 border rounded w-full" />
-          {errors.price && <div className="text-xs text-red-600 mt-1">{errors.price}</div>}
+
+      <div className="space-y-2">
+        <div className="space-y-1">
+          <label className="text-sm font-medium">City / Venue*</label>
+          <input list="citySuggestions" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="City or venue" className="w-full p-2 border rounded" />
+          <datalist id="citySuggestions">
+            {CITY_SUGGESTIONS.map(city => <option key={city} value={city} />)}
+          </datalist>
+          {errors.location && <div className="text-xs text-red-600">{errors.location}</div>}
         </div>
-        <div className="w-1/2">
-          <input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: Number(e.target.value) })} placeholder="Capacity" className="p-2 border rounded w-full" />
-          {errors.capacity && <div className="text-xs text-red-600 mt-1">{errors.capacity}</div>}
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Venue details</label>
+          <textarea value={form.locationDetails} onChange={e => setForm({ ...form, locationDetails: e.target.value })} placeholder="Venue name, hall/floor, full address" className="w-full p-2 border rounded" rows={2} />
+          <div className="text-xs text-gray-500">Include venue, street, landmark to avoid confusion.</div>
         </div>
       </div>
-      <div>
-        <input value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} placeholder="Image URL (required)" className="w-full p-2 border rounded" type="url" />
-        {errors.image && <div className="text-xs text-red-600 mt-1">{errors.image}</div>}
+
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Description*</label>
+        <textarea
+          value={form.description}
+          onChange={e => setForm({ ...form, description: e.target.value })}
+          placeholder="What is this event about? Add highlights, headliners, timings."
+          className="w-full p-2 border rounded"
+          rows={3}
+        />
+        {errors.description && <div className="text-xs text-red-600">{errors.description}</div>}
       </div>
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="px-3 py-1 border rounded">Cancel</button>
-        <button className="px-3 py-1 bg-indigo-600 text-white rounded">Save</button>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="sm:w-1/2 space-y-1">
+          <label className="text-sm font-medium">Category</label>
+          <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="p-2 border rounded w-full">
+            <option value="">Select category</option>
+            {CATEGORIES.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+        <div className="sm:w-1/2 space-y-1">
+          <label className="text-sm font-medium">Or type category</label>
+          <input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Custom category" className="p-2 border rounded w-full" />
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="sm:w-1/2 space-y-1">
+          <label className="text-sm font-medium">Ticket price (INR)*</label>
+          <input type="number" min="1" step="1" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} placeholder="e.g. 499" className="p-2 border rounded w-full" />
+          {errors.price && <div className="text-xs text-red-600">{errors.price}</div>}
+        </div>
+        <div className="sm:w-1/2 space-y-1">
+          <label className="text-sm font-medium">Capacity*</label>
+          <input type="number" min="1" step="1" value={form.capacity} onChange={e => setForm({ ...form, capacity: Number(e.target.value) })} placeholder="Total tickets" className="p-2 border rounded w-full" />
+          {errors.capacity && <div className="text-xs text-red-600">{errors.capacity}</div>}
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Hero image URL*</label>
+        <input value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} placeholder="https://..." className="w-full p-2 border rounded" type="url" />
+        {errors.image && <div className="text-xs text-red-600">{errors.image}</div>}
+        <div className="text-xs text-gray-500">Use a landscape image for best card display.</div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button type="button" onClick={onCancel} className="px-3 py-1 border rounded disabled:opacity-50" disabled={busy}>Cancel</button>
+        <button className="px-3 py-1 bg-indigo-600 text-white rounded disabled:opacity-50" disabled={busy}>{busy ? 'Saving...' : 'Save event'}</button>
       </div>
     </form>
   )
@@ -165,7 +202,12 @@ export default function AdminEvents() {
       setBusy(true)
       setFormError('')
       const token = user?.token || localStorage.getItem('token')
-      const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
+      if (!token) {
+        setFormError('No authentication token found. Please log in again.')
+        setBusy(false)
+        return
+      }
+      const config = { headers: { Authorization: `Bearer ${token}` } }
       const payload = {
         title: data.title,
         description: data.description,
@@ -187,7 +229,8 @@ export default function AdminEvents() {
       setCreating(false)
     } catch (err) {
       console.error('Create event failed', err)
-      setFormError('Failed to create event')
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to create event'
+      setFormError(errorMsg)
     } finally {
       setBusy(false)
     }
@@ -198,7 +241,12 @@ export default function AdminEvents() {
       setBusy(true)
       setFormError('')
       const token = user?.token || localStorage.getItem('token')
-      const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
+      if (!token) {
+        setFormError('No authentication token found. Please log in again.')
+        setBusy(false)
+        return
+      }
+      const config = { headers: { Authorization: `Bearer ${token}` } }
       const payload = {
         title: data.title,
         description: data.description,
@@ -207,8 +255,7 @@ export default function AdminEvents() {
         category: data.category,
         price: Number(data.price) || 0,
         date: new Date(data.date).toISOString(),
-        totalTickets: Number(data.capacity),
-        availableTickets: Number(data.capacity),
+        totalTickets: Number(data.capacity), // keep server-side logic to adjust availableTickets
       }
       const res = await API.put(`/events/${id}`, payload, config)
       const updated = {
@@ -221,7 +268,8 @@ export default function AdminEvents() {
       setEditingEvent(null)
     } catch (err) {
       console.error('Update event failed', err)
-      setFormError('Failed to update event')
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to update event'
+      setFormError(errorMsg)
     } finally {
       setBusy(false)
     }
@@ -276,12 +324,13 @@ export default function AdminEvents() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
-              {formError && <div className="mb-3 text-sm text-red-600">{formError}</div>}
+              {formError && <div className="mb-3 p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-800">{formError}</div>}
               {busy && <div className="mb-3 text-sm text-gray-500">Saving…</div>}
               <EventForm
                 initial={editingEvent || undefined}
                 onSave={creating ? handleCreate : (data) => handleUpdate(editingEvent.id, data)}
                 onCancel={() => { setCreating(false); setEditingEvent(null) }}
+                busy={busy}
               />
             </motion.div>
           </motion.div>

@@ -53,7 +53,7 @@ export default function Ticket({ booking }) {
               <div className="flex justify-between items-start mb-8">
                 <div>
                   <div className="flex items-center gap-2 mb-3 opacity-80">
-                    <Logo className="scale-75 origin-left" />
+                    <Logo />
                   </div>
                   <h2 className="text-3xl font-black text-gray-900 leading-none tracking-tight uppercase">{event.title}</h2>
                   <span className="inline-block mt-3 px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider rounded-full">
