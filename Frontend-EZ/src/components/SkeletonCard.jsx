@@ -14,7 +14,7 @@ export default function SkeletonCard() {
         <div className="h-4 bg-gradient-to-r from-gray-700/50 to-gray-800/50 rounded w-2/3 relative overflow-hidden">
           <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         </div>
-        <div className="h-10 bg-gradient-to-r from-rose-900/30 to-pink-900/30 rounded-lg mt-4 relative overflow-hidden">
+        <div className="h-10 bg-gradient-to-r from-red-900/30 to-red-800/30 rounded-lg mt-4 relative overflow-hidden\">
           <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         </div>
       </div>

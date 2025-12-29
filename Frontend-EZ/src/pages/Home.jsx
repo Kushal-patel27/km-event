@@ -100,7 +100,7 @@ export default function Home() {
             <div className="max-w-3xl">
               <h1 className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-extrabold leading-tight mb-4 sm:mb-6">
                 Book Your Next <br className="hidden sm:block" />
-                <span className="text-rose-500">Live Experience</span>
+                <span className="text-red-500">Live Experience</span>
               </h1>
 
               <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-10">
@@ -111,7 +111,7 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <Link
                   to="/events"
-                  className="px-6 sm:px-8 py-3 sm:py-4 bg-rose-600 hover:bg-rose-700 rounded-xl text-base sm:text-lg font-bold shadow-lg text-center sm:text-left"
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-red-600 hover:bg-red-700 rounded-xl text-base sm:text-lg font-bold shadow-lg text-center sm:text-left"
                 >
                   Explore Events
                 </Link>
@@ -139,7 +139,7 @@ export default function Home() {
             </h2>
             <Link
               to="/events"
-              className="text-rose-400 font-bold hover:underline"
+              className="text-red-400 font-bold hover:underline"
             >
               View All →
             </Link>
@@ -167,7 +167,7 @@ export default function Home() {
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.7 }}
-        className="py-28 bg-gradient-to-br from-rose-600 to-pink-600 text-center"
+        className="py-28 bg-gradient-to-br from-red-600 to-red-500 text-center"
       >
         <h2 className="text-5xl md:text-6xl font-extrabold mb-6">
           Don’t Miss Out 🎟️

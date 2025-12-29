@@ -68,7 +68,7 @@ export default function Events(){
     <div className="min-h-screen bg-[#0B0F19] text-white py-12 relative overflow-hidden">
       {/* Decorative Background */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-rose-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-red-500/20 rounded-full blur-3xl"></div>
         <div className="absolute top-[20%] right-[-5%] w-80 h-80 bg-pink-500/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-[-10%] left-[20%] w-72 h-72 bg-purple-500/20 rounded-full blur-3xl"></div>
       </div>
@@ -77,7 +77,7 @@ export default function Events(){
         
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-pink-500 tracking-tight mb-2">Explore Events</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-400 tracking-tight mb-2">Explore Events</h1>
           <p className="text-gray-400 text-lg">Find your next unforgettable experience.</p>
         </div>
 
@@ -90,8 +90,8 @@ export default function Events(){
                 onClick={()=>setSelectedCategory(cat)}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 backdrop-blur-lg ${
                   selectedCategory === cat 
-                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-500/30 transform scale-105' 
-                    : 'bg-white/10 text-gray-300 border border-white/20 hover:border-rose-400 hover:bg-white/20'
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-500/30 transform scale-105' 
+                    : 'bg-white/10 text-gray-300 border border-white/20 hover:border-red-400 hover:bg-white/20'
                 }`}
               >
                 {cat}
@@ -103,7 +103,7 @@ export default function Events(){
         {/* Results Info */}
         <div className="mb-8 flex items-center justify-between">
           <div className="text-gray-400 font-medium">
-            Showing <span className="text-rose-500 font-bold">{filtered.length}</span> {filtered.length === 1 ? 'event' : 'events'}
+            Showing <span className="text-red-500 font-bold">{filtered.length}</span> {filtered.length === 1 ? 'event' : 'events'}
           </div>
         </div>
 
@@ -129,7 +129,7 @@ export default function Events(){
             </div>
             <h3 className="text-lg font-medium text-white">No events found</h3>
             <p className="text-gray-400 mt-1">Try adjusting your search terms.</p>
-            <button onClick={()=>setQuery('')} className="mt-4 text-rose-500 font-semibold hover:text-rose-400">Clear Search</button>
+            <button onClick={()=>setQuery('')} className="mt-4 text-red-500 font-semibold hover:text-red-400">Clear Search</button>
           </div>
         )}
       </div>
