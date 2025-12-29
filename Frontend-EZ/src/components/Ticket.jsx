@@ -24,7 +24,7 @@ export default function Ticket({ booking }) {
   }
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-3xl mx-auto">
+    <div className="flex flex-col gap-6 w-full max-w-4xl mx-auto">
       {ticketItems.map((item) => {
         // Prefer backend-provided QR image (data URL) if available,
         // otherwise fall back to generating one via external API.
@@ -38,74 +38,104 @@ export default function Ticket({ booking }) {
         })()
 
         return (
-          <div key={item.qrId} className="relative bg-white w-full rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-200 print:shadow-none print:border-gray-900 break-inside-avoid">
+          <div key={item.qrId} className="relative w-full rounded-2xl overflow-hidden print:shadow-none break-inside-avoid group">
             
-            {/* Background Watermark */}
-            <div className="absolute -bottom-12 -left-12 opacity-[0.03] pointer-events-none transform rotate-12 z-0">
-              <svg width="300" height="300" viewBox="0 0 40 40" fill="currentColor" className="text-indigo-900">
-                <rect x="4" y="6" width="32" height="28" rx="6" />
-                <path d="M24 14L25.5 18.5H30L26.5 21L27.5 25.5L24 23L20.5 25.5L21.5 21L18 18.5H22.5L24 14Z" fill="white" />
-              </svg>
-            </div>
+            {/* Outer Glow Effect */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-red-600 via-red-500 to-orange-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur -z-10"></div>
+            
+            {/* Main Ticket Container */}
+            <div className="relative bg-gradient-to-br from-[#1a1f2e] to-[#0f1419] w-full rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-700 group-hover:border-red-600 transition-colors duration-300">
+              
+              {/* Premium Background Pattern */}
+              <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-red-600 rounded-full blur-3xl"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-red-900 rounded-full blur-3xl opacity-50"></div>
+              </div>
 
-            {/* Left Section: Event Details */}
-            <div className="flex-1 p-8 relative z-10 flex flex-col justify-between">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <div className="flex items-center gap-2 mb-3 opacity-80">
-                    <Logo />
+              {/* Left Section: Event Details */}
+              <div className="flex-1 p-6 md:p-10 relative z-10 flex flex-col justify-between bg-gradient-to-br from-[#1a1f2e] to-[#111827]">
+                <div className="flex justify-between items-start mb-6 md:mb-8">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                      <span className="text-xs text-red-500 font-bold uppercase tracking-wider">Event Entry Pass</span>
+                    </div>
+                    <h2 className="text-2xl md:text-4xl font-black text-white leading-tight tracking-tight mb-3 line-clamp-2">{event.title}</h2>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 bg-opacity-20 border border-red-600 border-opacity-30 text-red-400 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-opacity-30 transition-all">
+                      <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
+                      {event.category || 'General Admission'}
+                    </div>
                   </div>
-                  <h2 className="text-3xl font-black text-gray-900 leading-none tracking-tight uppercase">{event.title}</h2>
-                  <span className="inline-block mt-3 px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider rounded-full">
-                    {event.category || 'General Admission'}
-                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+                  <div className="bg-white bg-opacity-5 border border-gray-600 border-opacity-30 rounded-lg p-4 md:p-5 hover:bg-opacity-10 transition-all">
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2">Date & Time</div>
+                    <div className="text-sm md:text-base font-bold text-white">{date || 'TBA'}</div>
+                  </div>
+                  <div className="bg-white bg-opacity-5 border border-gray-600 border-opacity-30 rounded-lg p-4 md:p-5 hover:bg-opacity-10 transition-all">
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2">Location</div>
+                    <div className="text-sm md:text-base font-bold text-white truncate">{event.location}</div>
+                  </div>
+                  <div className="bg-white bg-opacity-5 border border-gray-600 border-opacity-30 rounded-lg p-4 md:p-5 hover:bg-opacity-10 transition-all">
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2">Guest Name</div>
+                    <div className="text-sm md:text-base font-bold text-white truncate">{user.name}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-600 to-red-700 bg-opacity-20 border border-red-600 border-opacity-40 rounded-lg p-4 md:p-5 hover:bg-opacity-30 transition-all">
+                    <div className="text-[10px] text-red-300 uppercase tracking-widest font-bold mb-2">Seat/Ticket</div>
+                    <div className="text-sm md:text-base font-bold text-red-400">{item.seatLabel}</div>
+                  </div>
+                </div>
+
+                <div className="pt-4 md:pt-6 border-t border-gray-600 border-opacity-30 flex justify-between items-center">
+                   <div className="text-xs text-gray-400 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Present at entrance
+                   </div>
+                   <div className="font-mono text-xs text-gray-500 bg-black bg-opacity-30 px-3 py-1 rounded">#{item.qrId.toString().slice(0, 8).toUpperCase()}</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-y-8 gap-x-4">
-                <div>
-                  <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Date & Time</div>
-                  <div className="font-bold text-lg text-gray-800">{date || 'TBA'}</div>
+              {/* Right Section: QR Code (Premium Stub) */}
+              <div className="relative w-full md:w-72 bg-gradient-to-br from-[#0f1419] via-[#1a1f2e] to-[#0f1419] text-white p-6 md:p-8 flex flex-col items-center justify-center text-center overflow-hidden border-t md:border-t-0 md:border-l border-gray-600 border-opacity-30">
+                
+                {/* Premium Gradient Overlay */}
+                <div className="absolute inset-0 opacity-30">
+                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-600 via-transparent to-transparent opacity-20"></div>
                 </div>
-                <div>
-                  <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Location</div>
-                  <div className="font-bold text-lg text-gray-800">{event.location}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Guest</div>
-                  <div className="font-bold text-lg text-gray-800 truncate">{user.name}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Seat</div>
-                  <div className="font-bold text-lg text-indigo-600">{item.seatLabel}</div>
-                </div>
-              </div>
+                
+                {/* Dashed Perforation Line */}
+                <div className="hidden md:block absolute left-0 top-0 bottom-0 w-px border-l-2 border-dashed border-gray-600 border-opacity-50"></div>
+                <div className="md:hidden absolute top-0 left-0 right-0 h-px border-t-2 border-dashed border-gray-600 border-opacity-50"></div>
+                
+                {/* Premium Decorative Cutouts */}
+                <div className="absolute hidden md:block left-0 top-1/4 -translate-x-1/2 w-5 h-5 bg-[#0B0F19] rounded-full border border-gray-700"></div>
+                <div className="absolute hidden md:block left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 bg-[#0B0F19] rounded-full border border-gray-700"></div>
+                <div className="absolute hidden md:block left-0 bottom-1/4 -translate-x-1/2 w-5 h-5 bg-[#0B0F19] rounded-full border border-gray-700"></div>
+                
+                <div className="absolute md:hidden top-0 left-1/4 -translate-y-1/2 w-5 h-5 bg-[#0B0F19] rounded-full border border-gray-700"></div>
+                <div className="absolute md:hidden top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 bg-[#0B0F19] rounded-full border border-gray-700"></div>
+                <div className="absolute md:hidden top-0 right-1/4 -translate-y-1/2 w-5 h-5 bg-[#0B0F19] rounded-full border border-gray-700"></div>
 
-              <div className="mt-8 pt-6 border-t border-dashed border-gray-200 flex justify-between items-end">
-                 <div className="text-xs text-gray-400">Present this ticket at the entrance</div>
-                 <div className="font-mono text-xs text-gray-400">#{item.qrId.toString().toUpperCase()}</div>
-              </div>
-            </div>
-
-            {/* Right Section: QR Code (Stub) */}
-            <div className="relative md:w-80 bg-gray-900 text-white p-8 flex flex-col items-center justify-center text-center overflow-hidden">
-              {/* Stub Decoration */}
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500 via-purple-500 to-transparent"></div>
-              
-              {/* Perforated Line */}
-              <div className="absolute left-0 top-0 bottom-0 w-0 border-l-2 border-dashed border-gray-700 h-full hidden md:block"></div>
-              <div className="absolute top-0 left-0 right-0 h-0 border-t-2 border-dashed border-gray-700 w-full md:hidden"></div>
-              
-              {/* Cutouts */}
-              <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full hidden md:block"></div>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full md:hidden"></div>
-
-              <div className="relative z-10">
-                <div className="bg-white p-3 rounded-xl shadow-lg mb-4 inline-block">
-                  <img src={qrUrl} alt="QR Code" className="w-32 h-32 object-contain mix-blend-multiply" />
+                <div className="relative z-10 flex flex-col items-center">
+                  {/* QR Code with Premium Styling */}
+                  <div className="relative mb-4 group">
+                    <div className="absolute -inset-2 bg-gradient-to-br from-red-600 to-red-900 rounded-xl blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                    <div className="relative bg-white p-3 rounded-xl shadow-2xl">
+                      <img src={qrUrl} alt="QR Code" className="w-36 h-36 object-contain mix-blend-multiply" />
+                    </div>
+                  </div>
+                  
+                  <div className="text-[10px] text-gray-400 uppercase tracking-[0.15em] font-bold mb-2 flex items-center gap-2">
+                    <span className="w-1 h-1 bg-red-600 rounded-full"></span>
+                    Scan to Enter
+                    <span className="w-1 h-1 bg-red-600 rounded-full"></span>
+                  </div>
+                  <p className="text-lg md:text-xl font-mono font-bold tracking-widest text-red-500 bg-black bg-opacity-30 px-3 py-2 rounded-lg">{item.qrId.toString().toUpperCase().slice(0, 12)}</p>
+                  <p className="text-xs text-gray-500 mt-3 tracking-wider">Valid for one entry</p>
                 </div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold mb-1">Scan Entry</p>
-                <p className="text-xl font-mono font-bold tracking-widest">{item.qrId.toString().toUpperCase()}</p>
               </div>
             </div>
           </div>
