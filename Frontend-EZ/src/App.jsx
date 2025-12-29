@@ -9,6 +9,7 @@ import BookingSuccess from './pages/BookingSuccess'
 import Navbar from './components/Navbar'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import AuthCallback from './pages/AuthCallback'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLogin from './pages/AdminLogin'
 import AdminEvents from './pages/AdminEvents'
@@ -34,6 +35,7 @@ export default function App(){
             <Route path="/my-bookings" element={<MyBookings />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
             {/* Admin routes */}
             <Route path="/admin/login" element={<AdminLogin />} />

@@ -62,3 +62,35 @@ export const loginUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Admin-only login that validates role
+export const loginAdmin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user)
+      return res.status(400).json({ message: "Invalid credentials" });
+
+    if (user.role !== "admin")
+      return res.status(403).json({ message: "Not an admin account" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

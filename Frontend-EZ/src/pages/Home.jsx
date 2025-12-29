@@ -6,6 +6,7 @@ import Slider from '../components/Slider'
 import EventCard from '../components/EventCard'
 import SkeletonCard from '../components/SkeletonCard'
 import { useAuth } from '../context/AuthContext'
+import { DarkModeProvider } from '../context/DarkModeContext'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -14,6 +15,24 @@ export default function Home() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Force dark mode on home page
+  useEffect(() => {
+    const htmlElement = document.documentElement
+    const wasDark = htmlElement.classList.contains('dark')
+    
+    // Add dark class if not present
+    if (!wasDark) {
+      htmlElement.classList.add('dark')
+    }
+
+    // Clean up: restore original state when leaving home page
+    return () => {
+      if (!wasDark) {
+        htmlElement.classList.remove('dark')
+      }
+    }
+  }, [])
 
   const featured = events.slice(0, 5)
   const heroImage =
@@ -152,11 +171,13 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {events.slice(0, 6).map(ev => (
-                <EventCard key={ev.id} event={ev} />
-              ))}
-            </div>
+            <DarkModeProvider forceDark={true}>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {events.slice(0, 6).map(ev => (
+                  <EventCard key={ev.id} event={ev} />
+                ))}
+              </div>
+            </DarkModeProvider>
           )}
         </div>
       </section>
