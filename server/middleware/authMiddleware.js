@@ -56,8 +56,11 @@ export const requireSuperAdmin = (req, res, next) => {
 };
 
 export const adminOnly = (req, res, next) => {
-  if (!req.user || req.user.role !== "admin") {
-    return res.status(403).json({ message: "Admins only" });
+  if (!req.user) {
+    return res.status(401).json({ message: "Not authorized" });
+  }
+  if (!ADMIN_ROLE_SET.has(req.user.role)) {
+    return res.status(403).json({ message: "Admin role required" });
   }
   return next();
 };

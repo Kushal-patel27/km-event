@@ -158,12 +158,80 @@ export const loginUser = async (req, res) => {
   }
 };
 
+// Login admin/staff user
+export const loginAdmin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+    // Check if user is an admin
+    if (!ADMIN_ROLE_SET.has(user.role)) {
+      return res.status(403).json({ message: "Only admin users can login here" });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({ message: "Password login not available for this account" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password || "");
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Get current authenticated user
 export const getMe = async (req, res) => {
   try {
     // req.user is set by protect middleware without password
     if (!req.user) return res.status(401).json({ message: "Not authorized" });
     res.json(req.user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Refresh session - create new token
+export const refreshSession = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const token = jwt.sign({ id: req.user._id, tv: req.user.tokenVersion }, process.env.JWT_SECRET, {
+      expiresIn: ACCESS_TOKEN_TTL,
+    });
+
+    res.json({
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Logout - clear session
+export const logout = async (req, res) => {
+  try {
+    res.json({ message: "Logged out successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -290,3 +358,136 @@ export const getMyData = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// List all admin users (super admin only)
+export const listAdmins = async (req, res) => {
+  try {
+    const admins = await User.find({ role: { $in: Array.from(ADMIN_ROLE_SET) } })
+      .select("-password")
+      .lean();
+    res.json({ admins });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Create admin user (super admin only)
+export const createAdminUser = async (req, res) => {
+  try {
+    const { name, email, password, role, assignedEvents } = req.body;
+
+    // Validate input
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: "Name, email, password, and role are required" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+
+    // Validate role
+    if (!ADMIN_ROLE_SET.has(role)) {
+      return res.status(400).json({ message: "Invalid admin role" });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      assignedEvents: assignedEvents || [],
+      active: true,
+    });
+
+    res.status(201).json({
+      message: "Admin user created successfully",
+      admin: user.toObject({ versionKey: false, transform: (_, obj) => { delete obj.password; return obj; } }),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Update admin user (super admin only)
+export const updateAdminUser = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    const { name, email, password, role, assignedEvents } = req.body;
+
+    // Validate adminId
+    if (!mongoose.Types.ObjectId.isValid(adminId)) {
+      return res.status(400).json({ message: "Invalid admin ID" });
+    }
+
+    const user = await User.findById(adminId);
+    if (!user) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    // Update fields
+    if (name) user.name = name;
+    if (email) {
+      const existingEmail = await User.findOne({ email, _id: { $ne: adminId } });
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      user.email = email;
+    }
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+    if (role) {
+      if (!ADMIN_ROLE_SET.has(role)) {
+        return res.status(400).json({ message: "Invalid admin role" });
+      }
+      user.role = role;
+    }
+    if (assignedEvents) {
+      user.assignedEvents = assignedEvents;
+    }
+
+    await user.save();
+
+    res.json({
+      message: "Admin updated successfully",
+      admin: user.toObject({ versionKey: false, transform: (_, obj) => { delete obj.password; return obj; } }),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Delete admin user (super admin only)
+export const deleteAdminUser = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+
+    // Validate adminId
+    if (!mongoose.Types.ObjectId.isValid(adminId)) {
+      return res.status(400).json({ message: "Invalid admin ID" });
+    }
+
+    // Prevent self-deletion
+    if (req.user._id.toString() === adminId) {
+      return res.status(400).json({ message: "Cannot delete your own account" });
+    }
+
+    const user = await User.findByIdAndDelete(adminId);
+    if (!user) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    res.json({ message: "Admin deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
