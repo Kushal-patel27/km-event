@@ -6,13 +6,15 @@ import User from "../models/User.js";
 // Load env vars here so strategy gets configured even if server.js loads dotenv later
 dotenv.config();
 
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback",
-    },
+// Only configure Google Strategy if credentials are provided
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback",
+      },
     async (accessToken, refreshToken, profile, done) => {
       try {
         // Check if user already exists with Google ID
@@ -46,7 +48,8 @@ passport.use(
       }
     }
   )
-);
+  );
+}
 
 passport.serializeUser((user, done) => {
   done(null, user._id);
