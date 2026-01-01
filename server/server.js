@@ -9,6 +9,8 @@ import eventRoutes from "./routes/eventRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import staffRoutes from "./routes/staffRoutes.js";
 import passport from "./config/passport.js";
+import contactRoutes from "./routes/contactRoutes.js";
+import aboutRoutes from "./routes/aboutRoutes.js";
 import User from "./models/User.js";
 import bcrypt from "bcryptjs";
 
@@ -48,6 +50,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/staff", staffRoutes);
+app.use("/api/contact", contactRoutes);
+app.use("/api/about", aboutRoutes);
 
 
 app.get("/", (req, res) => {

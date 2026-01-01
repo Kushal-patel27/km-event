@@ -112,7 +112,17 @@ export const registerUser = async (req, res) => {
       password: hashedPassword,
     });
 
-    return await issueTokensAndRespond(user, req, res);
+    const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token,
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -132,217 +142,151 @@ export const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password || "");
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-    return await issueTokensAndRespond(user, req, res);
+    const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token,
+    });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-export const loginAdmin = async (req, res) => {
-  const { email, password } = req.body;
-
+// Get current authenticated user
+export const getMe = async (req, res) => {
   try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
-
-    if (!adminRoles.has(user.role)) {
-      return res.status(403).json({ message: "Not an admin account" });
-    }
-
-    if (!user.password) {
-      return res.status(400).json({ message: "Password login not available for this account" });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password || "");
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
-
-    return await issueTokensAndRespond(user, req, res);
+    // req.user is set by protect middleware without password
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+    res.json(req.user);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-export const refreshSession = async (req, res) => {
-  const refreshToken = req.cookies?.refreshToken;
-  if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
-
+// Update profile (name, email)
+export const updateProfile = async (req, res) => {
+  const { name, email } = req.body;
   try {
-    const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
-    const user = await User.findById(decoded.id);
-    if (!user) return res.status(401).json({ message: "User not found" });
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
 
-    const tokenHash = hashToken(refreshToken);
-    const session = user.sessions.id(decoded.sid);
-    if (!session || session.tokenHash !== tokenHash) {
-      return res.status(401).json({ message: "Session expired" });
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // If changing email, ensure unique
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
     }
 
-    session.tokenHash = hashToken(refreshToken); // keep in sync
-    session.lastSeenAt = new Date();
-
-    const newRefreshToken = signRefreshToken(user._id, session._id.toString());
-    session.tokenHash = hashToken(newRefreshToken);
-
+    user.name = name ?? user.name;
+    user.email = email ?? user.email;
     await user.save();
 
-    const accessToken = signAccessToken(user);
-    res.cookie("refreshToken", newRefreshToken, REFRESH_COOKIE_OPTIONS);
-    res.cookie("accessToken", accessToken, ACCESS_COOKIE_OPTIONS);
-    return res.json(buildUserResponse(user, accessToken));
+    const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token,
+    });
   } catch (error) {
-    return res.status(401).json({ message: "Invalid refresh token" });
+    res.status(500).json({ message: error.message });
   }
 };
 
-export const logout = async (req, res) => {
-  const refreshToken = req.cookies?.refreshToken;
-  if (refreshToken) {
-    try {
-      const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
-      const user = await User.findById(decoded.id);
-      if (user) {
-        user.sessions = user.sessions.filter((s) => s._id.toString() !== decoded.sid);
-        await user.save();
-      }
-    } catch (err) {
-      // ignore invalid token on logout
-    }
-  }
-
-  res.clearCookie("refreshToken", { path: REFRESH_COOKIE_OPTIONS.path });
-  res.clearCookie("accessToken", { path: ACCESS_COOKIE_OPTIONS.path });
-  return res.json({ message: "Logged out" });
-};
-
-export const me = async (req, res) => {
-  if (!req.user) return res.status(401).json({ message: "Not authorized" });
-  const accessToken = req.cookies?.accessToken;
-  return res.json(buildUserResponse(req.user, accessToken));
-};
-
-export const listSessions = async (req, res) => {
-  const sessions = (req.user?.sessions || []).map((s) => ({
-    id: s._id,
-    userAgent: s.userAgent,
-    ip: s.ip,
-    createdAt: s.createdAt,
-    lastSeenAt: s.lastSeenAt,
-  }));
-  return res.json({ sessions });
-};
-
-export const revokeSession = async (req, res) => {
-  const { id } = req.params;
-  const targetId = id?.toString();
-  if (!targetId) return res.status(400).json({ message: "Session id required" });
-
-  req.user.sessions = req.user.sessions.filter((s) => s._id.toString() !== targetId);
-  await req.user.save();
-
-  // If the revoked session is the caller's cookie, clear it
+// Change password
+export const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
   try {
-    const refreshToken = req.cookies?.refreshToken;
-    if (refreshToken) {
-      const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
-      if (decoded.sid === targetId) {
-        res.clearCookie("refreshToken", { path: REFRESH_COOKIE_OPTIONS.path });
-        res.clearCookie("accessToken", { path: ACCESS_COOKIE_OPTIONS.path });
-      }
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Both current and new password are required" });
     }
-  } catch (err) {
-    // ignore invalid cookie
-  }
 
-  return res.json({ message: "Session revoked" });
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
-export const listAdmins = async (req, res) => {
-  const admins = await User.find({ role: { $in: Array.from(ADMIN_ROLE_SET) } })
-    .select("name email role createdAt lastLoginAt assignedEvents")
-    .populate("assignedEvents", "name");
-  return res.json({ admins });
-};
-
-export const createAdminUser = async (req, res) => {
-  const { name, email, password, role, assignedEvents } = req.body;
-
-  if (!email || !password || !role || !name) {
-    return res.status(400).json({ message: "name, email, password, and role are required" });
-  }
-
-  if (!ADMIN_ROLE_SET.has(role)) {
-    return res.status(400).json({ message: "Invalid admin role" });
-  }
-
-  const existing = await User.findOne({ email });
-  const salt = await bcrypt.genSalt(10);
-  const hashed = await bcrypt.hash(password, salt);
-
-  if (existing) {
-    existing.name = name;
-    existing.role = role;
-    existing.password = hashed;
-    if (assignedEvents && Array.isArray(assignedEvents)) {
-      existing.assignedEvents = assignedEvents;
-    }
-    await existing.save();
-    return res.json({ message: "Admin updated", user: buildUserResponse(existing) });
-  }
-
-  const user = await User.create({ 
-    name, 
-    email, 
-    password: hashed, 
-    role,
-    assignedEvents: assignedEvents || []
-  });
-  return res.status(201).json({ message: "Admin created", user: buildUserResponse(user) });
-};
-
-export const updateAdminUser = async (req, res) => {
-  const { adminId } = req.params;
-  const { name, email, password, role, assignedEvents } = req.body;
-
+// Get / update preferences
+export const getPreferences = async (req, res) => {
   try {
-    const admin = await User.findById(adminId);
-    if (!admin) {
-      return res.status(404).json({ message: "Admin not found" });
-    }
-
-    if (!ADMIN_ROLE_SET.has(role)) {
-      return res.status(400).json({ message: "Invalid admin role" });
-    }
-
-    admin.name = name || admin.name;
-    admin.email = email || admin.email;
-    admin.role = role || admin.role;
-    
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      admin.password = await bcrypt.hash(password, salt);
-    }
-
-    if (assignedEvents && Array.isArray(assignedEvents)) {
-      admin.assignedEvents = assignedEvents;
-    }
-
-    await admin.save();
-    return res.json({ message: "Admin updated successfully", user: buildUserResponse(admin) });
-  } catch (err) {
-    return res.status(500).json({ message: "Failed to update admin", error: err.message });
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+    res.json(req.user.preferences || {});
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-export const deleteAdminUser = async (req, res) => {
-  const { adminId } = req.params;
-
+export const updatePreferences = async (req, res) => {
   try {
-    const admin = await User.findByIdAndDelete(adminId);
-    if (!admin) {
-      return res.status(404).json({ message: "Admin not found" });
-    }
-    return res.json({ message: "Admin deleted successfully" });
-  } catch (err) {
-    return res.status(500).json({ message: "Failed to delete admin", error: err.message });
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+    const user = await User.findById(req.user._id);
+    user.preferences = {
+      ...user.preferences,
+      ...req.body,
+    };
+    await user.save();
+    res.json(user.preferences);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Logout all sessions: bump tokenVersion
+export const logoutAll = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+    const user = await User.findById(req.user._id);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+    res.json({ message: "Logged out from all devices" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Download my data (Contacts + Bookings)
+import Contact from "../models/Contact.js";
+import Booking from "../models/Booking.js";
+
+export const getMyData = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+    const [contacts, bookings] = await Promise.all([
+      Contact.find({ userId: req.user._id }).lean(),
+      Booking.find({ user: req.user._id }).lean(),
+    ]);
+    res.json({
+      user: { _id: req.user._id, name: req.user.name, email: req.user.email },
+      contacts,
+      bookings,
+      exportedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

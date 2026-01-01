@@ -1,7 +1,7 @@
 import express from "express";
 import {
   registerUser,
-  loginUser,
+  loginUser, getMe, updateProfile, changePassword, getPreferences, updatePreferences, logoutAll, getMyData,
   loginAdmin,
   refreshSession,
   logout,
@@ -16,6 +16,7 @@ import {
 import passport from "../config/passport.js";
 import jwt from "jsonwebtoken";
 import { protect, requireAdminRole, requireSuperAdmin } from "../middleware/authMiddleware.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -55,5 +56,12 @@ router.get(
     res.redirect(`${frontendURL}/auth/callback?token=${token}&name=${encodeURIComponent(req.user.name)}&email=${encodeURIComponent(req.user.email)}&role=${req.user.role}`);
   }
 );
+router.get("/me", protect, getMe);
+router.put("/profile", protect, updateProfile);
+router.put("/password", protect, changePassword);
+router.get("/preferences", protect, getPreferences);
+router.put("/preferences", protect, updatePreferences);
+router.post("/logout-all", protect, logoutAll);
+router.get("/my-data", protect, getMyData);
 
 export default router;

@@ -18,6 +18,10 @@ export const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id).select("-password");
     if (!user) return res.status(401).json({ message: "Not authorized" });
+    if (!user.active) return res.status(403).json({ message: "Account is deactivated" });
+    if (typeof decoded.tv !== "number" || decoded.tv !== user.tokenVersion) {
+      return res.status(401).json({ message: "Session expired. Please log in again." });
+    }
     req.user = user;
     req.userRole = user.role;
     return next();
@@ -50,3 +54,12 @@ export const requireSuperAdmin = (req, res, next) => {
   }
   return next();
 };
+
+export const adminOnly = (req, res, next) => {
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(403).json({ message: "Admins only" });
+  }
+  return next();
+};
+
+export default protect;
