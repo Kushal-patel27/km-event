@@ -15,6 +15,7 @@ export default function AdminLayout({ title = 'Admin', children }){
   const nav = [
     { to: '/admin/events', label: 'Events' },
     { to: '/admin/bookings', label: 'Bookings' },
+    { to: '/admin/contacts', label: 'Contact Messages' },
   ]
 
   function handleLogout(){
