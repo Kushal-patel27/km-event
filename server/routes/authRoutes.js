@@ -1,13 +1,36 @@
 import express from "express";
-import { registerUser, loginUser, loginAdmin } from "../controllers/authController.js";
+import {
+  registerUser,
+  loginUser,
+  loginAdmin,
+  refreshSession,
+  logout,
+  me,
+  listSessions,
+  revokeSession,
+  listAdmins,
+  createAdminUser,
+  updateAdminUser,
+  deleteAdminUser,
+} from "../controllers/authController.js";
 import passport from "../config/passport.js";
 import jwt from "jsonwebtoken";
+import { protect, requireAdminRole, requireSuperAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/admin/login", loginAdmin);
+router.post("/refresh", refreshSession);
+router.post("/logout", logout);
+router.get("/me", protect, me);
+router.get("/sessions", protect, requireAdminRole, listSessions);
+router.post("/sessions/revoke/:id", protect, requireAdminRole, revokeSession);
+router.get("/admin/users", protect, requireSuperAdmin, listAdmins);
+router.post("/admin/users", protect, requireSuperAdmin, createAdminUser);
+router.put("/admin/users/:adminId", protect, requireSuperAdmin, updateAdminUser);
+router.delete("/admin/users/:adminId", protect, requireSuperAdmin, deleteAdminUser);
 
 // Google OAuth routes
 router.get(

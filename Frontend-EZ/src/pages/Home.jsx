@@ -16,6 +16,73 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const highlights = [
+    {
+      title: 'Instant QR Tickets',
+      desc: 'Skip the queue with secure QR-based entry for every booking.',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h10v10H7z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 3h6v6M3 15h6v6" />
+        </svg>
+      ),
+    },
+    {
+      title: 'Verified Events',
+      desc: 'We work directly with organizers to ensure details are accurate.',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
+        </svg>
+      ),
+    },
+    {
+      title: 'Flexible Payments',
+      desc: 'Pay securely with cards, UPI, or wallets; get instant receipts.',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7h16M4 12h16M4 17h16" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7v10" />
+        </svg>
+      ),
+    },
+    {
+      title: '24/7 Support',
+      desc: 'Chat with a human whenever you need help with your booking.',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h8M8 14h5" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+  ]
+
+  const categories = [
+    { name: 'Concerts', color: 'from-red-500 to-orange-500' },
+    { name: 'Comedy', color: 'from-indigo-500 to-blue-500' },
+    { name: 'Workshops', color: 'from-emerald-500 to-teal-500' },
+    { name: 'Theatre', color: 'from-yellow-500 to-amber-500' },
+    { name: 'Sports', color: 'from-sky-500 to-cyan-500' },
+    { name: 'Festivals', color: 'from-pink-500 to-fuchsia-500' },
+  ]
+
+  const testimonials = [
+    {
+      quote: 'Smoothest booking experience. The QR tickets just work.',
+      name: 'Anika, Bengaluru',
+    },
+    {
+      quote: 'Loved the curated picks—found a jazz night I would have missed.',
+      name: 'Rohan, Mumbai',
+    },
+    {
+      quote: 'Support resolved a date issue in minutes. Superb.',
+      name: 'Priya, Delhi',
+    },
+  ]
+
   // Force dark mode on home page
   useEffect(() => {
     const htmlElement = document.documentElement
@@ -148,6 +215,199 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ================= FAST STATS ================= */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+        className="py-16 border-t border-white/10 bg-[#0d1221]"
+      >
+        <div className="px-6 lg:px-12 max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          {[{ label: 'Tickets issued', value: '1.2M+' }, { label: 'Cities covered', value: '30+' }, { label: 'Events live', value: '850+' }, { label: 'Avg. rating', value: '4.8/5' }].map((item, idx) => (
+            <motion.div
+              key={item.label}
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: idx * 0.1 }}
+              className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+            >
+              <div className="text-3xl md:text-4xl font-extrabold text-white">{item.value}</div>
+              <div className="mt-2 text-sm text-gray-300">{item.label}</div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.section>
+
+      {/* ================= HIGHLIGHTS ================= */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+        className="py-20"
+      >
+        <div className="px-6 lg:px-12 max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-10">
+            <h2 className="text-4xl md:text-5xl font-extrabold">Why people book with us</h2>
+            <Link to="/events" className="text-red-400 font-semibold hover:underline">Browse events →</Link>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {highlights.map((card, idx) => (
+              <motion.div
+                key={card.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: idx * 0.1 }}
+                className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+              >
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-red-200 mb-4">
+                  {card.icon}
+                </div>
+                <h3 className="text-lg font-semibold mb-2">{card.title}</h3>
+                <p className="text-sm text-gray-300 leading-relaxed">{card.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ================= CATEGORIES ================= */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+        className="py-16 bg-[#0d1221]"
+      >
+        <div className="px-6 lg:px-12 max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold">Top categories</h2>
+            <Link to="/events" className="text-sm text-red-300 hover:underline">See all</Link>
+          </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {categories.map((cat, idx) => (
+              <motion.div
+                key={cat.name}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: idx * 0.08 }}
+                className={`p-6 rounded-2xl bg-gradient-to-r ${cat.color} text-white font-semibold shadow-lg border border-white/10 hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 cursor-pointer`}
+              >
+                {cat.name}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ================= HOW IT WORKS ================= */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+        className="py-20"
+      >
+        <div className="px-6 lg:px-12 max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="text-sm uppercase tracking-[0.3em] text-red-300 mb-3"
+            >
+              Simple steps
+            </motion.p>
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-4xl md:text-5xl font-extrabold mb-3"
+            >
+              Book in under a minute
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-gray-300 max-w-2xl mx-auto"
+            >
+              Search, pick seats, pay, and get instant QR tickets on your phone.
+            </motion.p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { title: 'Find the event', desc: 'Use search or browse curated picks by city and category.' },
+              { title: 'Choose seats', desc: 'See live availability and lock your seats instantly.' },
+              { title: 'Scan & enter', desc: 'Show the QR at the gate—no printouts, no hassle.' },
+            ].map((step, idx) => (
+              <motion.div
+                key={step.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: idx * 0.15 }}
+                className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+              >
+                <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold mb-4">
+                  {idx + 1}
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+                <p className="text-gray-300 leading-relaxed text-sm">{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ================= TESTIMONIALS ================= */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+        className="py-20 bg-[#0d1221]"
+      >
+        <div className="px-6 lg:px-12 max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <div>
+                <p className="text-sm uppercase tracking-[0.25em] text-red-300">What people say</p>
+                <h2 className="text-4xl md:text-5xl font-extrabold">Loved by event-goers</h2>
+              </div>
+            </motion.div>
+            <Link to="/events" className="text-red-300 font-semibold hover:underline">Discover events →</Link>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((card, idx) => (
+              <motion.div
+                key={card.name}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: idx * 0.1 }}
+                className="p-6 rounded-2xl bg-white/5 border border-white/10 shadow-lg hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+              >
+                <p className="text-lg leading-relaxed text-gray-100">"{card.quote}"</p>
+                <p className="mt-4 text-sm text-gray-400 font-semibold">{card.name}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
 
       {/* ================= EVENTS ================= */}
       <section className="py-24">

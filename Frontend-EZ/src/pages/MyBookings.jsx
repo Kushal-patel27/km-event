@@ -315,6 +315,14 @@ export default function MyBookings() {
                               <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Amount:</span>
                               <span className={`font-bold ${isDarkMode ? 'text-red-400' : 'text-indigo-600'}`}>{formatINR(booking.totalAmount || 0)}</span>
                             </div>
+                            {booking.scans && booking.scans.length > 0 && (
+                              <div className="flex items-center gap-2">
+                                <svg className={`w-4 h-4 text-green-500`} fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                                </svg>
+                                <span className={`text-xs font-bold uppercase ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>{booking.scans.length} Scanned</span>
+                              </div>
+                            )}
                           </div>
 
                           <Ticket booking={ticketBooking} />

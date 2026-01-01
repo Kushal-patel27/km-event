@@ -21,6 +21,8 @@ function exportCSV(rows, filename = 'bookings-summary.csv'){
 
 export default function AdminBookings(){
   const { user } = useAuth()
+  const role = user?.role || 'user'
+  const canDelete = role === 'super_admin' || role === 'admin'
   const [bookings, setBookings] = useState([])
   const [summary, setSummary] = useState([])
   const [grouped, setGrouped] = useState({ all: [], live: [], upcoming: [], past: [] })
@@ -79,6 +81,7 @@ export default function AdminBookings(){
   }, [user])
 
   async function handleDelete(id){
+    if(!canDelete) return
     if(!confirm('Delete this booking?')) return
     try {
       const token = user?.token || localStorage.getItem('token')
@@ -99,7 +102,9 @@ export default function AdminBookings(){
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Bookings Summary</h2>
         <div className="flex items-center gap-2">
-          <Link to="/admin/events" className="px-3 py-1 bg-indigo-600 text-white rounded">Manage / Create Events</Link>
+          {(role === 'super_admin' || role === 'admin' || role === 'event_admin') && (
+            <Link to="/admin/events" className="px-3 py-1 bg-indigo-600 text-white rounded">Manage / Create Events</Link>
+          )}
           <button onClick={()=>exportCSV(summary)} className="px-3 py-1 border rounded">Export CSV</button>
         </div>
       </div>
@@ -168,7 +173,9 @@ export default function AdminBookings(){
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   <div className="font-bold">{formatINR(Number(b.totalAmount || b.total || 0))}</div>
-                  <button onClick={()=>handleDelete(b._id)} className="px-3 py-1 bg-red-600 text-white rounded">Delete</button>
+                  {canDelete && (
+                    <button onClick={()=>handleDelete(b._id)} className="px-3 py-1 bg-red-600 text-white rounded">Delete</button>
+                  )}
                 </div>
               </div>
             ))}

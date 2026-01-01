@@ -1,17 +1,22 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
+import staffRoutes from "./routes/staffRoutes.js";
 import passport from "./config/passport.js";
 import User from "./models/User.js";
 import bcrypt from "bcryptjs";
 
-dotenv.config();
+if (!process.env.JWT_SECRET) {
+  console.error("JWT_SECRET is not set. Please define it in your environment or .env file.");
+  process.exit(1);
+}
+
 connectDB();
 
 const app = express();
@@ -42,6 +47,7 @@ app.use(passport.session());
 app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/staff", staffRoutes);
 
 
 app.get("/", (req, res) => {
@@ -64,12 +70,12 @@ app.listen(PORT, () =>
     if (!existing) {
       const salt = await bcrypt.genSalt(10)
       const hashed = await bcrypt.hash(adminPass, salt)
-      await User.create({ name: adminName, email: adminEmail, password: hashed, role: 'admin' })
+      await User.create({ name: adminName, email: adminEmail, password: hashed, role: 'super_admin' })
       console.log('Admin user created:', adminEmail)
     } else {
       // ensure role is admin
-      if (existing.role !== 'admin') {
-        existing.role = 'admin'
+      if (existing.role !== 'super_admin') {
+        existing.role = 'super_admin'
         await existing.save()
         console.log('Existing user promoted to admin:', adminEmail)
       }

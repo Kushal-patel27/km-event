@@ -1,4 +1,5 @@
 import Event from "../models/Event.js";
+import { ADMIN_ROLE_SET } from "../models/User.js";
 
 export const createEvent = async (req, res) => {
   try {
@@ -64,7 +65,21 @@ export const createEvent = async (req, res) => {
 
 export const getEvents = async (req, res) => {
   try {
-    const events = await Event.find().populate("organizer", "name email");
+    // Super admin and staff can see all events
+    // Event admin and staff admin assigned to events can only see their assigned events
+    const user = req.user;
+    let query = {};
+
+    // If user is event_admin or staff_admin, filter by assignedEvents
+    if (user && ['event_admin', 'staff_admin'].includes(user.role)) {
+      if (!user.assignedEvents || user.assignedEvents.length === 0) {
+        // No events assigned
+        return res.json([]);
+      }
+      query._id = { $in: user.assignedEvents };
+    }
+
+    const events = await Event.find(query).populate("organizer", "name email");
     res.json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -80,6 +95,14 @@ export const getEventById = async (req, res) => {
     if (!event)
       return res.status(404).json({ message: "Event not found" });
 
+    // Check authorization for event_admin/staff_admin
+    if (req.user && ['event_admin', 'staff_admin'].includes(req.user.role)) {
+      const isAssigned = req.user.assignedEvents && req.user.assignedEvents.some(id => String(id) === String(event._id));
+      if (!isAssigned) {
+        return res.status(403).json({ message: "Not authorized to view this event" });
+      }
+    }
+
     res.json(event);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -88,7 +111,19 @@ export const getEventById = async (req, res) => {
 
 export const getMyEvents = async (req, res) => {
   try {
-    const events = await Event.find({ organizer: req.user._id });
+    const user = req.user;
+    
+    // event_admin sees their assigned events
+    if (user.role === 'event_admin') {
+      if (!user.assignedEvents || user.assignedEvents.length === 0) {
+        return res.json([]);
+      }
+      const events = await Event.find({ _id: { $in: user.assignedEvents } }).populate("organizer", "name email");
+      return res.json(events);
+    }
+
+    // Default: get by organizer (original behavior for other users)
+    const events = await Event.find({ organizer: user._id });
     res.json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -100,8 +135,11 @@ export const updateEvent = async (req, res) => {
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    // Only organizer or admin can update
-    if (String(event.organizer) !== String(req.user._id) && req.user.role !== 'admin') {
+    const isSuper = req.user?.role === 'super_admin';
+    const isOwner = String(event.organizer) === String(req.user._id);
+    // Only organizer or super admin can update (legacy "admin" also allowed)
+    const isLegacyAdmin = req.user?.role === 'admin';
+    if (!isOwner && !isSuper && !isLegacyAdmin) {
       return res.status(403).json({ message: "Not authorized to update this event" });
     }
 
@@ -133,8 +171,10 @@ export const deleteEvent = async (req, res) => {
     const event = await Event.findById(req.params.id)
     if (!event) return res.status(404).json({ message: 'Event not found' })
 
-    // Organizer or admin can delete
-    if (String(event.organizer) !== String(req.user._id) && req.user.role !== 'admin') {
+    const isSuper = req.user?.role === 'super_admin';
+    const isOwner = String(event.organizer) === String(req.user._id);
+    const isLegacyAdmin = req.user?.role === 'admin';
+    if (!isOwner && !isSuper && !isLegacyAdmin) {
       return res.status(403).json({ message: 'Not authorized to delete this event' })
     }
 

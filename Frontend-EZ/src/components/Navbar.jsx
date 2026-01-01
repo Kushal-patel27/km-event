@@ -12,8 +12,8 @@ export default function Navbar(){
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  function handleLogout(){
-    logout()
+  async function handleLogout(){
+    await logout()
     navigate('/')
     setMobileMenuOpen(false)
   }
@@ -33,7 +33,7 @@ export default function Navbar(){
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link to="/" className="h-full flex items-center hover:opacity-90 transition-opacity">
-              <Logo dark={isDarkMode} />
+              <Logo dark={isDarkMode} key={`navbar-logo-${isDarkMode}`} size="4xl" />
             </Link>
           </div>
 
@@ -51,7 +51,10 @@ export default function Navbar(){
               </Link>
             )}
             {user && user.isAdmin && (
-              <Link to="/admin" className={`font-medium transition ${location.pathname.startsWith('/admin') ? 'text-red-600 dark:text-red-500' : 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500'}`}>
+              <Link
+                to={user.role === 'event_admin' ? '/event-admin' : user.role === 'staff_admin' ? '/staff/scanner' : '/admin'}
+                className={`font-medium transition ${location.pathname.startsWith('/admin') || location.pathname.startsWith('/event-admin') || location.pathname.startsWith('/staff') ? 'text-red-600 dark:text-red-500' : 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500'}`}
+              >
                 Admin
               </Link>
             )}

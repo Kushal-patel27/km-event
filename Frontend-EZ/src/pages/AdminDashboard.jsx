@@ -18,8 +18,11 @@ export default function AdminDashboard(){
         setError('')
         const token = user?.token || localStorage.getItem('token')
         const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
+        const isSuper = user?.role === 'super_admin' || user?.role === 'admin'
+        const eventsUrl = isSuper ? '/events' : '/events/my'
+
         const [evRes, bkRes] = await Promise.all([
-          API.get('/events'),
+          API.get(eventsUrl, config),
           API.get('/bookings/all', config)
         ])
         const evs = (evRes.data || []).map(e => ({

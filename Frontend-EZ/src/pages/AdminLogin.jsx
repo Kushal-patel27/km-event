@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import API from '../services/api'
 
 export default function AdminLogin() {
+  const [email, setEmail] = useState('admin@local')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -18,27 +19,12 @@ export default function AdminLogin() {
     setLoading(true)
 
     try {
-      // Call backend admin login
-      const res = await API.post('/auth/login', {
-        email: 'admin@local',
+      const res = await API.post('/auth/admin/login', {
+        email,
         password,
       })
 
-      // Check admin role
-      if (res.data.role !== 'admin') {
-        setError('Not an admin account')
-        return
-      }
-
-      // Save auth data
-      login({
-        name: res.data.name,
-        email: res.data.email,
-        token: res.data.token,
-        role: res.data.role,
-      })
-
-      // Redirect to admin dashboard
+      login(res.data)
       navigate('/admin')
     } catch (err) {
       console.error('Admin login error:', err)
@@ -66,6 +52,21 @@ export default function AdminLogin() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Admin Email
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin mail"
+              disabled={loading}
+              className="mt-1 p-2 border border-gray-300 rounded w-full focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Admin Password
