@@ -10,8 +10,8 @@ export function useDarkMode() {
   return context
 }
 
-export function DarkModeProvider({ children }) {
-  const [isDarkMode, setIsDarkMode] = useState(false)
+export function DarkModeProvider({ children, forceDark = false }) {
+  const [isDarkMode, setIsDarkMode] = useState(forceDark ? true : false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -28,6 +28,9 @@ export function DarkModeProvider({ children }) {
   }, [])
 
   const toggleDarkMode = () => {
+    // Don't allow toggle if forceDark is true
+    if (forceDark) return
+    
     const newMode = !isDarkMode
     setIsDarkMode(newMode)
 

@@ -2,23 +2,37 @@ import React from 'react'
 import Logo from './Logo'
 
 export default function Ticket({ booking }) {
-  const { event, user, id, _id, seats, quantity, date, qrCode } = booking
+  const { event, user, id, _id, seats, quantity, date, qrCodes, qrCode, ticketIds, scans } = booking
   
   // Determine individual tickets based on seats array or quantity
   let ticketItems = []
   const baseId = _id || id || Date.now().toString()
 
   if (Array.isArray(seats) && seats.length > 0) {
-    ticketItems = seats.map(seat => ({
-      seatLabel: seat.toString(),
-      qrId: `${baseId}-${seat}`
-    }))
+    ticketItems = seats.map((seat, idx) => {
+      const ticketId = ticketIds && ticketIds[idx] ? ticketIds[idx] : null
+      const isScanned = scans && scans.some(s => s.ticketId === ticketId)
+      return {
+        seatLabel: seat.toString(),
+        qrId: `${baseId}-${seat}`,
+        ticketId,
+        qrImage: qrCodes && qrCodes[idx] ? qrCodes[idx].image : null,
+        isScanned,
+        ticketIndex: idx + 1
+      }
+    })
   } else {
     const count = quantity || (typeof seats === 'number' ? seats : 1)
     for (let i = 0; i < count; i++) {
+      const ticketId = ticketIds && ticketIds[i] ? ticketIds[i] : null
+      const isScanned = scans && scans.some(s => s.ticketId === ticketId)
       ticketItems.push({
         seatLabel: count > 1 ? `#${i + 1}` : 'General',
-        qrId: `${baseId}-${i + 1}`
+        qrId: `${baseId}-${i + 1}`,
+        ticketId,
+        qrImage: qrCodes && qrCodes[i] ? qrCodes[i].image : null,
+        isScanned,
+        ticketIndex: i + 1
       })
     }
   }
@@ -26,10 +40,10 @@ export default function Ticket({ booking }) {
   return (
     <div className="flex flex-col gap-6 w-full max-w-4xl mx-auto">
       {ticketItems.map((item) => {
-        // Prefer backend-provided QR image (data URL) if available,
-        // otherwise fall back to generating one via external API.
-        const qrUrl = qrCode || (() => {
+        // Use backend-provided QR image with unique ticket ID
+        const qrUrl = item.qrImage || (() => {
           const qrData = JSON.stringify({ 
+            ticketId: item.ticketId,
             bid: item.qrId, 
             uid: user?.id,
             evt: event?.id 
@@ -67,6 +81,16 @@ export default function Ticket({ booking }) {
                     </div>
                   </div>
                 </div>
+                {item.isScanned && (
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-bold text-green-600 uppercase">Used</span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
                   <div className="bg-white bg-opacity-5 border border-gray-600 border-opacity-30 rounded-lg p-4 md:p-5 hover:bg-opacity-10 transition-all">
@@ -136,6 +160,10 @@ export default function Ticket({ booking }) {
                   <p className="text-lg md:text-xl font-mono font-bold tracking-widest text-red-500 bg-black bg-opacity-30 px-3 py-2 rounded-lg">{item.qrId.toString().toUpperCase().slice(0, 12)}</p>
                   <p className="text-xs text-gray-500 mt-3 tracking-wider">Valid for one entry</p>
                 </div>
+                <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold mb-2">Scan Entry</p>
+                {item.ticketId && (
+                  <p className="text-sm font-mono font-bold tracking-widest text-indigo-300">{item.ticketId}</p>
+                )}
               </div>
             </div>
           </div>
