@@ -9,9 +9,9 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
   const navigate = useNavigate()
 
   const nav = [
-    { to: '/event-admin', label: 'Dashboard' },
-    { to: '/event-admin/events', label: 'My Events' },
-    { to: '/event-admin/bookings', label: 'My Bookings' },
+    { to: '/event-admin', label: '📊 Dashboard', exact: true },
+    { to: '/event-admin/events', label: '🎫 My Events' },
+    { to: '/event-admin/bookings', label: '📋 Bookings' },
   ]
 
   async function handleLogout(){
@@ -48,15 +48,24 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
         <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 mt-6">
           <aside className="bg-white border border-gray-200 rounded-xl p-3 h-fit">
             <nav className="flex flex-col gap-1">
-              {nav.map(item => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`px-3 py-2 rounded-lg ${location.pathname === item.to ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100'}`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {nav.map(item => {
+                const isActive = item.exact 
+                  ? location.pathname === item.to 
+                  : location.pathname.startsWith(item.to);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </nav>
           </aside>
 

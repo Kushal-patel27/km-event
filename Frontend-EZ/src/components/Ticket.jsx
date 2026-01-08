@@ -2,7 +2,7 @@ import React from 'react'
 import Logo from './Logo'
 
 export default function Ticket({ booking }) {
-  const { event, user, id, _id, seats, quantity, date, qrCodes, qrCode, ticketIds, scans } = booking
+  const { event, user, id, _id, seats, quantity, date, qrCodes, qrCode, ticketIds, scans, ticketType } = booking
   
   // Determine individual tickets based on seats array or quantity
   let ticketItems = []
@@ -75,9 +75,16 @@ export default function Ticket({ booking }) {
                       <span className="text-xs text-red-500 font-bold uppercase tracking-wider">Event Entry Pass</span>
                     </div>
                     <h2 className="text-2xl md:text-4xl font-black text-white leading-tight tracking-tight mb-3 line-clamp-2">{event.title}</h2>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 bg-opacity-20 border border-red-600 border-opacity-30 text-red-400 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-opacity-30 transition-all">
-                      <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
-                      {event.category || 'General Admission'}
+                    <div className="flex flex-wrap gap-2">
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 bg-opacity-20 border border-red-600 border-opacity-30 text-red-400 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-opacity-30 transition-all">
+                        <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
+                        {event.category || 'General Admission'}
+                      </div>
+                      {ticketType && (
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 bg-opacity-20 border border-indigo-600 border-opacity-30 text-indigo-400 text-xs font-bold uppercase tracking-widest rounded-full">
+                          {ticketType.name}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

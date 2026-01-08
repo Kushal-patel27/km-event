@@ -4,84 +4,149 @@ import API from '../services/api'
 import formatINR from '../utils/currency'
 
 export default function EventAdminBookings(){
+  const [events, setEvents] = useState([])
+  const [selectedEvent, setSelectedEvent] = useState(null)
   const [bookings, setBookings] = useState([])
-  const [grouped, setGrouped] = useState({ all: [], live: [], upcoming: [], past: [] })
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const sectionRefs = {
-    all: useRef(null), live: useRef(null), upcoming: useRef(null), past: useRef(null)
-  }
 
   useEffect(()=>{
     const load = async () => {
       try {
-        const res = await API.get('/bookings/all')
-        const all = res.data || []
-        setBookings(all)
-        const now = new Date()
-        const groups = { all, live: [], upcoming: [], past: [] }
-        all.forEach(b => {
-          const d = b.event?.date ? new Date(b.event.date) : null
-          if(!d || isNaN(d)) groups.live.push(b)
-          else if(d.toDateString() === now.toDateString()) groups.live.push(b)
-          else if(d > now) groups.upcoming.push(b)
-          else groups.past.push(b)
-        })
-        setGrouped(groups)
+        setLoading(true)
+        const res = await API.get('/event-admin/events')
+        setEvents(res.data || [])
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load bookings')
+        setError(err.response?.data?.message || 'Failed to load events')
+      } finally {
+        setLoading(false)
       }
     }
     load()
   }, [])
 
+  useEffect(() => {
+    if (selectedEvent) {
+      loadBookings(selectedEvent._id)
+    }
+  }, [selectedEvent])
+
+  const loadBookings = async (eventId) => {
+    try {
+      const res = await API.get(`/event-admin/events/${eventId}/bookings`)
+      setBookings(res.data.bookings || [])
+    } catch (err) {
+      setError('Failed to load bookings')
+    }
+  }
+
+  if (loading) {
+    return (
+      <EventAdminLayout title="Bookings">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      </EventAdminLayout>
+    )
+  }
+
   return (
-    <EventAdminLayout title="My Bookings">
-      {error && <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">{error}</div>}
+    <EventAdminLayout title="Bookings">
+      {error && <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700 mb-4">{error}</div>}
 
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold">Bookings by Time</h3>
-        <div className="flex flex-wrap gap-2 text-sm">
-          {[
-            { key: 'all', label: 'All' },
-            { key: 'live', label: 'Live Today' },
-            { key: 'upcoming', label: 'Upcoming' },
-            { key: 'past', label: 'Past' },
-          ].map(btn => (
-            <button
-              key={btn.key}
-              onClick={()=>sectionRefs[btn.key]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="px-3 py-1 border rounded hover:bg-gray-100"
-            >
-              {btn.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {[{ key: 'all', label: 'All Bookings' }, { key: 'live', label: 'Current Live Events' }, { key: 'upcoming', label: 'Upcoming Events' }, { key: 'past', label: 'Past Events' }].map(section => (
-        <div key={section.key} className="mb-6" ref={sectionRefs[section.key]}>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-md font-semibold">{section.label}</h4>
-            <div className="text-sm text-gray-500">{grouped[section.key]?.length || 0} bookings</div>
-          </div>
-          <div className="space-y-2">
-            {(grouped[section.key] || []).map(b => (
-              <div key={b._id} className="bg-white border rounded p-3 flex justify-between items-center">
-                <div>
-                  <div className="font-semibold">Event: {b.event?.title || b.eventId}</div>
-                  <div className="text-sm text-gray-600">{b.quantity} × {formatINR((Number(b.totalAmount || b.total || 0) / Math.max(1, Number(b.quantity) || 1)) || 0)} — {b.user?.name} • {b.user?.email}</div>
-                  {b.event?.date && <div className="text-xs text-gray-500">{new Date(b.event.date).toLocaleString()}</div>}
-                  {b.seats && b.seats.length>0 && <div className="text-sm text-gray-600">Seats: {Array.isArray(b.seats) ? b.seats.join(', ') : String(b.seats)}</div>}
+      {!selectedEvent ? (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Select an Event</h3>
+          {events.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center text-gray-500">
+              No events assigned to you yet.
+            </div>
+          ) : (
+            events.map(event => (
+              <div 
+                key={event._id}
+                onClick={() => setSelectedEvent(event)}
+                className="bg-white border border-gray-200 rounded-xl p-4 cursor-pointer hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold">{event.title}</div>
+                    <div className="text-sm text-gray-600">
+                      {new Date(event.date).toLocaleDateString()} • {event.location}
+                    </div>
+                  </div>
+                  <button className="text-indigo-600 hover:text-indigo-700 font-medium">
+                    View Bookings →
+                  </button>
                 </div>
-                <div className="text-right font-bold">{formatINR(Number(b.totalAmount || b.total || 0))}</div>
               </div>
-            ))}
-            {(grouped[section.key] || []).length === 0 && (
-              <div className="text-sm text-gray-500 border rounded p-3">No bookings in this section</div>
-            )}
-          </div>
+            ))
+          )}
         </div>
-      ))}
+      ) : (
+        <div>
+          <button 
+            onClick={() => setSelectedEvent(null)}
+            className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
+            ← Back to Events
+          </button>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+            <h2 className="text-2xl font-bold">{selectedEvent.title}</h2>
+            <div className="text-sm text-gray-600 mt-2">
+              {new Date(selectedEvent.date).toLocaleDateString()} • {selectedEvent.location}
+            </div>
+          </div>
+
+          {bookings.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center text-gray-500">
+              No bookings for this event yet
+            </div>
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Customer</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Email</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Tickets</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Amount</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Date</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Status</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Scanned</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings.map(booking => (
+                      <tr key={booking._id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="px-4 py-3">{booking.user?.name || 'N/A'}</td>
+                        <td className="px-4 py-3">{booking.user?.email || 'N/A'}</td>
+                        <td className="px-4 py-3">{booking.quantity || 1}</td>
+                        <td className="px-4 py-3">{formatINR(booking.totalAmount || 0)}</td>
+                        <td className="px-4 py-3">{new Date(booking.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                            booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                            'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {booking.lastScannedAt ? '✅ Yes' : '❌ No'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </EventAdminLayout>
   )
 }

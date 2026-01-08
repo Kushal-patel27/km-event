@@ -135,12 +135,19 @@ export const loginUser = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
+    if (!user.active) {
+      return res.status(403).json({ message: "Account disabled. Contact support." });
+    }
+
     if (!user.password) {
       return res.status(400).json({ message: "Password login not available for this account" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password || "");
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    user.lastLoginAt = new Date();
+    await user.save();
 
     const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
       expiresIn: "7d",
@@ -151,6 +158,7 @@ export const loginUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      lastLoginAt: user.lastLoginAt,
       token,
     });
   } catch (error) {
@@ -166,6 +174,10 @@ export const loginAdmin = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
+    if (!user.active) {
+      return res.status(403).json({ message: "Account disabled. Contact support." });
+    }
+
     // Check if user is an admin
     if (!ADMIN_ROLE_SET.has(user.role)) {
       return res.status(403).json({ message: "Only admin users can login here" });
@@ -178,6 +190,9 @@ export const loginAdmin = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password || "");
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
+    user.lastLoginAt = new Date();
+    await user.save();
+
     const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
@@ -187,6 +202,53 @@ export const loginAdmin = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      lastLoginAt: user.lastLoginAt,
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Login staff (scanner) user
+export const loginStaff = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+    if (!user.active) {
+      return res.status(403).json({ message: "Account disabled. Contact support." });
+    }
+
+    // Check if user is staff (scanner only)
+    if (user.role !== "staff") {
+      return res.status(403).json({ message: "Only scanner staff can login here" });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({ message: "Password login not available for this account" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password || "");
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      assignedEvents: user.assignedEvents,
+      assignedGates: user.assignedGates,
+      lastLoginAt: user.lastLoginAt,
       token,
     });
   } catch (error) {

@@ -2,6 +2,7 @@ import Booking from "../models/Booking.js";
 import Event from "../models/Event.js";
 import generateQR from "../utils/generateQR.js";
 import { ADMIN_ROLE_SET } from "../models/User.js";
+import SystemConfig from "../models/SystemConfig.js";
 import crypto from "crypto";
 
 function generateUniqueTicketId() {
@@ -16,7 +17,7 @@ function generateUniqueTicketId() {
 }
 
 export const createBooking = async (req, res) => {
-  const { eventId, quantity } = req.body;
+  const { eventId, quantity, ticketTypeId } = req.body;
 
   try {
     // Ensure user is authenticated
@@ -28,10 +29,32 @@ export const createBooking = async (req, res) => {
     if (!event)
       return res.status(404).json({ message: "Event not found" });
 
+    // Handle ticket type selection
+    let ticketTypeData = null;
+    let price = event.price;
+
+    if (ticketTypeId && event.ticketTypes && event.ticketTypes.length > 0) {
+      const selectedType = event.ticketTypes.id(ticketTypeId);
+      if (!selectedType) {
+        return res.status(400).json({ message: "Invalid ticket type" });
+      }
+      if (selectedType.available < quantity) {
+        return res.status(400).json({ message: `Only ${selectedType.available} tickets available for ${selectedType.name}` });
+      }
+      price = selectedType.price;
+      ticketTypeData = {
+        name: selectedType.name,
+        price: selectedType.price,
+        description: selectedType.description || ''
+      };
+      // Reduce ticket type availability
+      selectedType.available -= quantity;
+    }
+
     if (event.availableTickets < quantity)
       return res.status(400).json({ message: "Not enough tickets" });
 
-    const totalAmount = quantity * event.price;
+    const totalAmount = quantity * price;
 
     // Generate unique ticket IDs
     const ticketIds = [];
@@ -45,29 +68,60 @@ export const createBooking = async (req, res) => {
       quantity,
       totalAmount,
       ticketIds,
+      ...(ticketTypeData && { ticketType: ticketTypeData })
     });
 
     // Reduce tickets
     event.availableTickets -= quantity;
     await event.save();
 
-    // Generate unique QR codes (one per ticket with ticket ID)
+    // Check system config for QR code generation
+    let qrEnabled = true; // default: enabled
+    try {
+      const systemConfig = await SystemConfig.findById("system_config");
+      
+      if (systemConfig) {
+        // Explicitly check the boolean value
+        const isQrEnabled = systemConfig.qrCodeRules?.enabled;
+        if (isQrEnabled === false) {
+          qrEnabled = false;
+          console.log(`[QR BOOKING] QR Code generation DISABLED`);
+        } else if (isQrEnabled === true) {
+          qrEnabled = true;
+          console.log(`[QR BOOKING] QR Code generation ENABLED`);
+        } else {
+          console.log(`[QR BOOKING] qrCodeRules.enabled not explicitly set, defaulting to: true`);
+        }
+      } else {
+        console.log(`[QR BOOKING] No SystemConfig found, defaulting to: true`);
+      }
+    } catch (configError) {
+      console.error('[QR BOOKING ERROR]', configError.message);
+      // Continue with default (enabled) if config fetch fails
+    }
+
+    // Generate unique QR codes only if enabled (one per ticket with ticket ID)
     const qrCodes = [];
-    for (let i = 0; i < quantity; i++) {
-      const ticketId = ticketIds[i];
-      const qrData = JSON.stringify({
-        ticketId: ticketId,
-        bid: booking._id.toString(),
-        idx: i + 1,
-        evt: eventId.toString(),
-      });
-      const image = await generateQR(qrData);
-      qrCodes.push({ id: ticketId, image });
+    if (qrEnabled) {
+      for (let i = 0; i < quantity; i++) {
+        const ticketId = ticketIds[i];
+        const qrData = JSON.stringify({
+          ticketId: ticketId,
+          bid: booking._id.toString(),
+          idx: i + 1,
+          evt: eventId.toString(),
+        });
+        const image = await generateQR(qrData);
+        qrCodes.push({ id: ticketId, image });
+      }
     }
 
     booking.qrCodes = qrCodes;
     booking.qrCode = qrCodes.length > 0 ? qrCodes[0].image : undefined; // legacy: first QR as string
     await booking.save();
+
+    console.log(`[BOOKING] QR Code generation: ${qrEnabled ? 'ENABLED' : 'DISABLED'} - Generated ${qrCodes.length} QR codes`);
+
 
     res.status(201).json(booking);
   } catch (error) {
@@ -78,7 +132,7 @@ export const createBooking = async (req, res) => {
 export const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ user: req.user._id })
-      .populate("event", "title location date image category price totalTickets availableTickets");
+      .populate("event", "title location date image category price totalTickets availableTickets ticketTypes");
 
     res.json(bookings);
   } catch (error) {

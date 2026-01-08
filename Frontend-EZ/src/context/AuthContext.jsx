@@ -1,12 +1,17 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import API, { setAuthToken } from '../services/api'
 
 const AuthContext = createContext()
 const ADMIN_ROLES = ['super_admin', 'event_admin', 'staff_admin', 'admin']
 
+function normalizeRole(rawRole){
+  if(!rawRole) return 'user'
+  return String(rawRole).toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_')
+}
+
 function enrichUser(userObj){
   if(!userObj) return null
-  const role = userObj.role || 'user'
+  const role = normalizeRole(userObj.role)
   return {
     ...userObj,
     role,
@@ -19,7 +24,7 @@ export function AuthProvider({ children }){
 
   useEffect(()=>{
     if(user?.token) setAuthToken(user.token)
-  }, [])
+  }, [user?.token])
 
   useEffect(()=>{
     if(user) {
@@ -33,13 +38,13 @@ export function AuthProvider({ children }){
     }
   }, [user])
 
-  function login(userObj){
+  const login = useCallback((userObj) => {
     const enriched = enrichUser(userObj)
     if(enriched?.token) setAuthToken(enriched.token)
     setUser(enriched)
-  }
+  }, [])
 
-  async function logout(){
+  const logout = useCallback(async () => {
     try {
       await API.post('/auth/logout')
     } catch (err) {
@@ -47,11 +52,11 @@ export function AuthProvider({ children }){
     }
     setAuthToken(null)
     setUser(null)
-  }
+  }, [])
 
-  function signup(userObj){
+  const signup = useCallback((userObj) => {
     login(userObj)
-  }
+  }, [login])
 
   return (
     <AuthContext.Provider value={{ user, login, logout, signup }}>

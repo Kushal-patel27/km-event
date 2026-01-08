@@ -1,13 +1,10 @@
-import React, {useEffect, useRef, useState} from 'react'
+import React, { useEffect, useState } from 'react'
 import API from '../services/api'
-import { getEventById, getEvents } from '../utils/eventsStore'
 import formatINR from '../utils/currency'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
 import AdminLayout from '../components/AdminLayout'
 
-function exportCSV(rows, filename = 'bookings-summary.csv'){
-  if(!rows || rows.length === 0) return
+function exportCSV(rows, filename = 'bookings.csv') {
+  if (!rows || rows.length === 0) return
   const headers = Object.keys(rows[0])
   const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(','))).join('\n')
   const blob = new Blob([csv], { type: 'text/csv' })
@@ -19,172 +16,345 @@ function exportCSV(rows, filename = 'bookings-summary.csv'){
   URL.revokeObjectURL(url)
 }
 
-export default function AdminBookings(){
-  const { user } = useAuth()
-  const role = user?.role || 'user'
-  const canDelete = role === 'super_admin' || role === 'admin'
+export default function AdminBookings() {
   const [bookings, setBookings] = useState([])
-  const [summary, setSummary] = useState([])
-  const [grouped, setGrouped] = useState({ all: [], live: [], upcoming: [], past: [] })
-  const sectionRefs = {
-    all: useRef(null),
-    live: useRef(null),
-    upcoming: useRef(null),
-    past: useRef(null),
-  }
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [limit] = useState(20)
+  const [statusFilter, setStatusFilter] = useState('')
+  const [eventFilter, setEventFilter] = useState('')
+  const [events, setEvents] = useState([])
+  const [selectedBooking, setSelectedBooking] = useState(null)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
 
-  useEffect(()=>{
-    const fetch = async () => {
-      try {
-        const token = user?.token || localStorage.getItem('token')
-        const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
-        const res = await API.get('/bookings/all', config)
-        const all = res.data
-        setBookings(all)
+  useEffect(() => {
+    fetchBookings()
+    fetchEvents()
+  }, [page, statusFilter, eventFilter])
 
-        // Aggregate
-        const map = {}
-        all.forEach(b => {
-          const eid = String(b.event?._id || b.event?.id || b.eventId || 'unknown')
-          if(!map[eid]) map[eid] = { eventId: eid, title: b.event?.title || 'Unknown', tickets: 0, bookings: 0, revenue: 0 }
-          map[eid].bookings += 1
-          const qty = Number(b.quantity) || 1
-          map[eid].tickets += qty
-          const amt = Number(b.totalAmount || b.total || 0)
-          map[eid].revenue += amt
-        })
-        setSummary(Object.values(map))
-
-        // Group by event time
-        const now = new Date()
-        const groups = { all: all, live: [], upcoming: [], past: [] }
-        all.forEach(b => {
-          const d = b.event?.date ? new Date(b.event.date) : null
-          if(!d || isNaN(d)) {
-            groups.live.push(b)
-            return
-          }
-          if(d.toDateString() === now.toDateString()) {
-            groups.live.push(b)
-          } else if(d > now) {
-            groups.upcoming.push(b)
-          } else {
-            groups.past.push(b)
-          }
-        })
-        setGrouped(groups)
-      } catch (err) {
-        console.error('Failed to load bookings', err)
-      }
-    }
-    fetch()
-  }, [user])
-
-  async function handleDelete(id){
-    if(!canDelete) return
-    if(!confirm('Delete this booking?')) return
+  const fetchBookings = async () => {
     try {
-      const token = user?.token || localStorage.getItem('token')
-      const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
-      await API.delete(`/bookings/${id}`, config)
-      setBookings(prev => prev.filter(b => String(b._id) !== String(id)))
-      setSummary(prev => prev.map(s => ({ ...s, tickets: s.tickets, bookings: s.bookings })))
+      setLoading(true)
+      setError('')
+      const params = new URLSearchParams({
+        page,
+        limit,
+        ...(statusFilter && { status: statusFilter }),
+        ...(eventFilter && { eventId: eventFilter }),
+      })
+      const res = await API.get(`/admin/bookings?${params}`)
+      setBookings(res.data.bookings)
+      setTotal(res.data.pagination.total)
     } catch (err) {
-      console.error('Delete failed', err)
-      alert('Delete failed')
+      console.error('Failed to load bookings', err)
+      setError(err.response?.data?.message || 'Failed to load bookings')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const events = getEvents()
+  const fetchEvents = async () => {
+    try {
+      const res = await API.get('/admin/events?limit=100')
+      setEvents(res.data.events)
+    } catch (err) {
+      console.error('Failed to load events', err)
+    }
+  }
+
+  const handleStatusUpdate = async (bookingId, newStatus) => {
+    try {
+      setUpdatingStatus(true)
+      setError('')
+      const res = await API.put(`/admin/bookings/${bookingId}/status`, { status: newStatus })
+      console.log('Status updated successfully:', res.data)
+      setBookings(prev =>
+        prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b)
+      )
+      setSelectedBooking(null)
+    } catch (err) {
+      console.error('Status update error:', err)
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to update booking status'
+      setError(errorMsg)
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
 
   return (
     <AdminLayout title="Bookings">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Bookings Summary</h2>
-        <div className="flex items-center gap-2">
-          {(role === 'super_admin' || role === 'admin' || role === 'event_admin') && (
-            <Link to="/admin/events" className="px-3 py-1 bg-indigo-600 text-white rounded">Manage / Create Events</Link>
-          )}
-          <button onClick={()=>exportCSV(summary)} className="px-3 py-1 border rounded">Export CSV</button>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {error}
         </div>
+      )}
+
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Booking Management</h2>
+        <button
+          onClick={() => exportCSV(bookings)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+        >
+          ↓ Export CSV
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {summary.map(s => (
-          <div key={s.eventId} className="bg-white p-4 rounded border">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="font-bold text-lg">{s.title}</div>
-                <div className="text-sm text-gray-500">Event ID: {s.eventId}</div>
-              </div>
-              <div className="text-right">
-                <div className="font-bold text-lg">{s.tickets} Tickets</div>
-                <div className="text-sm text-gray-500">{s.bookings} Bookings</div>
-              </div>
-            </div>
-            <div className="mt-3 text-right font-bold">Revenue: {formatINR(s.revenue)}</div>
-            {/* Simple bar */}
-            <div className="mt-3 h-16 flex items-end gap-2">
-              <div style={{ height: Math.max(8, s.tickets) }} className="bg-indigo-500 w-6 rounded-t" title={`${s.tickets} tickets`} />
-              <div className="flex-1 text-xs text-right text-gray-500">&nbsp;</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold">Bookings by Time</h3>
-        <div className="flex flex-wrap gap-2 text-sm">
-          {[
-            { key: 'all', label: 'All' },
-            { key: 'live', label: 'Live Today' },
-            { key: 'upcoming', label: 'Upcoming' },
-            { key: 'past', label: 'Past' },
-          ].map(btn => (
-            <button
-              key={btn.key}
-              onClick={()=>sectionRefs[btn.key]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="px-3 py-1 border rounded hover:bg-gray-100"
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Event</label>
+            <select
+              value={eventFilter}
+              onChange={(e) => {
+                setEventFilter(e.target.value)
+                setPage(1)
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {btn.label}
+              <option value="">All Events</option>
+              {events.map(e => (
+                <option key={e._id} value={e._id}>
+                  {e.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value)
+                setPage(1)
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="refunded">Refunded</option>
+            </select>
+          </div>
+          <div className="flex-1 flex items-end">
+            <button
+              onClick={() => {
+                setStatusFilter('')
+                setEventFilter('')
+                setPage(1)
+              }}
+              className="w-full px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition border border-gray-200"
+            >
+              Clear Filters
             </button>
-          ))}
+          </div>
         </div>
       </div>
-      {[
-        { key: 'all', label: 'All Bookings' },
-        { key: 'live', label: 'Current Live Events' },
-        { key: 'upcoming', label: 'Upcoming Events' },
-        { key: 'past', label: 'Past Events' },
-      ].map(section => (
-        <div key={section.key} className="mb-6" ref={sectionRefs[section.key]}>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-md font-semibold">{section.label}</h4>
-            <div className="text-sm text-gray-500">{grouped[section.key]?.length || 0} bookings</div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Total Bookings</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">{total}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Page</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">{page} of {Math.ceil(total / limit)}</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <>
+          {/* Bookings Table */}
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 mb-6">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Event</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Qty</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Amount</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Date</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {bookings.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                      No bookings found.
+                    </td>
+                  </tr>
+                ) : (
+                  bookings.map(b => (
+                    <tr key={b._id} className="hover:bg-gray-50 transition">
+                      <td className="px-5 py-4">
+                        <p className="font-semibold text-gray-900">{b.event?.title || '—'}</p>
+                        {b.ticketType?.name && (
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full font-medium">
+                            {b.ticketType.name}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="font-semibold text-gray-900">{b.user?.name || '—'}</p>
+                        <p className="text-xs text-gray-600">{b.user?.email || '—'}</p>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-gray-600">
+                        {b.quantity || 1}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-gray-900">
+                        {formatINR(b.totalAmount || 0)}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            b.status === 'confirmed'
+                              ? 'bg-green-100 text-green-800'
+                              : b.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : b.status === 'cancelled'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {b.status || 'pending'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-gray-600">
+                        {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="px-5 py-4 text-sm space-x-2 whitespace-nowrap">
+                        <select
+                          value={b.status || 'pending'}
+                          onChange={(e) => handleStatusUpdate(b._id, e.target.value)}
+                          disabled={updatingStatus}
+                          className="px-3 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 cursor-pointer"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="cancelled">Cancelled</option>
+                          <option value="refunded">Refunded</option>
+                        </select>
+                        <button
+                          onClick={() => setSelectedBooking(b)}
+                          className="text-gray-600 hover:text-gray-900 font-medium text-xs ml-2"
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-          <div className="space-y-2">
-            {(grouped[section.key] || []).map(b => (
-              <div key={b._id} className="bg-white border rounded p-3 flex justify-between items-center">
+
+          {/* Pagination */}
+          {total > limit && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                Showing {bookings.length > 0 ? (page - 1) * limit + 1 : 0} to{' '}
+                {Math.min(page * limit, total)} of {total} bookings
+              </p>
+              <div className="space-x-2">
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={page * limit >= total}
+                  onClick={() => setPage(page + 1)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Booking Details Modal */}
+      {selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Booking Details</h3>
+                <button
+                  onClick={() => setSelectedBooking(null)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4 mb-6">
                 <div>
-                  <div className="font-semibold">Event: {b.event?.title || events.find(ev=>String(ev.id)===String(b.eventId))?.title || b.eventId}</div>
-                  <div className="text-sm text-gray-600">{b.quantity} × {formatINR((Number(b.totalAmount || b.total || 0) / Math.max(1, Number(b.quantity) || 1)) || 0)} — {b.user?.name} • {b.user?.email}</div>
-                  {b.event?.date && <div className="text-xs text-gray-500">{new Date(b.event.date).toLocaleString()}</div>}
-                  {b.seats && b.seats.length>0 && <div className="text-sm text-gray-600">Seats: {Array.isArray(b.seats) ? b.seats.join(', ') : String(b.seats)}</div>}
+                  <p className="text-gray-600 text-sm">Event</p>
+                  <p className="font-semibold text-gray-900">{selectedBooking.event?.title || '—'}</p>
                 </div>
-                <div className="flex flex-col gap-2 items-end">
-                  <div className="font-bold">{formatINR(Number(b.totalAmount || b.total || 0))}</div>
-                  {canDelete && (
-                    <button onClick={()=>handleDelete(b._id)} className="px-3 py-1 bg-red-600 text-white rounded">Delete</button>
-                  )}
+                <div>
+                  <p className="text-gray-600 text-sm">Customer</p>
+                  <p className="font-semibold text-gray-900">{selectedBooking.user?.name || '—'}</p>
+                  <p className="text-xs text-gray-600">{selectedBooking.user?.email || '—'}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-600 text-sm">Quantity</p>
+                    <p className="font-semibold text-gray-900">{selectedBooking.quantity || 1}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm">Amount</p>
+                    <p className="font-semibold text-gray-900">{formatINR(selectedBooking.totalAmount || 0)}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-sm mb-2">Status</p>
+                  <select
+                    value={selectedBooking.status || 'pending'}
+                    onChange={(e) => handleStatusUpdate(selectedBooking._id, e.target.value)}
+                    disabled={updatingStatus}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-sm">Booked On</p>
+                  <p className="font-semibold text-gray-900">
+                    {selectedBooking.createdAt ? new Date(selectedBooking.createdAt).toLocaleString() : '—'}
+                  </p>
                 </div>
               </div>
-            ))}
-            {(grouped[section.key] || []).length === 0 && (
-              <div className="text-sm text-gray-500 border rounded p-3">No bookings in this section</div>
-            )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setSelectedBooking(null)}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      ))}
+      )}
     </AdminLayout>
   )
 }

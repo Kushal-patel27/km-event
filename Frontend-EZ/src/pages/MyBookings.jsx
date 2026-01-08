@@ -54,13 +54,17 @@ export default function MyBookings() {
         event,
         bookings: [],
         totalTickets: 0,
-        totalAmount: 0
+        totalAmount: 0,
+        ticketTypes: new Set()
       }
     }
 
     acc[event._id].bookings.push(booking)
     acc[event._id].totalTickets += booking.quantity
     acc[event._id].totalAmount += booking.totalAmount || booking.total || 0
+    if (booking.ticketType?.name) {
+      acc[event._id].ticketTypes.add(booking.ticketType.name)
+    }
 
     return acc
   }, {})
@@ -182,7 +186,7 @@ export default function MyBookings() {
 
         {/* Bookings List */}
         <div className="space-y-4 md:space-y-6">
-          {Object.values(groupedByEvent).map(({ event, bookings, totalTickets, totalAmount }) => {
+          {Object.values(groupedByEvent).map(({ event, bookings, totalTickets, totalAmount, ticketTypes }) => {
             const isOpen = activeEventId === event._id
             const eventDate = new Date(event.date)
             const isPast = eventDate < new Date()
@@ -243,6 +247,15 @@ export default function MyBookings() {
                         <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`}>Tickets:</span>
                         <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>{totalTickets}</span>
                       </div>
+                      {ticketTypes.size > 0 && (
+                        <div className="flex items-center gap-2">
+                          <svg className={`w-5 h-5 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                          </svg>
+                          <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Types:</span>
+                          <span className={`font-medium ${isDarkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{Array.from(ticketTypes).join(', ')}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <svg className={`w-5 h-5 ${isDarkMode ? 'text-red-400' : 'text-red-600 flex-shrink-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -322,7 +335,9 @@ export default function MyBookings() {
                                 <svg className={`w-4 h-4 text-green-500`} fill="currentColor" viewBox="0 0 24 24">
                                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
                                 </svg>
-                                <span className={`text-xs font-bold uppercase ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>{booking.scans.length} Scanned</span>
+                                <span className={`text-xs font-bold uppercase ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                                  {Math.min(booking.scans.length, booking.quantity || 1)}/{booking.quantity || 1} Scanned
+                                </span>
                               </div>
                             )}
                           </div>

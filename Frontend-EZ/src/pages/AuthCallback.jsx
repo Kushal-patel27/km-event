@@ -7,8 +7,11 @@ export default function AuthCallback() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [error, setError] = useState("");
+  const [processed, setProcessed] = useState(false);
 
   useEffect(() => {
+    if (processed) return; // Prevent re-running
+
     const token = searchParams.get("token");
     const name = searchParams.get("name");
     const email = searchParams.get("email");
@@ -17,16 +20,18 @@ export default function AuthCallback() {
     if (token && name && email && role) {
       // Save user data to auth context
       login({ name, email, token, role });
+      setProcessed(true);
       
       // Redirect to home page
       navigate("/");
     } else {
       setError("Authentication failed. Please try again.");
+      setProcessed(true);
       setTimeout(() => {
         navigate("/login");
       }, 3000);
     }
-  }, [searchParams, login, navigate]);
+  }, []); // Empty dependency array since we use processed flag
 
   return (
     <div className="min-h-screen flex items-center justify-center">

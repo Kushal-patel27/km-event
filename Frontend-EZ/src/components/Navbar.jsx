@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useDarkMode } from '../context/DarkModeContext'
@@ -11,6 +11,19 @@ export default function Navbar(){
   const location = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const adminHome = useMemo(() => {
+    if(!user?.isAdmin) return null
+    if(user.role === 'super_admin') return '/super-admin'
+    if(user.role === 'event_admin') return '/event-admin'
+    if(user.role === 'staff_admin') return '/staff-admin'
+    return '/admin'
+  }, [user])
+
+  const isAdminArea = useMemo(() => {
+    const adminPrefixes = ['/admin', '/event-admin', '/staff', '/super-admin']
+    return adminPrefixes.some(prefix => location.pathname.startsWith(prefix))
+  }, [location.pathname])
 
   async function handleLogout(){
     await logout()
@@ -50,10 +63,10 @@ export default function Navbar(){
                 My Bookings
               </Link>
             )}
-            {user && user.isAdmin && (
+            {user && user.isAdmin && adminHome && (
               <Link
-                to={user.role === 'event_admin' ? '/event-admin' : user.role === 'staff_admin' ? '/staff/scanner' : '/admin'}
-                className={`font-medium transition ${location.pathname.startsWith('/admin') || location.pathname.startsWith('/event-admin') || location.pathname.startsWith('/staff') ? 'text-red-600 dark:text-red-500' : 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500'}`}
+                to={adminHome}
+                className={`font-medium transition ${isAdminArea ? 'text-red-600 dark:text-red-500' : 'text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-500'}`}
               >
                 Admin
               </Link>
@@ -241,11 +254,11 @@ export default function Navbar(){
                   Settings
                 </Link>
               )}
-              {user && user.isAdmin && (
+              {user && user.isAdmin && adminHome && (
                 <Link
-                  to="/admin"
+                  to={adminHome}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`px-4 py-2 rounded-lg transition ${location.pathname.startsWith('/admin') ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                  className={`px-4 py-2 rounded-lg transition ${isAdminArea ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                 >
                   Admin
                 </Link>

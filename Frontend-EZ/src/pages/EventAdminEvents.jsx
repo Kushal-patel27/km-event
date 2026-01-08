@@ -6,161 +6,898 @@ import { EventForm } from './AdminEvents'
 
 export default function EventAdminEvents() {
   const [events, setEvents] = useState([])
-  const [creating, setCreating] = useState(false)
-  const [editingEvent, setEditingEvent] = useState(null)
-  const [busy, setBusy] = useState(false)
-  const [formError, setFormError] = useState('')
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const res = await API.get('/events/my')
-        const evs = (res.data || []).map(e => ({
-          ...e,
-          id: e.id || e._id,
-          capacity: e.capacity ?? e.totalTickets ?? 0,
-          availableTickets: e.availableTickets ?? e.capacity ?? e.totalTickets ?? 0,
-        }))
-        setEvents(evs)
-      } catch (err) {
-        setFormError(err.response?.data?.message || 'Failed to load events')
-      }
-    }
-    fetch()
+    fetchEvents()
   }, [])
 
-  async function handleCreate(data) {
+  const fetchEvents = async () => {
     try {
-      setBusy(true)
-      setFormError('')
-      const payload = {
-        title: data.title,
-        description: data.description,
-        location: data.location,
-        image: data.image,
-        category: data.category,
-        price: Number(data.price) || 0,
-        date: new Date(data.date).toISOString(),
-        totalTickets: Number(data.capacity),
-        availableTickets: Number(data.capacity),
-      }
-      const res = await API.post('/events', payload)
-      setEvents(prev => [{
-        ...res.data,
-        id: res.data._id || res.data.id,
-        capacity: res.data.capacity ?? res.data.totalTickets ?? data.capacity,
-        availableTickets: res.data.availableTickets ?? res.data.totalTickets ?? data.capacity,
-      }, ...prev])
-      setCreating(false)
+      setLoading(true)
+      setError('')
+      const res = await API.get('/event-admin/events')
+      setEvents(res.data || [])
     } catch (err) {
-      setFormError(err.response?.data?.message || err.message || 'Failed to create event')
+      setError(err.response?.data?.message || 'Failed to load events')
     } finally {
-      setBusy(false)
+      setLoading(false)
     }
   }
 
-  async function handleUpdate(id, data) {
-    try {
-      setBusy(true)
-      setFormError('')
-      const payload = {
-        title: data.title,
-        description: data.description,
-        location: data.location,
-        image: data.image,
-        category: data.category,
-        price: Number(data.price) || 0,
-        date: new Date(data.date).toISOString(),
-        totalTickets: Number(data.capacity),
-      }
-      const res = await API.put(`/events/${id}`, payload)
-      const updated = {
-        ...res.data,
-        id: res.data._id || res.data.id,
-        capacity: res.data.capacity ?? res.data.totalTickets ?? data.capacity,
-        availableTickets: res.data.availableTickets ?? res.data.totalTickets ?? data.capacity,
-      }
-      setEvents(prev => prev.map(ev => ev.id === id ? updated : ev))
-      setEditingEvent(null)
-    } catch (err) {
-      setFormError(err.response?.data?.message || err.message || 'Failed to update event')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleDelete(id) {
-    if (!confirm('Delete this event? This cannot be undone.')) return
-    try {
-      setBusy(true)
-      setFormError('')
-      await API.delete(`/events/${id}`)
-      setEvents(prev => prev.filter(ev => ev.id !== id))
-    } catch (err) {
-      setFormError(err.response?.data?.message || 'Failed to delete event')
-    } finally {
-      setBusy(false)
-    }
+  if (loading) {
+    return (
+      <EventAdminLayout title="My Events">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      </EventAdminLayout>
+    )
   }
 
   return (
     <EventAdminLayout title="My Events">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">My Events</h2>
-        {!creating && !editingEvent && (
-          <button onClick={() => setCreating(true)} className="bg-indigo-600 text-white px-3 py-1 rounded">Add Event</button>
-        )}
-      </div>
-
-      {formError && <div className="mb-3 p-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded">{formError}</div>}
-      {busy && <div className="mb-3 text-sm text-gray-500">Working…</div>}
-
-      {(creating || editingEvent) && (
-        <div className="bg-white border rounded p-4 shadow-sm mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold">{creating ? 'Create Event' : 'Edit Event'}</h3>
-            <button onClick={() => { setCreating(false); setEditingEvent(null) }} className="p-2 rounded hover:bg-gray-100">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <EventForm
-            initial={editingEvent || undefined}
-            onSave={creating ? handleCreate : (data) => handleUpdate(editingEvent.id, data)}
-            onCancel={() => { setCreating(false); setEditingEvent(null) }}
-            busy={busy}
-          />
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {error}
         </div>
       )}
 
-      <div className="space-y-3 mt-4">
-        {events.map(ev => (
-          <div key={ev.id} className="bg-white border rounded p-3 flex justify-between items-start">
-            <div>
-              <div className="font-semibold">{ev.title}</div>
-              <div className="text-sm text-gray-500">{ev.date} • {ev.location}</div>
-              <div className="text-sm mt-2">Price: {formatINR(ev.price)} • Capacity: {ev.capacity}</div>
+      {selectedEvent ? (
+        <EventDetails 
+          event={selectedEvent} 
+          onBack={() => setSelectedEvent(null)}
+          onUpdate={(updatedEvent) => {
+            // Update the events list in real-time
+            setEvents((prev) => prev.map((e) => 
+              e._id === updatedEvent._id ? { ...e, ...updatedEvent } : e
+            ))
+            // Update the selected event as well
+            setSelectedEvent(updatedEvent)
+          }}
+        />
+      ) : (
+        <div className="space-y-4">
+          {events.length === 0 ? (
+            <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+              <p className="text-gray-500">No events assigned to you yet.</p>
             </div>
-            <div className="flex flex-col gap-2">
-              <a href={`/event/${ev.id}`} className="text-indigo-600">View</a>
-              <button
-                onClick={() => { setEditingEvent(ev); setCreating(false) }}
-                className="text-sm px-3 py-1 border rounded"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => handleDelete(ev.id)}
-                className="text-sm px-3 py-1 border rounded text-red-600 border-red-300 hover:bg-red-50"
-              >
-                Delete
-              </button>
+          ) : (
+            events.map(event => (
+              <EventCard 
+                key={event._id} 
+                event={event}
+                onSelect={() => setSelectedEvent(event)}
+              />
+            ))
+          )}
+        </div>
+      )}
+    </EventAdminLayout>
+  )
+}
+
+function EventCard({ event, onSelect }) {
+  const eventDate = new Date(event.date);
+  const isPast = eventDate < new Date();
+  
+  return (
+    <div 
+      className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer"
+      onClick={onSelect}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <h3 className="text-lg font-bold text-gray-900">{event.title}</h3>
+          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+            <span>📅 {eventDate.toLocaleDateString()}</span>
+            <span>📍 {event.location}</span>
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+              isPast ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'
+            }`}>
+              {event.status || (isPast ? 'Completed' : 'Upcoming')}
+            </span>
+          </div>
+          <div className="flex items-center gap-6 mt-4 text-sm">
+            <div>
+              <span className="text-gray-500">Tickets:</span> {event.availableTickets}/{event.totalTickets}
+            </div>
+            <div>
+              <span className="text-gray-500">Price:</span> {formatINR(event.price)}
+            </div>
+            {event.assignedStaff?.length > 0 && (
+              <div>
+                <span className="text-gray-500">Staff:</span> {event.assignedStaff.length}
+              </div>
+            )}
+          </div>
+        </div>
+        <button className="text-indigo-600 hover:text-indigo-700 font-medium">
+          Manage →
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function EventDetails({ event, onBack, onUpdate }) {
+  const [activeTab, setActiveTab] = useState('overview')
+  const [eventData, setEventData] = useState(event)
+  const [loading, setLoading] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editError, setEditError] = useState('')
+
+  const refreshEvent = async () => {
+    try {
+      const res = await API.get(`/event-admin/events/${event._id}`)
+      const updated = res.data
+      setEventData(updated)
+      onUpdate(updated)
+    } catch (err) {
+      console.error('Failed to refresh event:', err)
+    }
+  }
+
+  const handleUpdateEvent = async (formData) => {
+    try {
+      setSaving(true)
+      setEditError('')
+      
+      // Calculate total capacity and use first ticket type price as base price
+      const totalCapacity = formData.ticketTypes.reduce((sum, t) => sum + Number(t.quantity), 0)
+      const basePrice = formData.ticketTypes.length > 0 ? formData.ticketTypes[0].price : 0
+      
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        locationDetails: formData.locationDetails,
+        image: formData.image,
+        category: formData.category,
+        price: basePrice,
+        date: new Date(formData.date).toISOString(),
+        totalTickets: totalCapacity,
+        ticketTypes: formData.ticketTypes || []
+      }
+      const res = await API.put(`/event-admin/events/${event._id}`, payload)
+      const updated = res.data?.event || res.data
+      
+      // Update local state immediately
+      setEventData(updated)
+      // Update parent component's list
+      onUpdate(updated)
+      setEditMode(false)
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Failed to update event')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  useEffect(() => {
+    if (editMode) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => { document.body.style.overflow = 'unset' }
+  }, [editMode])
+
+  const tabs = [
+    { id: 'overview', label: '📊 Overview' },
+    { id: 'tickets', label: '🎫 Ticket Types' },
+    { id: 'staff', label: '👥 Staff' },
+    { id: 'bookings', label: '📋 Bookings' },
+    { id: 'logs', label: '📝 Entry Logs' },
+  ]
+
+  return (
+    <div>
+      <button 
+        onClick={onBack}
+        className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+      >
+        ← Back to Events
+      </button>
+
+      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold text-gray-900">{eventData.title}</h2>
+            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+              <span>📅 {new Date(eventData.date).toLocaleDateString()}</span>
+              <span>📍 {eventData.location}</span>
             </div>
           </div>
+          <button
+            onClick={() => setEditMode(true)}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            ✏️ Edit Event
+          </button>
+        </div>
+      </div>
+
+      {/* Edit Event Modal */}
+      {editMode && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style={{ margin: 0 }}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold">Edit Event</h3>
+              <button
+                onClick={() => { setEditMode(false); setEditError('') }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              {editError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                  {editError}
+                </div>
+              )}
+              <EventForm
+                initial={{
+                  ...eventData,
+                  capacity: eventData.totalTickets
+                }}
+                onSave={handleUpdateEvent}
+                onCancel={() => { setEditMode(false); setEditError('') }}
+                busy={saving}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === tab.id
+                ? 'text-indigo-600 border-b-2 border-indigo-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {tab.label}
+          </button>
         ))}
-        {events.length === 0 && (
-          <div className="text-sm text-gray-500 border rounded p-3">No events yet. Create your first event.</div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && <OverviewTab event={eventData} />}
+      {activeTab === 'tickets' && <TicketTypesTab event={eventData} onRefresh={refreshEvent} />}
+      {activeTab === 'staff' && <StaffTab event={eventData} onRefresh={refreshEvent} />}
+      {activeTab === 'bookings' && <BookingsTab eventId={eventData._id} />}
+      {activeTab === 'logs' && <EntryLogsTab eventId={eventData._id} />}
+    </div>
+  )
+}
+
+function OverviewTab({ event }) {
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchStats = async () => {
+      try {
+        const res = await API.get(`/event-admin/events/${event._id}/stats`)
+        if (!cancelled) setStats(res.data.stats)
+      } catch (err) {
+        console.error('Failed to load stats:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchStats()
+    const intervalId = setInterval(fetchStats, 1000) // keep overview numbers live
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+    }
+  }, [event._id])
+
+  if (loading) return <div className="text-center py-8">Loading stats...</div>
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard label="Total Bookings" value={stats?.totalBookings || 0} />
+        <StatCard label="Confirmed" value={stats?.confirmedBookings || 0} />
+        <StatCard label="Tickets Sold" value={stats?.ticketsSold || 0} />
+        <StatCard label="Available" value={stats?.ticketsAvailable || 0} />
+        <StatCard label="Revenue" value={formatINR(stats?.totalRevenue || 0)} />
+        <StatCard label="Cancelled" value={stats?.cancelledBookings || 0} />
+      </div>
+
+      {/* Event Details */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6">
+        <h3 className="font-bold mb-4">Event Details</h3>
+        <div className="space-y-2 text-sm">
+          <div><span className="font-medium">Description:</span> {event.description}</div>
+          <div><span className="font-medium">Location:</span> {event.location}</div>
+          {event.locationDetails && (
+            <div><span className="font-medium">Venue Details:</span> {event.locationDetails}</div>
+          )}
+          <div><span className="font-medium">Category:</span> {event.category || 'N/A'}</div>
+          <div><span className="font-medium">Price:</span> {formatINR(event.price)}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TicketTypesTab({ event, onRefresh }) {
+  const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [formData, setFormData] = useState({ name: '', price: '', quantity: '', description: '' })
+  const [error, setError] = useState('')
+
+  const handleAdd = async (e) => {
+    e.preventDefault()
+    try {
+      setError('')
+      await API.post(`/event-admin/events/${event._id}/ticket-types`, {
+        name: formData.name,
+        price: Number(formData.price),
+        quantity: Number(formData.quantity),
+        description: formData.description
+      })
+      setFormData({ name: '', price: '', quantity: '', description: '' })
+      setAdding(false)
+      onRefresh()
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to add ticket type')
+    }
+  }
+
+  const handleEdit = (ticket) => {
+    setEditing(ticket._id)
+    setFormData({
+      name: ticket.name,
+      price: ticket.price.toString(),
+      quantity: ticket.quantity.toString(),
+      description: ticket.description || ''
+    })
+  }
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault()
+    try {
+      setError('')
+      await API.put(`/event-admin/events/${event._id}/ticket-types/${editing}`, {
+        name: formData.name,
+        price: Number(formData.price),
+        quantity: Number(formData.quantity),
+        description: formData.description
+      })
+      setFormData({ name: '', price: '', quantity: '', description: '' })
+      setEditing(null)
+      onRefresh()
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update ticket type')
+    }
+  }
+
+  const handleDelete = async (ticketTypeId) => {
+    if (!confirm('Delete this ticket type?')) return
+    try {
+      await API.delete(`/event-admin/events/${event._id}/ticket-types/${ticketTypeId}`)
+      onRefresh()
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded">{error}</div>}
+      
+      <button
+        onClick={() => {
+          setAdding(!adding)
+          setEditing(null)
+          setFormData({ name: '', price: '', quantity: '', description: '' })
+        }}
+        className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+      >
+        {adding ? 'Cancel' : '+ Add Ticket Type'}
+      </button>
+
+      {(adding || editing) && (
+        <form onSubmit={editing ? handleSaveEdit : handleAdd} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <h4 className="font-bold text-gray-900">{editing ? 'Edit Ticket Type' : 'Add New Ticket Type'}</h4>
+          <input
+            type="text"
+            placeholder="Ticket Name (e.g., VIP, General)"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            required
+          />
+          <input
+            type="number"
+            placeholder="Price"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            required
+            min="0"
+          />
+          <input
+            type="number"
+            placeholder="Quantity"
+            value={formData.quantity}
+            onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            required
+            min="1"
+          />
+          <textarea
+            placeholder="Description (optional)"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            rows="2"
+          />
+          <div className="flex gap-2">
+            <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex-1">
+              {editing ? 'Update Ticket Type' : 'Save Ticket Type'}
+            </button>
+            {editing && (
+              <button 
+                type="button"
+                onClick={() => {
+                  setEditing(null)
+                  setFormData({ name: '', price: '', quantity: '', description: '' })
+                }}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+
+      <div className="space-y-3">
+        {event.ticketTypes?.length === 0 ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center text-gray-500">
+            No ticket types yet. Add one to get started.
+          </div>
+        ) : (
+          event.ticketTypes?.map(ticket => (
+            <div key={ticket._id} className="bg-white border border-gray-200 rounded-xl p-4 flex justify-between items-center">
+              <div>
+                <div className="font-bold">{ticket.name}</div>
+                <div className="text-sm text-gray-600">
+                  {formatINR(ticket.price)} • {ticket.available}/{ticket.quantity} available
+                </div>
+                {ticket.description && <div className="text-sm text-gray-500 mt-1">{ticket.description}</div>}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleEdit(ticket)}
+                  className="text-indigo-600 hover:text-indigo-700 px-3 py-1 border border-indigo-300 rounded"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(ticket._id)}
+                  className="text-red-600 hover:text-red-700 px-3 py-1 border border-red-300 rounded"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
-    </EventAdminLayout>
+    </div>
+  )
+}
+
+function StaffTab({ event, onRefresh }) {
+  const [assigning, setAssigning] = useState(false)
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState('staff')
+  const [error, setError] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createLoading, setCreateLoading] = useState(false)
+  const [createForm, setCreateForm] = useState({ name: '', email: '', role: 'staff', gates: '', password: '' })
+
+  const handleAssign = async (e) => {
+    e.preventDefault()
+    try {
+      setError('')
+      // Search for staff by email using Event Admin endpoint
+      const searchRes = await API.get(`/event-admin/staff/search?email=${email}`)
+      const user = searchRes.data.users?.find(u => u.email === email)
+      
+      if (!user) {
+        setError('Staff member not found with that email')
+        return
+      }
+
+      const eventIdStr = event._id?.toString()
+      const otherAssignments = (user.assignedEvents || []).filter(ev => {
+        const id = ev?._id || ev
+        return id?.toString() !== eventIdStr
+      })
+
+      if (otherAssignments.length > 0) {
+        const proceed = window.confirm(
+          `${user.name || 'This staff'} is already assigned to ${otherAssignments.length} other event${otherAssignments.length > 1 ? 's' : ''}. Continue assigning to this event?`
+        )
+        if (!proceed) {
+          setError('Assignment cancelled')
+          return
+        }
+      }
+
+      await API.post(`/event-admin/events/${event._id}/staff`, {
+        userId: user._id,
+        role
+      })
+      setEmail('')
+      setAssigning(false)
+      onRefresh()
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to assign staff')
+    }
+  }
+
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    try {
+      setError('')
+      setCreateLoading(true)
+      const payload = {
+        name: createForm.name,
+        email: createForm.email,
+        role: createForm.role,
+        gates: createForm.role === 'staff' ? createForm.gates.split(',').map(g => g.trim()).filter(Boolean) : [],
+        ...(createForm.password ? { password: createForm.password } : {}),
+      }
+
+      await API.post(`/event-admin/events/${event._id}/staff/new`, payload)
+      setCreateForm({ name: '', email: '', role: 'staff', gates: '', password: '' })
+      setCreating(false)
+      onRefresh()
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create staff')
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
+  const handleRemove = async (staffId) => {
+    if (!staffId) {
+      setError('Could not remove staff: missing staff id')
+      return
+    }
+    if (!confirm('Remove this staff member?')) return
+    try {
+      await API.delete(`/event-admin/events/${event._id}/staff/${staffId}`)
+      onRefresh()
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to remove staff')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded">{error}</div>}
+      
+      <div className="flex flex-wrap gap-3">
+        <button
+          onClick={() => setAssigning(!assigning)}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+        >
+          {assigning ? 'Cancel' : '+ Assign Staff'}
+        </button>
+
+        <button
+          onClick={() => setCreating(!creating)}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+        >
+          {creating ? 'Close Create' : '+ Create New Staff'}
+        </button>
+      </div>
+
+      {assigning && (
+        <form onSubmit={handleAssign} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <input
+            type="email"
+            placeholder="Staff Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            required
+          />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            <option value="staff">Staff</option>
+            <option value="staff_admin">Staff Admin</option>
+          </select>
+          <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+            Assign Staff
+          </button>
+        </form>
+      )}
+
+      {creating && (
+        <form onSubmit={handleCreate} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <h4 className="font-bold text-gray-900">Create & Assign Staff</h4>
+          <input
+            type="text"
+            placeholder="Full Name"
+            value={createForm.name}
+            onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            required
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            value={createForm.email}
+            onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Set password (optional)"
+            value={createForm.password}
+            onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+          />
+          <select
+            value={createForm.role}
+            onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            <option value="staff">Staff (scanner)</option>
+            <option value="staff_admin">Staff Admin</option>
+          </select>
+          {createForm.role === 'staff' && (
+            <input
+              type="text"
+              placeholder="Gates (comma separated)"
+              value={createForm.gates}
+              onChange={(e) => setCreateForm({ ...createForm, gates: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+            />
+          )}
+          <button type="submit" disabled={createLoading} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-60">
+            {createLoading ? 'Creating...' : 'Create & Assign'}
+          </button>
+        </form>
+      )}
+
+      <div className="space-y-3">
+        {event.assignedStaff?.length === 0 ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center text-gray-500">
+            No staff assigned yet.
+          </div>
+        ) : (
+          event.assignedStaff?.map(staff => (
+            <div key={staff._id} className="bg-white border border-gray-200 rounded-xl p-4 flex justify-between items-center">
+              <div>
+                <div className="font-bold">{staff.user?.name || 'Unknown'}</div>
+                <div className="text-sm text-gray-600">{staff.user?.email}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Role: {staff.role} • Assigned: {new Date(staff.assignedAt).toLocaleDateString()}
+                </div>
+              </div>
+              <button
+                onClick={() => handleRemove(staff.user?._id || staff.user || staff._id)}
+                className="text-red-600 hover:text-red-700 px-3 py-1 border border-red-300 rounded"
+              >
+                Remove
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+function BookingsTab({ eventId }) {
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchBookings = async () => {
+      try {
+        const res = await API.get(`/event-admin/events/${eventId}/bookings`)
+        if (!cancelled) setBookings(res.data.bookings || [])
+      } catch (err) {
+        console.error('Failed to load bookings:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchBookings()
+    const intervalId = setInterval(fetchBookings, 1000) // poll so booking list stays fresh
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+    }
+  }, [eventId])
+
+  const handleDownload = async () => {
+    try {
+      const res = await API.get(`/event-admin/events/${eventId}/attendees/download`, {
+        responseType: 'blob'
+      })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `attendees-${eventId}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch (err) {
+      alert('Failed to download attendee list')
+    }
+  }
+
+  if (loading) return <div className="text-center py-8">Loading bookings...</div>
+
+  return (
+    <div className="space-y-4">
+      <button
+        onClick={handleDownload}
+        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+      >
+        📥 Download Attendee List (CSV)
+      </button>
+
+      {bookings.length === 0 ? (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center text-gray-500">
+          No bookings yet
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Customer</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Email</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Tickets</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Date</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Status</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Scanned</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map(booking => (
+                  <tr key={booking._id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-3">{booking.user?.name || 'N/A'}</td>
+                    <td className="px-4 py-3">{booking.user?.email || 'N/A'}</td>
+                    <td className="px-4 py-3">{booking.quantity || 1}</td>
+                    <td className="px-4 py-3">{new Date(booking.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                        booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {booking.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {booking.lastScannedAt ? '✅ Yes' : '❌ No'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EntryLogsTab({ eventId }) {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchLogs = async () => {
+      try {
+        const res = await API.get(`/event-admin/events/${eventId}/entry-logs`)
+        if (!cancelled) setLogs(res.data.logs || [])
+      } catch (err) {
+        console.error('Failed to load entry logs:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetchLogs()
+    const intervalId = setInterval(fetchLogs, 1000) // near-real-time scan visibility
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+    }
+  }, [eventId])
+
+  if (loading) return <div className="text-center py-8">Loading entry logs...</div>
+
+  return (
+    <div className="space-y-4">
+      {logs.length === 0 ? (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center text-gray-500">
+          No entries recorded yet
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Booking ID</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Ticket #</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Name</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Email</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Entry Time</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700">Scanned By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map(log => (
+                  <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono text-xs">{log.bookingId || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
+                        #{log.ticketIndex || 1}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">{log.userName}</td>
+                    <td className="px-4 py-3">{log.userEmail}</td>
+                    <td className="px-4 py-3">
+                      {new Date(log.scannedAt).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3">{log.scannedBy}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StatCard({ label, value }) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="text-sm text-gray-600 mb-1">{label}</div>
+      <div className="text-2xl font-bold text-gray-900">{value}</div>
+    </div>
   )
 }

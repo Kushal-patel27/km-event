@@ -65,4 +65,49 @@ export const adminOnly = (req, res, next) => {
   return next();
 };
 
+// Event Admin: Check if user has access to specific event
+export const requireEventAccess = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Not authorized" });
+  }
+
+  // Super admin has access to all events
+  if (req.user.role === "super_admin" || req.user.role === "admin") {
+    return next();
+  }
+
+  // Event admin can only access assigned events
+  if (req.user.role === "event_admin") {
+    const eventId = req.params.eventId || req.params.id || req.body.eventId;
+    
+    if (!eventId) {
+      return res.status(400).json({ message: "Event ID required" });
+    }
+
+    // Check if event is in user's assignedEvents array
+    const hasAccess = req.user.assignedEvents.some(
+      (assignedId) => assignedId.toString() === eventId.toString()
+    );
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: "Access denied to this event" });
+    }
+
+    return next();
+  }
+
+  return res.status(403).json({ message: "Insufficient permissions" });
+};
+
+// Event Admin only (not staff or other admins)
+export const requireEventAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Not authorized" });
+  }
+  if (!["event_admin", "super_admin", "admin"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Event admin role required" });
+  }
+  return next();
+};
+
 export default protect;

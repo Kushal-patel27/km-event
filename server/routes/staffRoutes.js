@@ -12,19 +12,19 @@ const router = express.Router();
 router.post(
   "/scan",
   protect,
-  requireRoles("staff_admin"),
+  requireRoles("staff_admin", "staff"),
   validateAndScanQR
 );
 router.get(
   "/events",
   protect,
-  requireRoles("staff_admin"),
+  requireRoles("staff_admin", "staff"),
   getStaffEvents
 );
 router.get(
   "/stats/:eventId",
   protect,
-  requireRoles("staff_admin"),
+  requireRoles("staff_admin", "staff"),
   getEventScanStats
 );
 
