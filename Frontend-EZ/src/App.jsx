@@ -127,6 +127,7 @@ export default function App(){
             <Route path="/super-admin/config" element={<ProtectedSuperAdminRoute><SuperAdminConfig /></ProtectedSuperAdminRoute>} />
             <Route path="/super-admin/export" element={<ProtectedSuperAdminRoute><SuperAdminExport /></ProtectedSuperAdminRoute>} />
           </Routes>
+          </GenieEffect>
         </main>
 
         {!isSuperAdminRoute && (
