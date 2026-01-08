@@ -97,6 +97,8 @@ export default function App(){
               <Route path="/admin/events" element={<ProtectedAdminRoute><AdminEvents /></ProtectedAdminRoute>} />
               <Route path="/admin/bookings" element={<ProtectedAdminRoute><AdminBookings /></ProtectedAdminRoute>} />
               <Route path="/admin/contacts" element={<ProtectedAdminRoute><AdminContacts /></ProtectedAdminRoute>} />
+              <Route path="/admin/faq" element={<ProtectedAdminRoute><AdminFAQ /></ProtectedAdminRoute>} />
+              <Route path="/admin/help" element={<ProtectedAdminRoute><AdminHelp /></ProtectedAdminRoute>} />
             
               {/* Event Admin routes */}
             <Route path="/event-admin/login" element={<EventAdminLogin />} />
@@ -130,25 +132,7 @@ export default function App(){
           </GenieEffect>
         </main>
 
-        {!isSuperAdminRoute && (
-          <footer className="bg-white dark:bg-gray-900 border-t dark:border-gray-700 py-8 mt-12">
-            <div className="container mx-auto px-4">
-              <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
-                <div className="text-center md:text-left">
-                  <p className="text-gray-700 dark:text-gray-300 font-semibold mb-2">K&M Events</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Your gateway to unforgettable live experiences</p>
-                </div>
-                <div className="flex gap-6 text-sm">
-                  <Link to="/about" className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 transition font-semibold">About Us</Link>
-                  <Link to="/contact" className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 transition font-semibold">Contact Us</Link>
-                </div>
-              </div>
-              <div className="border-t dark:border-gray-700 pt-6 text-center text-xs text-gray-500 dark:text-gray-400">
-                © 2025 K&M Events. All rights reserved.
-              </div>
-            </div>
-          </footer>
-        )}
+        {!isAdminRoute && !isEventAdminRoute && !isStaffAdminRoute && !isStaffRoute && !isSuperAdminRoute && <Footer />}
       </div>
     </DarkModeProvider>
   )

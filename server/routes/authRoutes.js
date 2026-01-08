@@ -4,7 +4,6 @@ import {
   loginUser,
   loginAdmin,
   loginStaff,
-  loginAdmin,
   getMe,
   refreshSession,
   logout,
@@ -22,7 +21,6 @@ import {
 import passport from "../config/passport.js";
 import jwt from "jsonwebtoken";
 import { protect, requireSuperAdmin } from "../middleware/authMiddleware.js";
-import { protect, requireSuperAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -30,9 +28,6 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/admin/login", loginAdmin);
 router.post("/staff/login", loginStaff);
-router.post("/refresh", protect, refreshSession);
-router.post("/logout", logout);
-router.post("/admin/login", loginAdmin);
 router.post("/refresh", protect, refreshSession);
 router.post("/logout", logout);
 router.get("/me", protect, getMe);

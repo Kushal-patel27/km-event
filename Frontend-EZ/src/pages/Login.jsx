@@ -11,6 +11,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [mode, setMode] = useState(searchParams.get("mode") === "admin" ? "admin" : "user"); // 'user' | 'admin'
+  const [showPassword, setShowPassword] = useState(false);
   const { isDarkMode } = useDarkMode();
 
   const { login } = useAuth();
@@ -81,33 +82,46 @@ export default function Login() {
   };
 
   return (
-    <>
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="max-w-md w-full bg-white p-6 rounded shadow">
-          <div className="flex justify-center mb-4">
-            <div
-              className="inline-flex rounded-lg border border-gray-200 overflow-hidden"
-              role="tablist"
-              aria-label="Login mode"
-            >
-              <button
-                type="button"
-                className={`px-4 py-2 text-sm font-medium focus:outline-none ${
-                  mode === "user"
-                    ? "bg-indigo-600 text-white"
+    <div className={`flex items-center justify-center py-8 px-4 ${
+      isDarkMode ? 'bg-gray-900' : 'bg-gray-50'
+    }`}>
+      <div className={`max-w-md w-full p-6 rounded-lg shadow-md border ${
+        isDarkMode 
+          ? 'bg-gray-800 border-gray-700' 
+          : 'bg-white border-gray-200'
+      }`}>
+        <div className="flex justify-center mb-4">
+          <div
+            className={`inline-flex rounded-lg border overflow-hidden ${
+              isDarkMode ? 'border-gray-600' : 'border-gray-200'
+            }`}
+            role="tablist"
+            aria-label="Login mode"
+          >
+            <button
+              type="button"
+              className={`px-4 py-2 text-sm font-medium focus:outline-none ${
+                mode === "user"
+                  ? "bg-indigo-600 text-white"
+                  : isDarkMode
+                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
                     : "bg-white text-gray-700 hover:bg-gray-50"
-                }`}
-                aria-selected={mode === "user"}
+              }`}
+              aria-selected={mode === "user"}
                 onClick={() => setMode("user")}
               >
                 User
               </button>
               <button
                 type="button"
-                className={`px-4 py-2 text-sm font-medium border-l border-gray-200 focus:outline-none ${
+                className={`px-4 py-2 text-sm font-medium border-l focus:outline-none ${
+                  isDarkMode ? 'border-gray-600' : 'border-gray-200'
+                } ${
                   mode === "admin"
                     ? "bg-indigo-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    : isDarkMode
+                      ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      : "bg-white text-gray-700 hover:bg-gray-50"
                 }`}
                 aria-selected={mode === "admin"}
                 onClick={() => setMode("admin")}
@@ -117,10 +131,14 @@ export default function Login() {
             </div>
           </div>
 
-          <h2 className="text-2xl font-semibold mb-1">
+          <h2 className={`text-2xl font-semibold mb-1 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>
             {mode === "admin" ? "Admin / Organizer Login" : "Login"}
           </h2>
-          <p className="text-sm text-gray-500 mb-3">
+          <p className={`text-sm mb-3 ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+          }`}>
             {mode === "admin"
               ? "Use your admin credentials to access your dashboard."
               : "Sign in to manage your bookings and profile."}
@@ -147,18 +165,38 @@ export default function Login() {
 
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
-                <input
-                  required
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
-                    isDarkMode
-                      ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-blue-300/50 focus:ring-2 focus:ring-blue-300/20'
-                      : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
-                  }`}
-                />
+                <div className="relative">
+                  <input
+                    required
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className={`w-full px-4 py-3 pr-12 rounded-lg border transition-all outline-none ${
+                      isDarkMode
+                        ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-blue-300/50 focus:ring-2 focus:ring-blue-300/20'
+                        : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 focus:outline-none ${
+                      isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between pt-2">
@@ -228,14 +266,13 @@ export default function Login() {
           )}
 
           {/* Footer Note */}
-          <p className={`text-center mt-6 text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+          <p className={`text-center mt-4 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
             By logging in, you agree to our{' '}
-            <a href="#" className={`transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}>
+            <Link to="/terms" className={`transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}>
               Terms of Service
-            </a>
+            </Link>
           </p>
         </div>
       </div>
-    </>
   );
 }
