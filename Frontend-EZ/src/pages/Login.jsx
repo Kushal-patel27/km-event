@@ -226,7 +226,6 @@ export default function Login() {
                 </motion.button>
             </>
           )}
-          </div>
 
           {/* Footer Note */}
           <p className={`text-center mt-6 text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
@@ -235,7 +234,7 @@ export default function Login() {
               Terms of Service
             </a>
           </p>
-        </motion.div>
+        </div>
       </div>
     </>
   );
