@@ -11,6 +11,9 @@ import Settings from './pages/Settings'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+import ScrollToTop from './components/ScrollToTop'
+import GenieEffect from './components/GenieEffect'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import AuthCallback from './pages/AuthCallback'
@@ -26,7 +29,15 @@ import EventAdminBookings from './pages/EventAdminBookings'
 import StaffLogin from './pages/StaffLogin'
 import StaffScanner from './pages/StaffScanner'
 import AdminContacts from './pages/AdminContacts'
+import AdminFAQ from './pages/AdminFAQ'
+import AdminHelp from './pages/AdminHelp'
 import ProtectedAdminRoute from './components/ProtectedAdminRoute'
+import FAQ from './pages/FAQ'
+import HelpCenter from './pages/HelpCenter'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
+import Cookies from './pages/Cookies'
+import GenieAnimationDemo from './pages/GenieAnimationDemo'
 import { DarkModeProvider } from './context/DarkModeContext'
 
 export default function App(){
@@ -35,60 +46,54 @@ export default function App(){
   const isStaffRoute = location.pathname.startsWith('/staff')
   return (
     <DarkModeProvider>
+      <ScrollToTop />
       <div className="min-h-screen flex flex-col">
         {!isAdminRoute && !isStaffRoute && <Navbar />}
         <main className={isAdminRoute || isStaffRoute ? "flex-1" : "flex-1"}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/event/:id" element={<EventDetail />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/book/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
-            <Route path="/booking-success" element={<BookingSuccess />} />
-            <Route path="/my-bookings" element={<MyBookings />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
+          <GenieEffect key={location.pathname}>
+            <Routes location={location}>
+              <Route path="/" element={<Home />} />
+              <Route path="/event/:id" element={<EventDetail />} />
+              <Route path="/events" element={<Events />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/help" element={<HelpCenter />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/cookies" element={<Cookies />} />
+              <Route path="/genie-demo" element={<GenieAnimationDemo />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/book/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
+              <Route path="/booking-success" element={<BookingSuccess />} />
+              <Route path="/my-bookings" element={<MyBookings />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
 
-            {/* Admin routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-            <Route path="/admin/events" element={<ProtectedAdminRoute><AdminEvents /></ProtectedAdminRoute>} />
-            <Route path="/admin/bookings" element={<ProtectedAdminRoute><AdminBookings /></ProtectedAdminRoute>} />
-            <Route path="/admin/users" element={<ProtectedAdminRoute><AdminUsers /></ProtectedAdminRoute>} />
+              {/* Admin routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+              <Route path="/admin/events" element={<ProtectedAdminRoute><AdminEvents /></ProtectedAdminRoute>} />
+              <Route path="/admin/bookings" element={<ProtectedAdminRoute><AdminBookings /></ProtectedAdminRoute>} />
+              <Route path="/admin/users" element={<ProtectedAdminRoute><AdminUsers /></ProtectedAdminRoute>} />
 
-            {/* Event Admin dedicated area */}
-            <Route path="/event-admin" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/admin/login"><EventAdminDashboard /></ProtectedAdminRoute>} />
-            <Route path="/event-admin/events" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/admin/login"><EventAdminEvents /></ProtectedAdminRoute>} />
-            <Route path="/event-admin/bookings" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/admin/login"><EventAdminBookings /></ProtectedAdminRoute>} />
+              {/* Event Admin dedicated area */}
+              <Route path="/event-admin" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/admin/login"><EventAdminDashboard /></ProtectedAdminRoute>} />
+              <Route path="/event-admin/events" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/admin/login"><EventAdminEvents /></ProtectedAdminRoute>} />
+              <Route path="/event-admin/bookings" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/admin/login"><EventAdminBookings /></ProtectedAdminRoute>} />
 
-            {/* Staff Scanner area */}
-            <Route path="/staff/login" element={<StaffLogin />} />
-            <Route path="/staff/scanner" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff/login"><StaffScanner /></ProtectedAdminRoute>} />
-            <Route path="/admin/contacts" element={<ProtectedAdminRoute><AdminContacts /></ProtectedAdminRoute>} />
-          </Routes>
+              {/* Staff Scanner area */}
+              <Route path="/staff/login" element={<StaffLogin />} />
+              <Route path="/staff/scanner" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff/login"><StaffScanner /></ProtectedAdminRoute>} />
+              <Route path="/admin/contacts" element={<ProtectedAdminRoute><AdminContacts /></ProtectedAdminRoute>} />
+              <Route path="/admin/faq" element={<ProtectedAdminRoute><AdminFAQ /></ProtectedAdminRoute>} />
+              <Route path="/admin/help" element={<ProtectedAdminRoute><AdminHelp /></ProtectedAdminRoute>} />
+            </Routes>
+          </GenieEffect>
         </main>
 
-        <footer className="bg-white dark:bg-gray-900 border-t dark:border-gray-700 py-8 mt-12">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-6">
-              <div className="text-center md:text-left">
-                <p className="text-gray-700 dark:text-gray-300 font-semibold mb-2">K&M Events</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Your gateway to unforgettable live experiences</p>
-              </div>
-              <div className="flex gap-6 text-sm">
-                <Link to="/about" className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 transition font-semibold">About Us</Link>
-                <Link to="/contact" className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 transition font-semibold">Contact Us</Link>
-              </div>
-            </div>
-            <div className="border-t dark:border-gray-700 pt-6 text-center text-xs text-gray-500 dark:text-gray-400">
-              © 2025 K&M Events. All rights reserved.
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </DarkModeProvider>
   )

@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER || "your-email@gmail.com",
+    user: process.env.EMAIL_USER || "k.m.easyevents@gmail.com",
     pass: process.env.EMAIL_PASS || "your-app-password",
   },
 });
@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 export const sendReplyEmail = async (recipientEmail, name, subject, reply) => {
   try {
     const mailOptions = {
-      from: process.env.EMAIL_USER || "support@kmevents.com",
+      from: process.env.EMAIL_USER || "k.m.easyevents@gmail.com",
       to: recipientEmail,
       subject: `Re: ${subject} - K&M Events Support`,
       html: `

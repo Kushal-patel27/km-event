@@ -26,7 +26,7 @@ const aboutSchema = new mongoose.Schema(
       linkedin: { type: String, default: "" },
     },
     contactInfo: {
-      email: { type: String, default: "support@kmevents.com" },
+      email: { type: String, default: "k.m.easyevents@gmail.com" },
       phone: { type: String, default: "+1 (555) 123-4567" },
       address: { type: String, default: "123 Event Street, New York, NY 10001" },
       businessHours: { type: String, default: "Monday - Friday: 9:00 AM - 6:00 PM" },

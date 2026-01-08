@@ -16,6 +16,8 @@ export default function AdminLayout({ title = 'Admin', children }){
     { to: '/admin/events', label: 'Events', roles: ['super_admin','event_admin','admin'] },
     { to: '/admin/bookings', label: 'Bookings', roles: ['super_admin','event_admin','staff_admin','admin'] },
     { to: '/admin/contacts', label: 'Contact Messages' },
+    { to: '/admin/faq', label: 'FAQ Management', roles: ['super_admin'] },
+    { to: '/admin/help', label: 'Help Center', roles: ['super_admin','admin'] },
     { to: '/admin/users', label: 'Admin Users', roles: ['super_admin'] },
   ].filter(item => !item.roles || item.roles.includes(role))
 

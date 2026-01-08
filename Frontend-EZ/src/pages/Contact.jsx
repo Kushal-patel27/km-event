@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import API from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { useDarkMode } from '../context/DarkModeContext'
 
 export default function Contact() {
   const { user } = useAuth()
+  const { isDarkMode } = useDarkMode()
   const [activeTab, setActiveTab] = useState('form')
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -89,53 +91,68 @@ export default function Contact() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-[#0B0F19] to-[#1a1f2e] text-white min-h-screen py-16 px-4 sm:px-6 lg:px-12">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="max-w-4xl mx-auto mb-16"
-      >
-        <h1 className="text-5xl md:text-6xl font-extrabold mb-6 text-center">
-          Get In <span className="text-red-500">Touch</span>
-        </h1>
-        <p className="text-xl text-gray-300 text-center">
-          Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
-        </p>
-      </motion.div>
+    <div className={`min-h-screen transition-colors ${
+      isDarkMode 
+        ? 'bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19] text-white' 
+        : 'bg-white text-gray-900'
+    }`}>
+      {/* ================= HERO SECTION ================= */}
+      <section className="relative py-24 md:py-32 px-4 sm:px-6 lg:px-12 bg-gradient-to-b from-[#0B0F19] to-[#0d1221]">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
+          >
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 text-white drop-shadow-lg">
+              Get In <span className="bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent">Touch</span>
+            </h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-xl md:text-2xl text-gray-200 drop-shadow-md max-w-3xl mx-auto"
+            >
+              Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            </motion.p>
+          </motion.div>
+        </div>
+      </section>
 
-      <div className="max-w-5xl mx-auto">
-        {/* Tab Navigation - Only show for logged in users */}
+      {/* ================= CONTACT CONTENT ================= */}
+      <section className="py-24 px-4 sm:px-6 lg:px-12 bg-gradient-to-b from-[#0d1221] to-[#0B0F19]">
+        <div className="max-w-6xl mx-auto">
+          {/* Tab Navigation - Only show for logged in users */}
         {user && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="flex gap-2 mb-8 border-b border-white/10"
+            className="flex gap-4 mb-12 border-b border-white/10 pb-4"
           >
             <button
               onClick={() => setActiveTab('form')}
-              className={`px-6 py-4 font-bold transition-all relative ${
+              className={`px-6 py-3 font-bold transition-all relative text-lg ${
                 activeTab === 'form'
                   ? 'text-red-500'
-                  : 'text-gray-400 hover:text-white'
+                  : 'text-gray-400 hover:text-gray-200'
               }`}
             >
               Send Message
               {activeTab === 'form' && (
                 <motion.div
                   layoutId="underline"
-                  className="absolute bottom-0 left-0 right-0 h-1 bg-red-500"
+                  className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-red-600"
                 />
               )}
             </button>
             <button
               onClick={() => setActiveTab('messages')}
-              className={`px-6 py-4 font-bold transition-all relative flex items-center gap-2 ${
+              className={`px-6 py-3 font-bold transition-all relative flex items-center gap-3 text-lg ${
                 activeTab === 'messages'
                   ? 'text-red-500'
-                  : 'text-gray-400 hover:text-white'
+                  : 'text-gray-400 hover:text-gray-200'
               }`}
             >
               My Messages
@@ -171,69 +188,93 @@ export default function Contact() {
               transition={{ duration: 0.6 }}
               className="space-y-8"
             >
-              <div className="bg-white/5 p-8 rounded-xl border border-white/10 backdrop-blur-sm">
-                <h2 className="text-2xl font-bold mb-6">Contact Information</h2>
+              <div className="p-8 md:p-10 rounded-2xl bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/12 hover:to-white/8 hover:border-red-500/40 transition-all duration-300">
+                <h2 className="text-3xl font-extrabold mb-8 text-white drop-shadow-lg">Contact Information</h2>
                 
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {/* Email */}
-                  <div className="flex gap-4">
-                    <div className="text-3xl">📧</div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-1">Email</h3>
-                      <p className="text-gray-400">support@kmevents.com</p>
-                      <p className="text-gray-400">info@kmevents.com</p>
+                  <motion.div 
+                    whileHover={{ x: 5 }}
+                    className="flex gap-5 p-5 rounded-xl bg-white/5 border border-white/10 hover:border-red-500/30 transition-all group"
+                  >
+                    <div className="text-4xl group-hover:scale-110 transition-transform">📧</div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg mb-2 text-white group-hover:text-red-400 transition-colors">Email</h3>
+                      <p className="text-gray-300">support@kmevents.com</p>
+                      <p className="text-gray-300">info@kmevents.com</p>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* Phone */}
-                  <div className="flex gap-4">
-                    <div className="text-3xl">📱</div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-1">Phone</h3>
-                      <p className="text-gray-400">+1 (555) 123-4567</p>
-                      <p className="text-gray-400">+1 (555) 987-6543</p>
+                  <motion.div 
+                    whileHover={{ x: 5 }}
+                    className="flex gap-5 p-5 rounded-xl bg-white/5 border border-white/10 hover:border-red-500/30 transition-all group"
+                  >
+                    <div className="text-4xl group-hover:scale-110 transition-transform">📱</div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg mb-2 text-white group-hover:text-red-400 transition-colors">Phone</h3>
+                      <p className="text-gray-300">+1 (555) 123-4567</p>
+                      <p className="text-gray-300">+1 (555) 987-6543</p>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* Address */}
-                  <div className="flex gap-4">
-                    <div className="text-3xl">📍</div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-1">Office Address</h3>
-                      <p className="text-gray-400">123 Event Street</p>
-                      <p className="text-gray-400">New York, NY 10001</p>
+                  <motion.div 
+                    whileHover={{ x: 5 }}
+                    className="flex gap-5 p-5 rounded-xl bg-white/5 border border-white/10 hover:border-red-500/30 transition-all group"
+                  >
+                    <div className="text-4xl group-hover:scale-110 transition-transform">📍</div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg mb-2 text-white group-hover:text-red-400 transition-colors">Office Address</h3>
+                      <p className="text-gray-300">123 Event Street</p>
+                      <p className="text-gray-300">New York, NY 10001</p>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* Hours */}
-                  <div className="flex gap-4">
-                    <div className="text-3xl">🕐</div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-1">Business Hours</h3>
-                      <p className="text-gray-400">Monday - Friday: 9:00 AM - 6:00 PM</p>
-                      <p className="text-gray-400">Saturday: 10:00 AM - 4:00 PM</p>
-                      <p className="text-gray-400">Sunday: Closed</p>
+                  <motion.div 
+                    whileHover={{ x: 5 }}
+                    className="flex gap-5 p-5 rounded-xl bg-white/5 border border-white/10 hover:border-red-500/30 transition-all group"
+                  >
+                    <div className="text-4xl group-hover:scale-110 transition-transform">🕐</div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg mb-2 text-white group-hover:text-red-400 transition-colors">Business Hours</h3>
+                      <p className="text-gray-300">Monday - Friday: 9:00 AM - 6:00 PM</p>
+                      <p className="text-gray-300">Saturday: 10:00 AM - 4:00 PM</p>
+                      <p className="text-gray-300">Sunday: Closed</p>
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
               </div>
 
               {/* Social Media */}
-              <div className="bg-white/5 p-8 rounded-xl border border-white/10 backdrop-blur-sm">
-                <h3 className="text-2xl font-bold mb-6">Follow Us</h3>
+              <div className="p-8 md:p-10 rounded-2xl bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/12 hover:to-white/8 hover:border-red-500/40 transition-all duration-300">
+                <h3 className="text-2xl font-extrabold mb-8 text-white drop-shadow-lg">Follow Us</h3>
                 <div className="flex gap-4">
-                  <button className="w-12 h-12 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center transition text-xl">
+                  <motion.button 
+                    whileHover={{ scale: 1.1 }}
+                    className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 rounded-lg flex items-center justify-center transition text-xl font-bold shadow-lg hover:shadow-red-500/50"
+                  >
                     f
-                  </button>
-                  <button className="w-12 h-12 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center transition text-xl">
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.1 }}
+                    className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 rounded-lg flex items-center justify-center transition text-xl font-bold shadow-lg hover:shadow-red-500/50"
+                  >
                     𝕏
-                  </button>
-                  <button className="w-12 h-12 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center transition text-xl">
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.1 }}
+                    className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 rounded-lg flex items-center justify-center transition text-xl font-bold shadow-lg hover:shadow-red-500/50"
+                  >
                     📷
-                  </button>
-                  <button className="w-12 h-12 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center transition text-xl">
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ scale: 1.1 }}
+                    className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 rounded-lg flex items-center justify-center transition text-xl font-bold shadow-lg hover:shadow-red-500/50"
+                  >
                     in
-                  </button>
+                  </motion.button>
                 </div>
               </div>
             </motion.div>
@@ -315,7 +356,7 @@ export default function Contact() {
 
                 {/* Message */}
                 <div>
-                  <label className="block text-sm font-bold mb-3">Message</label>
+                  <label className="block text-sm font-bold mb-3 text-white">Message</label>
                   <textarea
                     name="message"
                     value={formData.message}
@@ -323,7 +364,7 @@ export default function Contact() {
                     required
                     rows="6"
                     placeholder="Tell us more about your inquiry..."
-                    className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 text-white placeholder-gray-500 transition resize-none"
+                    className="w-full px-4 py-3 bg-white/8 border border-white/20 rounded-lg focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/50 text-white placeholder-gray-400 transition resize-none"
                   />
                 </div>
 
@@ -333,7 +374,7 @@ export default function Contact() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={loading}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 disabled:from-gray-600 disabled:to-gray-500 rounded-lg text-lg font-bold transition flex items-center justify-center gap-2"
+                  className="w-full px-8 py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 disabled:from-gray-600 disabled:to-gray-500 rounded-lg text-lg font-bold transition flex items-center justify-center gap-2 shadow-lg hover:shadow-red-500/50"
                 >
                   {loading ? (
                     <>
@@ -670,52 +711,59 @@ export default function Contact() {
             </motion.div>
           </div>
         )}
-      </div>
+        </div>
+      </section>
 
       {/* FAQ Section */}
-      <motion.section
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.7 }}
-        className="max-w-4xl mx-auto mt-20"
-      >
-        <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Frequently Asked Questions</h2>
-        
-        <div className="space-y-4">
-          {[
-            {
-              q: "What is your response time?",
-              a: "We typically respond to all inquiries within 24 hours during business days."
-            },
-            {
-              q: "How can I report a technical issue?",
-              a: "Please email us at support@kmevents.com with details of the issue and we'll help you resolve it quickly."
-            },
-            {
-              q: "Can I cancel or modify my booking?",
-              a: "Yes! You can manage your bookings from your account dashboard. Cancellation policies may vary by event."
-            },
-            {
-              q: "Is there a mobile app available?",
-              a: "Our web app is fully responsive and works great on mobile devices. Native apps are coming soon!"
-            }
-          ].map((faq, idx) => (
-            <motion.details
-              key={idx}
-              className="group bg-white/5 border border-white/10 rounded-lg overflow-hidden cursor-pointer hover:border-red-500/50 transition"
-            >
-              <summary className="px-6 py-4 font-bold flex items-center justify-between">
-                {faq.q}
-                <span className="text-red-500 group-open:rotate-180 transition">▼</span>
-              </summary>
-              <div className="px-6 py-4 border-t border-white/10 text-gray-300">
-                {faq.a}
-              </div>
-            </motion.details>
-          ))}
-        </div>
-      </motion.section>
+        <motion.section
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="py-24 px-4 sm:px-6 lg:px-12 bg-gradient-to-b from-[#0B0F19] to-[#0d1221]"
+        >
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl md:text-5xl font-extrabold mb-4 text-white drop-shadow-lg">Frequently Asked Questions</h2>
+              <p className="text-gray-300 text-lg">Find answers to common questions</p>
+            </div>
+            
+            <div className="space-y-4">
+              {[
+                {
+                  q: "What is your response time?",
+                  a: "We typically respond to all inquiries within 24 hours during business days."
+                },
+                {
+                  q: "How can I report a technical issue?",
+                  a: "Please email us at support@kmevents.com with details of the issue and we'll help you resolve it quickly."
+                },
+                {
+                  q: "Can I cancel or modify my booking?",
+                  a: "Yes! You can manage your bookings from your account dashboard. Cancellation policies may vary by event."
+                },
+                {
+                  q: "Is there a mobile app available?",
+                  a: "Our web app is fully responsive and works great on mobile devices. Native apps are coming soon!"
+                }
+              ].map((faq, idx) => (
+                <motion.details
+                  key={idx}
+                  whileHover={{ borderColor: 'rgba(239, 68, 68, 0.5)' }}
+                  className="group p-6 rounded-2xl bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:border-red-500/40 cursor-pointer transition-all duration-300 overflow-hidden"
+                >
+                  <summary className="font-bold text-lg flex items-center justify-between text-white cursor-pointer group-open:text-red-400 transition-colors">
+                    {faq.q}
+                    <span className="text-red-500 group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="px-0 py-4 text-gray-300 text-base">
+                    {faq.a}
+                  </div>
+                </motion.details>
+              ))}
+            </div>
+          </div>
+        </motion.section>
     </div>
   )
 }

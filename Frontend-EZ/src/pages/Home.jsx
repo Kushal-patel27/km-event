@@ -83,7 +83,7 @@ export default function Home() {
     },
   ]
 
-  // Force dark mode on home page
+  // Force entire Home page to stay dark
   useEffect(() => {
     const htmlElement = document.documentElement
     const wasDark = htmlElement.classList.contains('dark')
@@ -147,10 +147,10 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="bg-[#0B0F19] text-white overflow-x-hidden">
+    <div className="bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19] text-white overflow-x-hidden min-h-screen">
 
       {/* ================= HERO / CINEMATIC CAROUSEL ================= */}
-      <section className="relative min-h-[95vh] overflow-hidden">
+      <section className="relative min-h-[95vh] overflow-hidden bg-[#0B0F19]">
         {loading ? (
           <div className="absolute inset-0 bg-gradient-to-br from-[#0B0F19] via-[#111827] to-[#1a1f2e] flex items-center justify-center">
             <div className="text-center">
@@ -159,7 +159,7 @@ export default function Home() {
                 alt="K&M Events" 
                 className="w-40 h-40 md:w-48 md:h-48 mx-auto object-contain animate-pulse drop-shadow-2xl"
               />
-               <p className="mt-6 text-gray-400 text-sm md:text-base animate-pulse">Loading events...</p> 
+              <p className="mt-6 text-gray-400 text-sm md:text-base animate-pulse">Loading events...</p> 
             </div>
           </div>
         ) : (
@@ -171,10 +171,10 @@ export default function Home() {
             {[...featured, ...featured].map((e, i) => (
               <div
                 key={i}
-                className="min-w-full bg-contain bg-center bg-no-repeat relative"
+                className="min-w-full bg-cover bg-center bg-no-repeat relative"
                 style={{ backgroundImage: `url(${e.image})` }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/30" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-transparent" />
               </div>
             ))}
           </motion.div>
@@ -183,21 +183,36 @@ export default function Home() {
         {/* Hero Content */}
         <div className="relative z-10 min-h-[95vh] flex items-end pb-16 sm:pb-20 md:pb-24 w-full">
           <div className="px-4 sm:px-6 lg:px-12 w-full">
-            <div className="max-w-3xl">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-extrabold leading-tight mb-4 sm:mb-6">
+            <div className="max-w-4xl">
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="text-4xl sm:text-5xl md:text-6xl xl:text-7xl font-extrabold leading-tight mb-4 sm:mb-6 text-white drop-shadow-lg"
+              >
                 Book Your Next <br className="hidden sm:block" />
-                <span className="text-red-500">Live Experience</span>
-              </h1>
+                <span className="bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent">Live Experience</span>
+              </motion.h1>
 
-              <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-10">
-                <span className="hidden sm:inline">Concerts, comedy shows & festivals — book instantly with QR tickets.</span>
-                <span className="sm:hidden">Book events instantly with QR tickets.</span>
-              </p>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+                className="text-base sm:text-lg md:text-xl text-gray-200 mb-6 sm:mb-10 drop-shadow-md"
+              >
+                <span className="hidden sm:inline">Concerts, comedy shows & festivals — book instantly with secure QR tickets.</span>
+                <span className="sm:hidden">Book events with instant QR tickets.</span>
+              </motion.p>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="flex flex-col sm:flex-row gap-3 sm:gap-4"
+              >
                 <Link
                   to="/events"
-                  className="px-6 sm:px-8 py-3 sm:py-4 bg-red-600 hover:bg-red-700 rounded-xl text-base sm:text-lg font-bold shadow-lg text-center sm:text-left"
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 rounded-xl text-base sm:text-lg font-bold shadow-lg hover:shadow-red-500/50 text-center sm:text-left transform hover:scale-105 transition-all duration-300"
                 >
                   Explore Events
                 </Link>
@@ -205,12 +220,12 @@ export default function Home() {
                 {!user && (
                   <Link
                     to="/signup"
-                    className="px-6 sm:px-8 py-3 sm:py-4 border border-white/30 rounded-xl text-base sm:text-lg hover:bg-white/10 text-center sm:text-left"
+                    className="px-6 sm:px-8 py-3 sm:py-4 border-2 border-white/40 rounded-xl text-base sm:text-lg font-semibold hover:bg-white/10 hover:border-white/60 text-center sm:text-left backdrop-blur-sm transition-all duration-300"
                   >
                     Create Account
                   </Link>
                 )}
-              </div>
+              </motion.div>
             </div>
           </div>
         </div>
@@ -222,9 +237,9 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-16 border-t border-white/10 bg-[#0d1221]"
+        className="py-16 border-t border-white/10 bg-gradient-to-b from-[#0d1221] to-[#0B0F19]"
       >
-        <div className="px-6 lg:px-12 max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div className="px-6 lg:px-12 max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center">
           {[{ label: 'Tickets issued', value: '1.2M+' }, { label: 'Cities covered', value: '30+' }, { label: 'Events live', value: '850+' }, { label: 'Avg. rating', value: '4.8/5' }].map((item, idx) => (
             <motion.div
               key={item.label}
@@ -232,10 +247,10 @@ export default function Home() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: idx * 0.1 }}
-              className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              className="group p-5 md:p-6 rounded-2xl bg-gradient-to-br from-white/8 to-white/3 border border-white/15 hover:border-red-500/50 hover:from-white/12 hover:to-white/6 backdrop-blur-sm transition-all duration-300"
             >
-              <div className="text-3xl md:text-4xl font-extrabold text-white">{item.value}</div>
-              <div className="mt-2 text-sm text-gray-300">{item.label}</div>
+              <div className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 group-hover:from-red-400 group-hover:to-white transition-all">{item.value}</div>
+              <div className="mt-2 text-xs md:text-sm text-gray-300 font-medium">{item.label}</div>
             </motion.div>
           ))}
         </div>
@@ -247,12 +262,12 @@ export default function Home() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-20"
+        className="py-20 bg-gradient-to-b from-[#0B0F19] to-[#0d1221]"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-10">
-            <h2 className="text-4xl md:text-5xl font-extrabold">Why people book with us</h2>
-            <Link to="/events" className="text-red-400 font-semibold hover:underline">Browse events →</Link>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg">Why people book with us</h2>
+            <Link to="/events" className="text-red-400 font-semibold hover:text-red-300 transition-colors duration-200">Browse events →</Link>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {highlights.map((card, idx) => (
@@ -262,12 +277,12 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
-                className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+                className="group p-6 rounded-2xl bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/15 hover:to-white/8 hover:border-red-500/40 transition-all duration-300 cursor-pointer hover:-translate-y-1"
               >
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-red-200 mb-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500/30 to-red-600/10 flex items-center justify-center text-red-300 mb-4 group-hover:text-red-200 transition-colors">
                   {card.icon}
                 </div>
-                <h3 className="text-lg font-semibold mb-2">{card.title}</h3>
+                <h3 className="text-lg font-semibold mb-3 text-white group-hover:text-red-400 transition-colors">{card.title}</h3>
                 <p className="text-sm text-gray-300 leading-relaxed">{card.desc}</p>
               </motion.div>
             ))}
@@ -281,14 +296,14 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-16 bg-[#0d1221]"
+        className="py-20 bg-gradient-to-b from-[#0d1221] to-[#0B0F19]"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold">Top categories</h2>
-            <Link to="/events" className="text-sm text-red-300 hover:underline">See all</Link>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg">Top categories</h2>
+            <Link to="/events" className="text-sm text-red-400 hover:text-red-300 font-semibold transition-colors">See all →</Link>
           </div>
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
             {categories.map((cat, idx) => (
               <motion.div
                 key={cat.name}
@@ -296,9 +311,10 @@ export default function Home() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.08 }}
-                className={`p-6 rounded-2xl bg-gradient-to-r ${cat.color} text-white font-semibold shadow-lg border border-white/10 hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 cursor-pointer`}
+                className={`group p-6 md:p-7 rounded-2xl bg-gradient-to-r ${cat.color} text-white font-bold text-lg shadow-lg border border-white/20 hover:border-white/40 hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 cursor-pointer relative overflow-hidden`}
               >
-                {cat.name}
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <span className="relative z-10">{cat.name}</span>
               </motion.div>
             ))}
           </div>
@@ -311,16 +327,16 @@ export default function Home() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-20"
+        className="py-24 bg-gradient-to-b from-[#0B0F19] to-[#0d1221]"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <motion.p
               initial={{ opacity: 0, y: -10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="text-sm uppercase tracking-[0.3em] text-red-300 mb-3"
+              className="text-xs md:text-sm uppercase tracking-[0.3em] text-red-400 font-semibold mb-3"
             >
               Simple steps
             </motion.p>
@@ -329,7 +345,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-4xl md:text-5xl font-extrabold mb-3"
+              className="text-4xl md:text-5xl font-extrabold mb-4 text-white drop-shadow-lg"
             >
               Book in under a minute
             </motion.h2>
@@ -338,12 +354,12 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-gray-300 max-w-2xl mx-auto"
+              className="text-gray-300 max-w-2xl mx-auto text-base md:text-lg"
             >
               Search, pick seats, pay, and get instant QR tickets on your phone.
             </motion.p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-8">
             {[
               { title: 'Find the event', desc: 'Use search or browse curated picks by city and category.' },
               { title: 'Choose seats', desc: 'See live availability and lock your seats instantly.' },
@@ -355,13 +371,79 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.15 }}
-                className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+                className={`group relative p-10 md:p-12 rounded-3xl backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 overflow-hidden ${
+                  idx === 1 
+                    ? 'bg-gradient-to-br from-[#1a1520] via-[#2a1a28] to-[#1a1520] border border-red-900/20' 
+                    : 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 hover:from-white/15 hover:to-white/8 hover:border-red-500/40'
+                }`}
               >
-                <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold mb-4">
-                  {idx + 1}
+                {/* Animated background glow for middle card */}
+                {idx === 1 && (
+                  <>
+                    <motion.div
+                      animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.5, 0.3] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                      className="absolute inset-0 bg-red-600/20 blur-3xl"
+                    />
+                    <motion.div
+                      animate={{ scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] }}
+                      transition={{ duration: 3.5, repeat: Infinity, delay: 0.5 }}
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-red-500/30 rounded-full blur-3xl"
+                    />
+                  </>
+                )}
+
+                <div className={`relative z-10 flex flex-col ${idx === 1 ? 'items-center text-center' : 'items-start'}`}>
+                  {/* Step Number Badge */}
+                  <motion.div 
+                    animate={idx === 1 ? { scale: [1, 1.05, 1] } : {}}
+                    transition={idx === 1 ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : {}}
+                    className={`relative mb-8 ${idx === 1 ? 'w-28 h-28 md:w-32 md:h-32' : 'w-16 h-16 md:w-20 md:h-20'}`}
+                  >
+                    {/* Outer glow rings for middle card */}
+                    {idx === 1 && (
+                      <>
+                        <motion.div
+                          animate={{ scale: [1, 1.4, 1], opacity: [0.5, 0, 0.5] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                          className="absolute inset-0 rounded-full bg-red-500/40 blur-2xl"
+                        />
+                        <motion.div
+                          animate={{ scale: [1, 1.6, 1], opacity: [0.4, 0, 0.4] }}
+                          transition={{ duration: 2.5, repeat: Infinity, delay: 0.3 }}
+                          className="absolute inset-0 rounded-full bg-red-600/30 blur-3xl"
+                        />
+                      </>
+                    )}
+                    
+                    {/* Badge circle */}
+                    <div className={`relative w-full h-full rounded-full bg-gradient-to-br from-red-600 to-red-500 flex items-center justify-center font-bold transition-all ${
+                      idx === 1 
+                        ? 'text-5xl md:text-6xl shadow-2xl shadow-red-500/60' 
+                        : 'text-2xl md:text-3xl shadow-lg group-hover:shadow-xl group-hover:shadow-red-500/50'
+                    }`}>
+                      <span className="text-white">{idx + 1}</span>
+                    </div>
+                  </motion.div>
+
+                  {/* Title */}
+                  <h3 className={`font-bold mb-5 transition-colors ${
+                    idx === 1 
+                      ? 'text-3xl md:text-4xl text-white' 
+                      : 'text-xl md:text-2xl text-white group-hover:text-red-400'
+                  }`}>
+                    {step.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className={`leading-relaxed ${
+                    idx === 1 
+                      ? 'text-gray-300 text-base md:text-lg max-w-xs' 
+                      : 'text-gray-300 text-sm'
+                  }`}>
+                    {step.desc}
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                <p className="text-gray-300 leading-relaxed text-sm">{step.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -374,24 +456,22 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-20 bg-[#0d1221]"
+        className="py-24 bg-gradient-to-b from-[#0d1221] to-[#0B0F19]"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-14">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-red-300">What people say</p>
-                <h2 className="text-4xl md:text-5xl font-extrabold">Loved by event-goers</h2>
-              </div>
+              <p className="text-xs md:text-sm uppercase tracking-[0.25em] text-red-400 font-semibold mb-2">What people say</p>
+              <h2 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg">Loved by event-goers</h2>
             </motion.div>
-            <Link to="/events" className="text-red-300 font-semibold hover:underline">Discover events →</Link>
+            <Link to="/events" className="text-red-400 font-semibold hover:text-red-300 transition-colors whitespace-nowrap">Discover events →</Link>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 gap-8">
             {testimonials.map((card, idx) => (
               <motion.div
                 key={card.name}
@@ -399,10 +479,17 @@ export default function Home() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
-                className="p-6 rounded-2xl bg-white/5 border border-white/10 shadow-lg hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+                className="group p-7 md:p-8 rounded-2xl bg-gradient-to-br from-white/8 to-white/3 border border-white/15 shadow-lg backdrop-blur-sm hover:from-white/15 hover:to-white/8 hover:border-red-500/40 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
               >
-                <p className="text-lg leading-relaxed text-gray-100">"{card.quote}"</p>
-                <p className="mt-4 text-sm text-gray-400 font-semibold">{card.name}</p>
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <svg key={i} className="w-4 h-4 text-yellow-400 group-hover:text-yellow-300 transition-colors" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                <p className="text-base md:text-lg leading-relaxed text-gray-100 mb-5 italic">"{card.quote}"</p>
+                <p className="text-sm font-semibold text-gray-300 group-hover:text-red-300 transition-colors">— {card.name}</p>
               </motion.div>
             ))}
           </div>
@@ -410,37 +497,61 @@ export default function Home() {
       </motion.section>
 
       {/* ================= EVENTS ================= */}
-      <section className="py-24">
-        <div className="px-6 lg:px-12">
-          <div className="flex justify-between items-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-extrabold">
-              Popular Events
-            </h2>
-            <Link
-              to="/events"
-              className="text-red-400 font-bold hover:underline"
-            >
-              View All →
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[...Array(6)].map((_, i) => (
-                <SkeletonCard key={i} />
-              ))}
+      {/* This section always stays DARK - Light mode does not apply here */}
+      <div className="dark">
+        <motion.section
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="py-28 bg-gradient-to-b from-[#0B0F19] to-[#0d1221] text-white"
+        >
+          <div className="px-6 lg:px-12 max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-16">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-red-400 font-semibold mb-3">Trending now</p>
+                <h2 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg">Popular Events</h2>
+              </motion.div>
+              <Link
+                to="/events"
+                className="text-red-400 font-semibold hover:text-red-300 transition-colors whitespace-nowrap"
+              >
+                View All →
+              </Link>
             </div>
-          ) : (
-            <DarkModeProvider forceDark={true}>
+
+            {loading ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {events.slice(0, 6).map(ev => (
-                  <EventCard key={ev.id} event={ev} />
+                {[...Array(6)].map((_, i) => (
+                  <SkeletonCard key={i} />
                 ))}
               </div>
-            </DarkModeProvider>
-          )}
-        </div>
-      </section>
+            ) : (
+              <DarkModeProvider forceDark={true}>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {events.slice(0, 6).map((ev, idx) => (
+                    <motion.div
+                      key={ev.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.6, delay: idx * 0.1 }}
+                      className="transform hover:-translate-y-2 transition-transform duration-300"
+                    >
+                      <EventCard event={ev} />
+                    </motion.div>
+                  ))}
+                </div>
+              </DarkModeProvider>
+            )}
+          </div>
+        </motion.section>
+      </div>
 
       {/* ================= CTA ================= */}
       <motion.section
@@ -448,20 +559,48 @@ export default function Home() {
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.7 }}
-        className="py-28 bg-gradient-to-br from-red-600 to-red-500 text-center"
+        className="py-32 bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-center relative overflow-hidden"
       >
-        <h2 className="text-5xl md:text-6xl font-extrabold mb-6">
-          Don’t Miss Out 🎟️
-        </h2>
-        <p className="text-white/80 text-xl mb-12 max-w-3xl mx-auto">
-          Thousands are booking events daily. Be one of them.
-        </p>
-        <Link
-          to="/events"
-          className="px-12 py-5 bg-black text-white rounded-xl text-xl font-bold hover:scale-105 transition"
-        >
-          Book Now
-        </Link>
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-red-400 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-red-700 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-4xl mx-auto px-6 lg:px-12">
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 text-white drop-shadow-lg"
+          >
+            Don't Miss Out 🎟️
+          </motion.h2>
+          
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-white/90 text-lg md:text-xl mb-12 max-w-3xl mx-auto drop-shadow-md"
+          >
+            Thousands are booking events daily. Secure your spot for unforgettable experiences.
+          </motion.p>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <Link
+              to="/events"
+              className="inline-block px-12 py-5 bg-black hover:bg-gray-900 text-white rounded-xl text-lg font-bold shadow-2xl hover:scale-110 hover:shadow-2xl transition-all duration-300"
+            >
+              Book Now
+            </Link>
+          </motion.div>
+        </div>
       </motion.section>
     </div>
   )
