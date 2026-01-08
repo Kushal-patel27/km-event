@@ -256,6 +256,42 @@ export const loginStaff = async (req, res) => {
   }
 };
 
+// Login admin/staff user
+export const loginAdmin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+    // Check if user is an admin
+    if (!ADMIN_ROLE_SET.has(user.role)) {
+      return res.status(403).json({ message: "Only admin users can login here" });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({ message: "Password login not available for this account" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password || "");
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Get current authenticated user
 export const getMe = async (req, res) => {
   try {

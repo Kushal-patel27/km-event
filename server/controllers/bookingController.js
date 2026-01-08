@@ -17,7 +17,7 @@ function generateUniqueTicketId() {
 }
 
 export const createBooking = async (req, res) => {
-  const { eventId, quantity, ticketTypeId } = req.body;
+  const { eventId, quantity, ticketTypeId, seats } = req.body;
 
   try {
     // Ensure user is authenticated
@@ -54,6 +54,52 @@ export const createBooking = async (req, res) => {
     if (event.availableTickets < quantity)
       return res.status(400).json({ message: "Not enough tickets" });
 
+    // If seats are provided, validate them
+    if (seats && Array.isArray(seats)) {
+      // Check if number of seats matches quantity
+      if (seats.length !== quantity) {
+        return res.status(400).json({ 
+          message: `Number of seats (${seats.length}) must match quantity (${quantity})` 
+        });
+      }
+
+      // Check for duplicate seats in this booking
+      const uniqueSeats = new Set(seats);
+      if (uniqueSeats.size !== seats.length) {
+        return res.status(400).json({ message: "Duplicate seats selected" });
+      }
+
+      // Check if event has capacity and seats are within range
+      if (event.capacity && isFinite(event.capacity)) {
+        const invalidSeats = seats.filter(s => s < 1 || s > event.capacity);
+        if (invalidSeats.length > 0) {
+          return res.status(400).json({ 
+            message: `Invalid seat numbers: ${invalidSeats.join(', ')}` 
+          });
+        }
+
+        // Check if any seats are already booked
+        const existingBookings = await Booking.find({ 
+          event: eventId,
+          seats: { $exists: true, $ne: [] }
+        });
+
+        const bookedSeats = new Set();
+        existingBookings.forEach(booking => {
+          if (Array.isArray(booking.seats)) {
+            booking.seats.forEach(seat => bookedSeats.add(seat));
+          }
+        });
+
+        const conflictingSeats = seats.filter(s => bookedSeats.has(s));
+        if (conflictingSeats.length > 0) {
+          return res.status(400).json({ 
+            message: `Seats already booked: ${conflictingSeats.join(', ')}` 
+          });
+        }
+      }
+    }
+
     const totalAmount = quantity * price;
 
     // Generate unique ticket IDs
@@ -62,14 +108,21 @@ export const createBooking = async (req, res) => {
       ticketIds.push(generateUniqueTicketId());
     }
 
-    const booking = await Booking.create({
+    const bookingData = {
       user: req.user._id,
       event: eventId,
       quantity,
       totalAmount,
       ticketIds,
       ...(ticketTypeData && { ticketType: ticketTypeData })
-    });
+    };
+
+    // Add seats if provided
+    if (seats && Array.isArray(seats) && seats.length > 0) {
+      bookingData.seats = seats.map(s => Number(s));
+    }
+
+    const booking = await Booking.create(bookingData);
 
     // Reduce tickets
     event.availableTickets -= quantity;
@@ -110,7 +163,8 @@ export const createBooking = async (req, res) => {
           bid: booking._id.toString(),
           idx: i + 1,
           evt: eventId.toString(),
-        });
+          seat: seats && seats[i] ? seats[i] : null,
+      });
         const image = await generateQR(qrData);
         qrCodes.push({ id: ticketId, image });
       }
@@ -231,3 +285,36 @@ export const deleteBooking = async (req, res) => {
   }
 }
 
+// Get booked seats for a specific event
+export const getBookedSeats = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Find all bookings for this event that have seats
+    const bookings = await Booking.find({ 
+      event: eventId,
+      seats: { $exists: true, $ne: [] }
+    }).select('seats');
+
+    // Collect all booked seat numbers
+    const bookedSeats = [];
+    bookings.forEach(booking => {
+      if (Array.isArray(booking.seats)) {
+        bookedSeats.push(...booking.seats);
+      }
+    });
+
+    res.json({ 
+      eventId, 
+      bookedSeats,
+      totalBooked: bookedSeats.length 
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

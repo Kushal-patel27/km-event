@@ -58,3 +58,11 @@ API.interceptors.response.use(
 );
 
 export default API;
+
+// Help Center helpers
+export const fetchHelpArticles = (params = {}) => API.get('/help', { params })
+export const fetchHelpArticlesAdmin = (params = {}) => API.get('/help/admin/all', { params })
+export const createHelpArticle = (data) => API.post('/help', data)
+export const updateHelpArticle = (id, data) => API.put(`/help/${id}`, data)
+export const deleteHelpArticle = (id) => API.delete(`/help/${id}`)
+export const seedHelpArticlesAdmin = () => API.post('/help/admin/seed')

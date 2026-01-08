@@ -27,7 +27,7 @@ export const getAbout = async (req, res) => {
           linkedin: "https://linkedin.com/company/kmevents",
         },
         contactInfo: {
-          email: "support@kmevents.com",
+          email: "k.m.easyevents@gmail.com",
           phone: "+1 (555) 123-4567",
           address: "123 Event Street, New York, NY 10001",
           businessHours: "Monday - Friday: 9:00 AM - 6:00 PM",

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 
 const DarkModeContext = createContext()
 
@@ -15,6 +16,9 @@ export function DarkModeProvider({ children, forceDark = false }) {
   const [isDarkMode, setIsDarkMode] = useState(forceDark ? true : false)
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff') || location.pathname.startsWith('/event-admin')
+  const location = useLocation()
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff') || location.pathname.startsWith('/event-admin')
+  const isHomeRoute = location.pathname === '/'
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -27,6 +31,7 @@ export function DarkModeProvider({ children, forceDark = false }) {
 
       const stored = localStorage.getItem('theme')
       const enableDark = stored === 'dark' ? true : false
+      const enableDark = stored === 'dark' ? true : false
       setIsDarkMode(enableDark)
       if (enableDark) {
         document.documentElement.classList.add('dark')
@@ -34,11 +39,11 @@ export function DarkModeProvider({ children, forceDark = false }) {
         document.documentElement.classList.remove('dark')
       }
     }
-  }, [isAdminRoute])
+  }, [isAdminRouteisAdminRoute, forceDark, isHomeRoute])
 
   const toggleDarkMode = () => {
-    // Don't allow toggle if forceDark is true or on admin routes
-    if (forceDark || isAdminRoute) return
+    // Don't allow toggle if forceDark is true or on admin routes or on admin routes
+    if (forceDark || isAdminRoute || isAdminRoute || isHomeRoute) return
     
     const newMode = !isDarkMode
     setIsDarkMode(newMode)
