@@ -15,6 +15,8 @@ const bookingSchema = new mongoose.Schema(
     },
     quantity: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
+    seats: [{ type: Number }], // Array of selected seat numbers (e.g., [1, 2, 3])
+    ticketIds: [{ type: String, unique: true }], // Unique ticket IDs for each ticket in booking
     qrCode: { type: String }, // legacy single QR image
     qrCodes: [
       {
@@ -26,6 +28,19 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       default: "confirmed",
     },
+    scans: [
+      {
+        scannedAt: { type: Date, default: Date.now },
+        scannedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User"
+        },
+        ticketIndex: { type: Number },
+        ticketId: { type: String }, // Link to specific ticket ID
+        deviceInfo: { type: String }
+      }
+    ],
+    lastScannedAt: { type: Date },
   },
   { timestamps: true }
 );

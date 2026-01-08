@@ -1,35 +1,63 @@
-import React from 'react'
-import Logo from './Logo'
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import { useDarkMode } from '../context/DarkModeContext'
+import { motion } from 'framer-motion'
 
-export default function Ticket({ booking }) {
-  const { event, user, id, _id, seats, quantity, date, qrCode } = booking
-  
+const Ticket = forwardRef(function Ticket({ booking }, ref) {
+  const { isDarkMode } = useDarkMode()
+  const { event, user, id, _id, seats, quantity, date, qrCodes, qrCode, ticketIds, scans } = booking
+  const [flipped, setFlipped] = useState({})
+  const frontRefs = useRef([])
+  const backRefs = useRef([])
+
+  // Expose ticket face nodes for PDF capture
+  useImperativeHandle(ref, () => ({
+    getTicketFaces: () => ({ fronts: frontRefs.current, backs: backRefs.current }),
+    resetFlips: () => setFlipped({})
+  }))
+
   // Determine individual tickets based on seats array or quantity
   let ticketItems = []
   const baseId = _id || id || Date.now().toString()
 
+  // Reset refs each render so indexes stay aligned
+  frontRefs.current = []
+  backRefs.current = []
+
   if (Array.isArray(seats) && seats.length > 0) {
-    ticketItems = seats.map(seat => ({
-      seatLabel: seat.toString(),
-      qrId: `${baseId}-${seat}`
-    }))
+    ticketItems = seats.map((seat, idx) => {
+      const ticketId = ticketIds && ticketIds[idx] ? ticketIds[idx] : null
+      const isScanned = scans && scans.some(s => s.ticketId === ticketId)
+      return {
+        seatLabel: seat.toString(),
+        qrId: `${baseId}-${seat}`,
+        ticketId,
+        qrImage: qrCodes && qrCodes[idx] ? qrCodes[idx].image : null,
+        isScanned,
+        ticketIndex: idx + 1
+      }
+    })
   } else {
     const count = quantity || (typeof seats === 'number' ? seats : 1)
     for (let i = 0; i < count; i++) {
+      const ticketId = ticketIds && ticketIds[i] ? ticketIds[i] : null
+      const isScanned = scans && scans.some(s => s.ticketId === ticketId)
       ticketItems.push({
         seatLabel: count > 1 ? `#${i + 1}` : 'General',
-        qrId: `${baseId}-${i + 1}`
+        qrId: `${baseId}-${i + 1}`,
+        ticketId,
+        qrImage: qrCodes && qrCodes[i] ? qrCodes[i].image : null,
+        isScanned,
+        ticketIndex: i + 1
       })
     }
   }
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-3xl mx-auto">
-      {ticketItems.map((item) => {
-        // Prefer backend-provided QR image (data URL) if available,
-        // otherwise fall back to generating one via external API.
-        const qrUrl = qrCode || (() => {
+    <div className="flex flex-col gap-6 w-full max-w-4xl mx-auto px-6 py-4">
+      {ticketItems.map((item, idx) => {
+        const qrUrl = item.qrImage || (() => {
           const qrData = JSON.stringify({ 
+            ticketId: item.ticketId,
             bid: item.qrId, 
             uid: user?.id,
             evt: event?.id 
@@ -37,80 +65,257 @@ export default function Ticket({ booking }) {
           return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`
         })()
 
+        const isFlipped = flipped[item.qrId]
+
         return (
-          <div key={item.qrId} className="relative bg-white w-full rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-200 print:shadow-none print:border-gray-900 break-inside-avoid">
-            
-            {/* Background Watermark */}
-            <div className="absolute -bottom-12 -left-12 opacity-[0.03] pointer-events-none transform rotate-12 z-0">
-              <svg width="300" height="300" viewBox="0 0 40 40" fill="currentColor" className="text-indigo-900">
-                <rect x="4" y="6" width="32" height="28" rx="6" />
-                <path d="M24 14L25.5 18.5H30L26.5 21L27.5 25.5L24 23L20.5 25.5L21.5 21L18 18.5H22.5L24 14Z" fill="white" />
-              </svg>
-            </div>
+          <motion.div
+            key={item.qrId}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: idx * 0.15 }}
+            className="relative h-[600px] cursor-pointer"
+            onClick={() => setFlipped(prev => ({ ...prev, [item.qrId]: !prev[item.qrId] }))}
+          >
+            {/* 3D Flip Container */}
+            <motion.div
+              animate={{ rotateY: isFlipped ? 180 : 0 }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              style={{ perspective: "1000px" }}
+              className="relative w-full h-full"
+            >
+              {/* ===== FRONT SIDE - Event Details ===== */}
+              <motion.div
+                initial={{ opacity: 1 }}
+                animate={{ opacity: isFlipped ? 0 : 1 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 w-full h-full"
+                data-ticket-face="front"
+                data-ticket-id={item.qrId}
+                ref={el => { frontRefs.current[idx] = el }}
+                style={{ backfaceVisibility: "hidden" }}
+              >
+                <div className={`relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border ${
+                  isDarkMode
+                    ? 'bg-gray-900 border-gray-700'
+                    : 'bg-white border-gray-200'
+                }`}>
+                  {/* Content */}
+                  <div className="relative h-full p-10 flex flex-col justify-between">
+                    {/* Header */}
+                    <div className="space-y-5">
+                      <motion.div 
+                        animate={{ scale: [1, 1.05, 1] }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                        className={`flex items-center justify-center gap-4 mb-1 ${isDarkMode ? 'text-cyan-300' : 'text-slate-700'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full animate-pulse ${isDarkMode ? 'bg-blue-400' : 'bg-teal-500'}`}></div>
+                        <span className="text-base font-black uppercase tracking-[0.3em]">EVENT TICKET</span>
+                        <div className={`w-4 h-4 rounded-full animate-pulse ${isDarkMode ? 'bg-blue-400' : 'bg-teal-500'}`}></div>
+                      </motion.div>
 
-            {/* Left Section: Event Details */}
-            <div className="flex-1 p-8 relative z-10 flex flex-col justify-between">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <div className="flex items-center gap-2 mb-3 opacity-80">
-                    <Logo />
+                      <h2 className={`text-3xl md:text-4xl font-black leading-tight line-clamp-2 ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        {event.title}
+                      </h2>
+
+                      {/* Badges */}
+                      <div className="flex flex-wrap gap-2">
+                        {item.isScanned && (
+                          <span className="px-3 py-1 rounded-full bg-green-500/20 border border-green-400 text-green-300 text-xs font-bold uppercase tracking-wider">
+                            ✓ Verified
+                          </span>
+                        )}
+                        <span className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${
+                          isDarkMode 
+                            ? 'bg-blue-500/20 border-blue-400 text-blue-300' 
+                            : 'bg-teal-100 border-teal-400 text-teal-700'
+                        }`}>
+                          Ticket #{item.ticketIndex}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Event Details */}
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <p className={`text-xs font-bold uppercase tracking-widest ${
+                            isDarkMode ? 'text-cyan-400' : 'text-slate-500'
+                          }`}>Date & Time</p>
+                          <p className={`text-sm font-semibold ${
+                            isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                          }`}>
+                            {new Date(event.date).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                          <p className={`text-xs ${
+                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                          }`}>
+                            {new Date(event.date).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className={`text-xs font-bold uppercase tracking-widest ${
+                            isDarkMode ? 'text-cyan-400' : 'text-slate-500'
+                          }`}>Venue</p>
+                          <p className={`text-sm font-semibold ${
+                            isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                          }`}>{event.location}</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className={`text-xs font-bold uppercase tracking-widest ${
+                            isDarkMode ? 'text-cyan-400' : 'text-slate-500'
+                          }`}>Seat Number</p>
+                          <p className={`text-base font-bold ${
+                            isDarkMode ? 'text-blue-300' : 'text-teal-600'
+                          }`}>{item.seatLabel}</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className={`text-xs font-bold uppercase tracking-widest ${
+                            isDarkMode ? 'text-cyan-400' : 'text-slate-500'
+                          }`}>Guest Name</p>
+                          <p className={`text-sm font-semibold ${
+                            isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                          }`}>{user.name}</p>
+                        </div>
+                      </div>
+
+                      {/* Flip Indicator */}
+                      <div className={`pt-6 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <p className={`text-xs text-center font-bold uppercase tracking-widest flex items-center justify-center gap-2 ${
+                          isDarkMode ? 'text-cyan-400' : 'text-slate-500'
+                        }`}>
+                          <span>Flip for QR code</span>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Footer - Validity Notice */}
+                    <div className={`mt-6 p-4 rounded-2xl border ${
+                      isDarkMode 
+                        ? 'bg-blue-500/10 border-blue-400/30' 
+                        : 'bg-teal-50 border-teal-200'
+                    }`}>
+                      <p className={`text-xs font-bold uppercase tracking-wide mb-1 ${
+                        isDarkMode ? 'text-cyan-300' : 'text-teal-700'
+                      }`}>Valid Admission</p>
+                      <p className={`text-xs ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>
+                        This ticket authorizes entry to the specified event. Present QR code at entrance for verification.
+                      </p>
+                    </div>
                   </div>
-                  <h2 className="text-3xl font-black text-gray-900 leading-none tracking-tight uppercase">{event.title}</h2>
-                  <span className="inline-block mt-3 px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider rounded-full">
-                    {event.category || 'General Admission'}
-                  </span>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="grid grid-cols-2 gap-y-8 gap-x-4">
-                <div>
-                  <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Date & Time</div>
-                  <div className="font-bold text-lg text-gray-800">{date || 'TBA'}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Location</div>
-                  <div className="font-bold text-lg text-gray-800">{event.location}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Guest</div>
-                  <div className="font-bold text-lg text-gray-800 truncate">{user.name}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Seat</div>
-                  <div className="font-bold text-lg text-indigo-600">{item.seatLabel}</div>
-                </div>
-              </div>
+              {/* ===== BACK SIDE - QR Code ===== */}
+              <motion.div
+                initial={{ opacity: 0, rotateY: 180 }}
+                animate={{ opacity: isFlipped ? 1 : 0, rotateY: isFlipped ? 0 : 180 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 w-full h-full"
+                data-ticket-face="back"
+                data-ticket-id={item.qrId}
+                ref={el => { backRefs.current[idx] = el }}
+                style={{ backfaceVisibility: "hidden" }}
+              >
+                <div className={`relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border ${
+                  isDarkMode
+                    ? 'bg-gray-900 border-gray-700'
+                    : 'bg-white border-gray-200'
+                }`}>
+                  {/* Content */}
+                  <div className="relative h-full p-10 flex flex-col items-center justify-between" style={{ transform: 'scaleX(-1)' }}>
+                    {/* Top - Scan Instructions */}
+                    <div className="w-full text-center">
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2.5, repeat: Infinity }}
+                        className={`inline-block px-3 py-1 rounded-full mb-3 border ${
+                          isDarkMode
+                            ? 'bg-gray-500/30 border-gray-400/60'
+                            : 'bg-gray-100/80 border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <div className={`w-2 h-2 rounded-full animate-pulse ${isDarkMode ? 'bg-gray-300' : 'bg-gray-600'}`}></div>
+                          <span className={`text-xs font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>Scan QR Code</span>
+                          <div className={`w-2 h-2 rounded-full animate-pulse ${isDarkMode ? 'bg-gray-300' : 'bg-gray-600'}`}></div>
+                        </div>
+                      </motion.div>
+                      <p className={`text-xs tracking-wide ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Present at entrance for verification</p>
+                    </div>
 
-              <div className="mt-8 pt-6 border-t border-dashed border-gray-200 flex justify-between items-end">
-                 <div className="text-xs text-gray-400">Present this ticket at the entrance</div>
-                 <div className="font-mono text-xs text-gray-400">#{item.qrId.toString().toUpperCase()}</div>
-              </div>
-            </div>
+                    {/* Middle - QR Code */}
+                    <motion.div
+                      animate={{ scale: [1, 1.03, 1] }}
+                      transition={{ duration: 2.5, repeat: Infinity }}
+                      className="relative"
+                    >
+                      <div className={`p-5 rounded-2xl shadow-lg border-2 ${
+                        isDarkMode
+                          ? 'bg-white border-gray-400'
+                          : 'bg-white border-gray-300'
+                      }`}>
+                        <img 
+                          src={qrUrl} 
+                          alt="QR Code" 
+                          className="w-48 h-48 object-contain"
+                        />
+                      </div>
+                    </motion.div>
 
-            {/* Right Section: QR Code (Stub) */}
-            <div className="relative md:w-80 bg-gray-900 text-white p-8 flex flex-col items-center justify-center text-center overflow-hidden">
-              {/* Stub Decoration */}
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500 via-purple-500 to-transparent"></div>
-              
-              {/* Perforated Line */}
-              <div className="absolute left-0 top-0 bottom-0 w-0 border-l-2 border-dashed border-gray-700 h-full hidden md:block"></div>
-              <div className="absolute top-0 left-0 right-0 h-0 border-t-2 border-dashed border-gray-700 w-full md:hidden"></div>
-              
-              {/* Cutouts */}
-              <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full hidden md:block"></div>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full md:hidden"></div>
+                    {/* Bottom - Ticket Info */}
+                    <div className="w-full space-y-4">
+                      <div className={`flex items-center justify-between text-sm pb-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <span className={`font-bold uppercase tracking-wide ${
+                          isDarkMode ? 'text-cyan-300' : 'text-slate-600'
+                        }`}>Ticket ID</span>
+                        <span className={`font-mono font-semibold ${
+                          isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                        }`}>{item.ticketId?.slice(-8) || item.qrId.slice(-8)}</span>
+                      </div>
 
-              <div className="relative z-10">
-                <div className="bg-white p-3 rounded-xl shadow-lg mb-4 inline-block">
-                  <img src={qrUrl} alt="QR Code" className="w-32 h-32 object-contain mix-blend-multiply" />
+                      <div className={`text-center p-4 rounded-xl border ${
+                        isDarkMode 
+                          ? 'bg-blue-500/10 border-blue-400/30' 
+                          : 'bg-slate-50 border-slate-200'
+                      }`}>
+                        <p className={`text-xs font-bold uppercase tracking-wide mb-1 ${
+                          isDarkMode ? 'text-cyan-300' : 'text-slate-700'
+                        }`}>Authorized To</p>
+                        <p className={`text-sm font-semibold ${
+                          isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                        }`}>{user.name}</p>
+                        <p className={`text-xs mt-2 ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>Seat: {item.seatLabel}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold mb-1">Scan Entry</p>
-                <p className="text-xl font-mono font-bold tracking-widest">{item.qrId.toString().toUpperCase()}</p>
-              </div>
-            </div>
-          </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
         )
       })}
     </div>
   )
-}
+})
+
+export default Ticket

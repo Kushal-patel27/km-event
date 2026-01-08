@@ -178,11 +178,16 @@ export default function AdminEvents() {
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState('')
   const { user } = useAuth()
+  const role = user?.role || 'user'
+  const isSuper = role === 'super_admin' || role === 'admin'
+  const isEventAdmin = role === 'event_admin'
+  const isStaff = role === 'staff_admin'
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const res = await API.get('/events')
+        const url = isSuper ? '/events' : '/events/my'
+        const res = await API.get(url)
         const evs = (res.data || []).map(e => ({
           ...e,
           id: e.id || e._id,
@@ -195,7 +200,7 @@ export default function AdminEvents() {
       }
     }
     fetch()
-  }, [])
+  }, [isSuper])
 
   async function handleCreate(data) {
     try {
@@ -297,7 +302,7 @@ export default function AdminEvents() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Manage Events</h2>
         <div className="flex gap-2">
-          {!creating && !editingEvent && (
+          {!creating && !editingEvent && !isStaff && (
             <button onClick={() => setCreating(true)} className="bg-indigo-600 text-white px-3 py-1 rounded">Add Event</button>
           )}
         </div>
@@ -345,24 +350,30 @@ export default function AdminEvents() {
               <div className="text-sm text-gray-500">{ev.date} • {ev.location}</div>
               <div className="text-sm mt-2">Category: {ev.category || '-'} • Price: {formatINR(ev.price)} • Capacity: {ev.capacity}</div>
             </div>
-            <div className="flex flex-col gap-2">
-              <a href={`/event/${ev.id}`} className="text-indigo-600">View</a>
-              <button
-                onClick={() => { setEditingEvent(ev); setCreating(false) }}
-                className="text-sm px-3 py-1 border rounded"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => handleDelete(ev.id)}
-                className="text-sm px-3 py-1 border rounded text-red-600 border-red-300 hover:bg-red-50"
-              >
-                Delete
-              </button>
-            </div>
+              <div className="flex flex-col gap-2">
+                <a href={`/event/${ev.id}`} className="text-indigo-600">View</a>
+                {!isStaff && (
+                  <>
+                    <button
+                      onClick={() => { setEditingEvent(ev); setCreating(false) }}
+                      className="text-sm px-3 py-1 border rounded"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(ev.id)}
+                      className="text-sm px-3 py-1 border rounded text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
           </div>
         ))}
       </div>
     </AdminLayout>
   )
 }
+
+export { EventForm }
