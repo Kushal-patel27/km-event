@@ -2,8 +2,11 @@ import React, { useEffect, useState, useRef } from 'react'
 import QrScanner from 'qr-scanner'
 import StaffLayout from '../components/StaffLayout'
 import API from '../services/api'
+import { useAuth } from '../context/AuthContext'
+import { Navigate } from 'react-router-dom'
 
 export default function StaffScanner() {
+  const { user } = useAuth()
   const [events, setEvents] = useState([])
   const [selectedEvent, setSelectedEvent] = useState('')
   const [stats, setStats] = useState(null)
@@ -22,6 +25,17 @@ export default function StaffScanner() {
   const streamRef = useRef(null)
   const qrScannerRef = useRef(null)
 
+  const role = (user?.role || '').toLowerCase()
+  const allowed = role === 'staff' || role === 'staff_admin'
+
+  if (!user) {
+    return <Navigate to="/staff/login" replace />
+  }
+
+  if (!allowed) {
+    return <Navigate to="/staff/login" replace />
+  }
+
   // Load events and init
   useEffect(() => {
     const loadEvents = async () => {
@@ -29,9 +43,10 @@ export default function StaffScanner() {
         const res = await API.get('/staff/events')
         const assignedEvents = res.data || []
         setEvents(assignedEvents)
-        // Auto-select first event if available
-        if (assignedEvents.length > 0) {
+        if (assignedEvents.length === 1) {
           setSelectedEvent(assignedEvents[0]._id)
+        } else {
+          setSelectedEvent('')
         }
       } catch (err) {
         console.error('Failed to load events', err)
@@ -56,23 +71,41 @@ export default function StaffScanner() {
     }
   }, [])
 
-  // Update stats when event changes
+  // Fetch stats helper
+  const fetchStats = async (eventId) => {
+    if (!eventId) return
+    try {
+      const res = await API.get(`/staff/stats/${eventId}`)
+      setStats(res.data)
+    } catch (err) {
+      console.error('Failed to load stats', err)
+    }
+  }
+
+  // Update stats when event changes + realtime polling
   useEffect(() => {
-    if (selectedEvent) {
-      const fetchStats = async () => {
-        try {
-          const res = await API.get(`/staff/stats/${selectedEvent}`)
-          setStats(res.data)
-        } catch (err) {
-          console.error('Failed to load stats', err)
-        }
-      }
-      fetchStats()
+    if (!selectedEvent) return
+
+    let cancelled = false
+    fetchStats(selectedEvent)
+
+    const interval = setInterval(() => {
+      if (!cancelled) fetchStats(selectedEvent)
+    },1000) // 1s polling for near real-time updates
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
     }
   }, [selectedEvent])
 
   // Initialize camera for QR scanning
   const startCamera = async () => {
+    // Ensure video element is mounted before starting camera
+    if (!videoRef.current) {
+      console.warn('Video element not ready yet')
+      return
+    }
     try {
       if (qrScannerRef.current) {
         await qrScannerRef.current.start()
@@ -137,6 +170,15 @@ export default function StaffScanner() {
     }
   }, [])
 
+  // Switch behavior when toggling scan mode so camera starts only after video renders
+  useEffect(() => {
+    if (scanMode === 'camera' && selectedEvent) {
+      startCamera()
+    } else {
+      stopCamera()
+    }
+  }, [scanMode, selectedEvent])
+
   // Handle manual QR input
   const handleManualQRInput = async (e) => {
     e.preventDefault()
@@ -193,8 +235,7 @@ export default function StaffScanner() {
       localStorage.setItem('pendingScans', JSON.stringify(pendingScans))
 
       // Refresh stats
-      const statsRes = await API.get(`/staff/stats/${selectedEvent}`)
-      setStats(statsRes.data)
+      await fetchStats(selectedEvent)
 
       // Clear manual input
       if (qrInputRef.current) {
@@ -203,10 +244,11 @@ export default function StaffScanner() {
     } catch (err) {
       // Check if it's a duplicate scan error
       const isDuplicate = err.response?.status === 400 && err.response?.data?.duplicate;
+      const isCancelled = err.response?.data?.cancelled;
       
       const result = {
-        success: isDuplicate ? true : false,
-        status: isDuplicate ? 'duplicate' : 'invalid',
+        success: false,
+        status: isDuplicate ? 'duplicate' : isCancelled ? 'cancelled' : 'invalid',
         message: err.response?.data?.message || 'Scan failed - ticket not found',
         attendee: isDuplicate ? {
           name: err.response?.data?.booking?.user?.name || 'Unknown',
@@ -219,7 +261,6 @@ export default function StaffScanner() {
 
       setScanResult(result)
       // Don't add duplicate or failed scans to history
-      // Only add successful scans (result.success && result.status === 'valid')
 
       // Add to pending if offline
       if (offline || err.message.includes('Network')) {
@@ -272,6 +313,37 @@ export default function StaffScanner() {
     <StaffLayout title={pageTitle}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
 
+        {/* Event selector */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Assigned Events</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {events.length === 0
+                  ? 'No events assigned to this staff account.'
+                  : events.length === 1
+                    ? 'One event assigned — preselected.'
+                    : 'Multiple events assigned — choose one before scanning.'}
+              </p>
+            </div>
+            <div className="w-full sm:w-64">
+              <select
+                value={selectedEvent}
+                onChange={(e) => setSelectedEvent(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={events.length === 0}
+              >
+                <option value="">Select an event</option>
+                {events.map((evt) => (
+                  <option key={evt._id} value={evt._id}>
+                    {evt.title || evt.name || 'Event'} — {evt.location || ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
         {offline && (
           <div className="bg-yellow-50 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-700 p-3 flex items-center gap-2 text-sm text-yellow-800 dark:text-yellow-200 mb-4 rounded-lg">
             📡 <span>Offline mode - scans will sync when connection returns</span>
@@ -306,7 +378,7 @@ export default function StaffScanner() {
             {/* Scan Mode Toggle */}
             <div className="flex gap-3">
               <button
-                onClick={() => { setScanMode('manual'); stopCamera() }}
+                onClick={() => setScanMode('manual')}
                 className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
                   scanMode === 'manual'
                     ? 'bg-blue-600 text-white shadow-lg'
@@ -316,7 +388,7 @@ export default function StaffScanner() {
                 📝 Manual Input
               </button>
               <button
-                onClick={() => { setScanMode('camera'); startCamera() }}
+                onClick={() => setScanMode('camera')}
                 className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
                   scanMode === 'camera'
                     ? 'bg-blue-600 text-white shadow-lg'

@@ -12,13 +12,13 @@ export default function AdminLayout({ title = 'Admin', children }){
 
   const role = user?.role || 'user'
   const nav = [
-    { to: '/admin', label: 'Dashboard', roles: ['super_admin','event_admin','staff_admin','admin'] },
-    { to: '/admin/events', label: 'Events', roles: ['super_admin','event_admin','admin'] },
-    { to: '/admin/bookings', label: 'Bookings', roles: ['super_admin','event_admin','staff_admin','admin'] },
-    { to: '/admin/contacts', label: 'Contact Messages' },
-    { to: '/admin/faq', label: 'FAQ Management', roles: ['super_admin'] },
-    { to: '/admin/help', label: 'Help Center', roles: ['super_admin','admin'] },
-    { to: '/admin/users', label: 'Admin Users', roles: ['super_admin'] },
+    { to: '/admin', label: 'Dashboard', icon: '📊', roles: ['super_admin','event_admin','staff_admin','admin'] },
+    { to: '/admin/team', label: 'Team Management', icon: '👥', roles: ['super_admin','admin'] },
+    { to: '/admin/events', label: 'Events', icon: '📅', roles: ['super_admin','event_admin','admin'] },
+    { to: '/admin/bookings', label: 'Bookings', icon: '🎫', roles: ['super_admin','event_admin','staff_admin','admin'] },
+    { to: '/admin/contacts', label: 'Contacts', icon: '📬', roles: ['super_admin','admin'] },
+    { to: '/admin/faq', label: 'FAQ', icon: '❓', roles: ['super_admin','admin'] },
+    { to: '/admin/help', label: 'Help Center', icon: '📚', roles: ['super_admin','admin'] },
   ].filter(item => !item.roles || item.roles.includes(role))
 
   function handleLogout(){
@@ -103,9 +103,10 @@ export default function AdminLayout({ title = 'Admin', children }){
                     <Link
                       key={item.to}
                       to={item.to}
-                      className={`px-3 py-2 rounded-lg ${location.pathname === item.to ? 'bg-red-600 text-white' : 'hover:bg-gray-100'}`}
+                      className={`px-3 py-2 rounded-lg flex items-center gap-2 ${location.pathname === item.to ? 'bg-red-600 text-white' : 'hover:bg-gray-100'}`}
                       onClick={() => setOpen(false)}
                     >
+                      <span>{item.icon}</span>
                       {item.label}
                     </Link>
                   ))}
@@ -120,8 +121,9 @@ export default function AdminLayout({ title = 'Admin', children }){
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`px-3 py-2 rounded-lg ${location.pathname === item.to ? 'bg-red-600 text-white' : 'hover:bg-gray-100'}`}
+                  className={`px-3 py-2 rounded-lg flex items-center gap-2 ${location.pathname === item.to ? 'bg-red-600 text-white' : 'hover:bg-gray-100'}`}
                 >
+                  <span>{item.icon}</span>
                   {item.label}
                 </Link>
               ))}

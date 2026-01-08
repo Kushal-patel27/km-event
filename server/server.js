@@ -10,6 +10,11 @@ import authRoutes from "./routes/authRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import staffRoutes from "./routes/staffRoutes.js";
+import scannerRoutes from "./routes/scannerRoutes.js";
+import staffAdminRoutes from "./routes/staffAdminRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import superAdminRoutes from "./routes/superAdminRoutes.js";
+import eventAdminRoutes from "./routes/eventAdminRoutes.js";
 import passport from "./config/passport.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import aboutRoutes from "./routes/aboutRoutes.js";
@@ -60,6 +65,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/staff", staffRoutes);
+app.use("/api/scanner", scannerRoutes);
+app.use("/api/staff-admin", staffAdminRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/super-admin", superAdminRoutes);
+app.use("/api/event-admin", eventAdminRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/about", aboutRoutes);
 app.use("/api/faq", faqRoutes);
@@ -72,7 +82,7 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
-  console.log(`Server running on port ${PORT}`)
+  console.log(`Server running on port ${PORT} `)
 );
 
 // Seed default FAQs if the collection is empty

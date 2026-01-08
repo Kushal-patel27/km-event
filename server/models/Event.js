@@ -24,6 +24,10 @@ const eventSchema = new mongoose.Schema(
       type: String, 
       required: [true, 'Location is required'] 
     },
+    locationDetails: {
+      type: String,
+      default: ''
+    },
     price: { 
       type: Number, 
       default: 0,
@@ -47,11 +51,56 @@ const eventSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    status: {
+      type: String,
+      enum: ['scheduled', 'ongoing', 'completed', 'cancelled'],
+      default: 'scheduled'
+    },
     organizer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true
     },
+    assignedStaff: [{
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      },
+      role: {
+        type: String,
+        enum: ['staff', 'staff_admin'],
+        default: 'staff'
+      },
+      assignedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    ticketTypes: [{
+      name: {
+        type: String,
+        required: true
+      },
+      price: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      quantity: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      available: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      description: {
+        type: String,
+        default: ''
+      }
+    }]
   },
   { timestamps: true }
 );

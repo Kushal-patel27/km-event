@@ -19,24 +19,10 @@ export function DarkModeProvider({ children, forceDark = false }) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // If forceDark is true, always keep dark mode on
-      if (forceDark) {
-        setIsDarkMode(true)
-        document.documentElement.classList.add('dark')
-        return
-      }
-
       // Always disable dark mode for admin/staff/event-admin routes
       if (isAdminRoute) {
         document.documentElement.classList.remove('dark')
         setIsDarkMode(false)
-        return
-      }
-
-      // Always enable dark mode on Home page regardless of saved preference
-      if (isHomeRoute) {
-        setIsDarkMode(true)
-        document.documentElement.classList.add('dark')
         return
       }
 

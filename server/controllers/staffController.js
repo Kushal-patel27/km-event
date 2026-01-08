@@ -1,10 +1,288 @@
+import User from "../models/User.js";
 import Booking from "../models/Booking.js";
+import EntryLog from "../models/EntryLog.js";
 import Event from "../models/Event.js";
 
+// Scan ticket by QR code or Booking ID
+export const scanTicket = async (req, res) => {
+  try {
+    const { bookingId, ticketId, gate, ipAddress } = req.body;
+    const staffId = req.user._id;
+
+    // Find booking
+    let booking = null;
+    if (bookingId) {
+      booking = await Booking.findOne({ bookingId });
+    } else if (ticketId) {
+      booking = await Booking.findById(ticketId);
+    }
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Check if cancelled
+    if (booking.status === "cancelled") {
+      return res.status(400).json({
+        message: "Booking is cancelled",
+        ticketStatus: "cancelled",
+      });
+    }
+
+    // Check if this booking has already been scanned (prevent duplicate scans)
+    if (booking.scans && booking.scans.length > 0) {
+      // If booking ID is used (not individual ticket), prevent re-scanning entire booking
+      if (bookingId && !ticketId) {
+        return res.status(400).json({
+          message: "Booking already scanned",
+          ticketStatus: "used",
+          scanTime: booking.lastScannedAt,
+        });
+      }
+      
+      // If specific ticket ID, check if this ticket was already scanned
+      if (ticketId) {
+        const alreadyScanned = booking.scans.some(s => s.ticketId === ticketId);
+        if (alreadyScanned) {
+          return res.status(400).json({
+            message: "This ticket already scanned",
+            ticketStatus: "used",
+            scanTime: booking.scans.find(s => s.ticketId === ticketId)?.scannedAt,
+          });
+        }
+      }
+    }
+
+    // For bookings with multiple tickets, check if all tickets have been scanned
+    const scannedCount = booking.scans?.length || 0;
+    const totalTickets = booking.quantity || 1;
+    
+    if (scannedCount >= totalTickets) {
+      return res.status(400).json({
+        message: "All tickets for this booking have been scanned",
+        ticketStatus: "used",
+        scanTime: booking.lastScannedAt,
+      });
+    }
+
+    // Create entry log
+    const scanMethod = bookingId ? "booking_id" : "qr_code";
+    const entryLog = new EntryLog({
+      event: booking.event,
+      booking: booking._id,
+      staff: staffId,
+      gate: gate || "Unknown",
+      scanMethod,
+      ticketStatus: "valid",
+      ipAddress: ipAddress || "",
+    });
+
+    await entryLog.save();
+
+    // Update booking with scan info (for compatibility with event admin)
+    booking.scans = booking.scans || [];
+    booking.scans.push({
+      scannedAt: entryLog.scannedAt,
+      scannedBy: staffId,
+      ticketId: ticketId || null,
+      ticketIndex: (booking.scans.length + 1),
+      deviceInfo: req.headers['user-agent'] || 'Unknown'
+    });
+    booking.lastScannedAt = entryLog.scannedAt;
+    
+    // Update status to "used" only if all tickets have been scanned
+    if (booking.scans.length >= totalTickets) {
+      booking.status = "used";
+    }
+    
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: "Ticket scanned successfully",
+      booking: {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        userName: booking.userName,
+        userEmail: booking.userEmail,
+        ticketType: booking.ticketType,
+        status: booking.status,
+      },
+      entryLog: {
+        _id: entryLog._id,
+        scannedAt: entryLog.scannedAt,
+        gate: entryLog.gate,
+      },
+    });
+  } catch (err) {
+    console.error("Scan ticket error:", err);
+    res.status(500).json({ message: err.message || "Failed to scan ticket" });
+  }
+};
+
+// Get ticket status
+export const getTicketStatus = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findOne({ bookingId }).populate(
+      "event",
+      "title date"
+    );
+
+    if (!booking) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    const entryLog = await EntryLog.findOne({ booking: booking._id });
+
+    res.json({
+      booking: {
+        bookingId: booking.bookingId,
+        userName: booking.userName,
+        userEmail: booking.userEmail,
+        ticketType: booking.ticketType,
+        event: booking.event,
+        status: booking.status,
+        createdAt: booking.createdAt,
+      },
+      entry: entryLog
+        ? {
+            status: entryLog.ticketStatus,
+            scannedAt: entryLog.scannedAt,
+            gate: entryLog.gate,
+            scanMethod: entryLog.scanMethod,
+          }
+        : null,
+    });
+  } catch (err) {
+    console.error("Get ticket status error:", err);
+    res.status(500).json({ message: err.message || "Failed to get status" });
+  }
+};
+
+// Get real-time entry stats for staff's gates
+export const getGateStats = async (req, res) => {
+  try {
+    const staffId = req.user._id;
+    const { eventId } = req.params;
+
+    const staff = await User.findById(staffId);
+    if (!staff) {
+      return res.status(404).json({ message: "Staff not found" });
+    }
+
+    // Get entry logs for this staff at their gates
+    const logs = await EntryLog.find({
+      event: eventId,
+      staff: staffId,
+      gate: { $in: staff.assignedGates },
+    });
+
+    const stats = {
+      totalScanned: logs.length,
+      valid: logs.filter((l) => l.ticketStatus === "valid").length,
+      used: logs.filter((l) => l.ticketStatus === "used").length,
+      invalid: logs.filter((l) => l.ticketStatus === "invalid").length,
+      cancelled: logs.filter((l) => l.ticketStatus === "cancelled").length,
+      byGate: {},
+    };
+
+    // Count by gate
+    logs.forEach((log) => {
+      const gate = log.gate || "Unknown";
+      stats.byGate[gate] = (stats.byGate[gate] || 0) + 1;
+    });
+
+    // Get recent scans
+    const recentScans = logs
+      .sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt))
+      .slice(0, 20)
+      .map((log) => ({
+        _id: log._id,
+        scannedAt: log.scannedAt,
+        gate: log.gate,
+        status: log.ticketStatus,
+      }));
+
+    res.json({ stats, recentScans });
+  } catch (err) {
+    console.error("Get gate stats error:", err);
+    res.status(500).json({ message: err.message || "Failed to get stats" });
+  }
+};
+
+// Get assigned events and gates for scanner
+export const getAssignedInfo = async (req, res) => {
+  try {
+    const staffId = req.user._id;
+
+    const staff = await User.findById(staffId)
+      .populate("assignedEvents", "title date location totalTickets availableTickets")
+      .select("name email assignedEvents assignedGates");
+
+    if (!staff) {
+      return res.status(404).json({ message: "Staff not found" });
+    }
+
+    res.json({
+      staff: {
+        name: staff.name,
+        email: staff.email,
+        assignedGates: staff.assignedGates,
+        assignedEvents: staff.assignedEvents,
+      },
+    });
+  } catch (err) {
+    console.error("Get assigned info error:", err);
+    res.status(500).json({ message: err.message || "Failed to get info" });
+  }
+};
+
+// Manual entry with admin approval
+export const requestManualEntry = async (req, res) => {
+  try {
+    const { bookingId, reason, gate } = req.body;
+    const staffId = req.user._id;
+
+    const booking = await Booking.findOne({ bookingId });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Create entry log with manual status - requires approval
+    const entryLog = new EntryLog({
+      event: booking.event,
+      booking: booking._id,
+      staff: staffId,
+      gate: gate || "Unknown",
+      scanMethod: "manual",
+      ticketStatus: "valid", // Will be approved by staff admin
+      notes: reason || "Manual entry requested",
+    });
+
+    await entryLog.save();
+
+    res.json({
+      success: true,
+      message: "Manual entry request submitted for approval",
+      entryLog: {
+        _id: entryLog._id,
+        status: entryLog.ticketStatus,
+        notes: entryLog.notes,
+      },
+    });
+  } catch (err) {
+    console.error("Manual entry error:", err);
+    res.status(500).json({ message: err.message || "Failed to request entry" });
+  }
+};
+
+// Legacy QR validation (kept for compatibility)
 export const validateAndScanQR = async (req, res) => {
   const { eventId, qrData, deviceInfo } = req.body;
 
-  if (!req.user || req.user.role !== "staff_admin") {
+  if (!req.user || !["staff", "staff_admin"].includes(req.user.role)) {
     return res.status(403).json({ message: "Staff role required" });
   }
 
@@ -65,6 +343,16 @@ export const validateAndScanQR = async (req, res) => {
       return res.status(400).json({ message: "Invalid QR format or ticket ID" });
     }
 
+    // Block cancelled or refunded bookings
+    if (["cancelled", "refunded"].includes(booking.status)) {
+      return res.status(400).json({
+        message: "Booking is cancelled/refunded — entry not allowed",
+        valid: false,
+        cancelled: true,
+        status: booking.status,
+      });
+    }
+
     // Check if already scanned (prevent duplicates)
     const alreadyScanned = booking.scans?.some(
       (s) => s.ticketId === ticketId || (ticketIndex && s.ticketIndex === ticketIndex)
@@ -121,14 +409,15 @@ export const validateAndScanQR = async (req, res) => {
 };
 
 export const getStaffEvents = async (req, res) => {
-  if (!req.user || req.user.role !== "staff_admin") {
+  if (!req.user || !["staff_admin", "staff"].includes(req.user.role)) {
     return res.status(403).json({ message: "Staff role required" });
   }
 
   try {
-    // Staff can access all events (assuming organization-wide staff)
-    // If you want event-specific staff, add an organizer/staff field to Event model
-    const events = await Event.find()
+    const assignedIds = Array.isArray(req.user.assignedEvents) ? req.user.assignedEvents : []
+    const filter = assignedIds.length > 0 ? { _id: { $in: assignedIds } } : { _id: null } // return none if no assignment
+
+    const events = await Event.find(filter)
       .select("_id title location date totalTickets availableTickets")
       .sort({ date: -1 });
 
@@ -141,7 +430,7 @@ export const getStaffEvents = async (req, res) => {
 export const getEventScanStats = async (req, res) => {
   const { eventId } = req.params;
 
-  if (!req.user || req.user.role !== "staff_admin") {
+  if (!req.user || !["staff_admin", "staff"].includes(req.user.role)) {
     return res.status(403).json({ message: "Staff role required" });
   }
 

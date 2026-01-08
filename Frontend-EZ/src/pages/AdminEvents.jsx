@@ -32,14 +32,15 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false }) {
     locationDetails: '',
     category: '',
     description: '',
-    price: 0,
-    capacity: 100,
     image: '',
     ...initial,
     date: toInputDateTime(initial.date) || '',
+    ticketTypes: initial.ticketTypes || []
   })
   const [errors, setErrors] = useState({})
   const [dateSaved, setDateSaved] = useState(false)
+  const [addingTicketType, setAddingTicketType] = useState(false)
+  const [ticketForm, setTicketForm] = useState({ name: '', price: '', quantity: '', description: '' })
 
   function validate(f) {
     const err = {}
@@ -49,8 +50,12 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false }) {
     if (!f.image?.trim()) err.image = 'Image URL is required'
     if (!f.date) err.date = 'Date/time is required'
     else if (isNaN(new Date(f.date))) err.date = 'Invalid date/time'
-    if (!(Number(f.price) > 0)) err.price = 'Price must be greater than 0'
-    if (!(Number(f.capacity) > 0)) err.capacity = 'Capacity must be greater than 0'
+    
+    // Require at least one ticket type
+    if (!f.ticketTypes || f.ticketTypes.length === 0) {
+      err.ticketTypes = 'At least one ticket type is required'
+    }
+    
     return err
   }
 
@@ -65,11 +70,10 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false }) {
       description: form.description.trim(),
       image: form.image.trim(),
     }
-    const combinedLocation = [trimmed.location, trimmed.locationDetails].filter(Boolean).join(' — ')
-    const err = validate({ ...trimmed, location: combinedLocation })
+    const err = validate(trimmed)
     setErrors(err)
     if (Object.keys(err).length) return
-    onSave({ ...trimmed, location: combinedLocation })
+    onSave(trimmed)
   }
 
   return (
@@ -143,17 +147,49 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false }) {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="sm:w-1/2 space-y-1">
-          <label className="text-sm font-medium">Ticket price (INR)*</label>
-          <input type="number" min="1" step="1" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} placeholder="e.g. 499" className="p-2 border rounded w-full" />
-          {errors.price && <div className="text-xs text-red-600">{errors.price}</div>}
+      {/* Ticket Types Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium">Ticket Types *</label>
+          <button type="button" onClick={() => setAddingTicketType(true)} className="text-sm text-indigo-600 hover:text-indigo-700">+ Add Ticket Type</button>
         </div>
-        <div className="sm:w-1/2 space-y-1">
-          <label className="text-sm font-medium">Capacity*</label>
-          <input type="number" min="1" step="1" value={form.capacity} onChange={e => setForm({ ...form, capacity: Number(e.target.value) })} placeholder="Total tickets" className="p-2 border rounded w-full" />
-          {errors.capacity && <div className="text-xs text-red-600">{errors.capacity}</div>}
-        </div>
+        <div className="text-xs text-gray-500">Add different ticket types (e.g., VIP, General, Student). At least one type is required.</div>
+        {errors.ticketTypes && <div className="text-xs text-red-600">{errors.ticketTypes}</div>}
+        
+        {form.ticketTypes.length > 0 && (
+          <div className="space-y-2">
+            {form.ticketTypes.map((ticket, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{ticket.name}</div>
+                  <div className="text-xs text-gray-600">{formatINR(ticket.price)} • {ticket.quantity} tickets</div>
+                </div>
+                <button type="button" onClick={() => setForm({ ...form, ticketTypes: form.ticketTypes.filter((_, i) => i !== idx) })} className="text-red-600 hover:text-red-700 text-sm">Remove</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {addingTicketType && (
+          <div className="bg-gray-50 p-3 rounded space-y-2">
+            <div className="flex gap-2">
+              <input placeholder="Name (e.g., VIP)" value={ticketForm.name} onChange={e => setTicketForm({ ...ticketForm, name: e.target.value })} className="flex-1 p-2 border rounded text-sm" />
+              <input type="number" placeholder="Price" value={ticketForm.price} onChange={e => setTicketForm({ ...ticketForm, price: e.target.value })} className="w-24 p-2 border rounded text-sm" />
+              <input type="number" placeholder="Qty" value={ticketForm.quantity} onChange={e => setTicketForm({ ...ticketForm, quantity: e.target.value })} className="w-20 p-2 border rounded text-sm" />
+            </div>
+            <input placeholder="Description (optional)" value={ticketForm.description} onChange={e => setTicketForm({ ...ticketForm, description: e.target.value })} className="w-full p-2 border rounded text-sm" />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => {
+                if (ticketForm.name && ticketForm.price && ticketForm.quantity) {
+                  setForm({ ...form, ticketTypes: [...form.ticketTypes, { ...ticketForm, price: Number(ticketForm.price), quantity: Number(ticketForm.quantity), available: Number(ticketForm.quantity) }] })
+                  setTicketForm({ name: '', price: '', quantity: '', description: '' })
+                  setAddingTicketType(false)
+                }
+              }} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm">Add</button>
+              <button type="button" onClick={() => { setAddingTicketType(false); setTicketForm({ name: '', price: '', quantity: '', description: '' }) }} className="px-3 py-1 border rounded text-sm">Cancel</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-1">
@@ -171,66 +207,91 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false }) {
   )
 }
 
+// Export EventForm for reuse in other admin pages
+export { EventForm }
+
 export default function AdminEvents() {
   const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState('')
   const { user } = useAuth()
-  const role = user?.role || 'user'
-  const isSuper = role === 'super_admin' || role === 'admin'
-  const isEventAdmin = role === 'event_admin'
-  const isStaff = role === 'staff_admin'
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [limit] = useState(20)
+  const [search, setSearch] = useState('')
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [editingMode, setEditingMode] = useState(false)
+  const [savingDetail, setSavingDetail] = useState(false)
+
+  // Prevent background scroll when any modal is open
+  useEffect(() => {
+    const shouldLock = Boolean(selectedEvent || creating || editingEvent)
+    if (!shouldLock) return undefined
+
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [selectedEvent, creating, editingEvent])
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const url = isSuper ? '/events' : '/events/my'
-        const res = await API.get(url)
-        const evs = (res.data || []).map(e => ({
-          ...e,
-          id: e.id || e._id,
-          capacity: e.capacity ?? e.totalTickets ?? 0,
-          availableTickets: e.availableTickets ?? e.capacity ?? e.totalTickets ?? 0,
-        }))
-        setEvents(evs)
-      } catch (err) {
-        console.error('Failed to load events', err)
-      }
+    fetchEvents()
+  }, [page, search])
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true)
+      setFormError('')
+      const params = new URLSearchParams({
+        page,
+        limit,
+        ...(search && { search }),
+      })
+      const res = await API.get(`/admin/events?${params}`)
+      setEvents(res.data.events)
+      setTotal(res.data.pagination.total)
+    } catch (err) {
+      console.error('Failed to load events', err)
+      setFormError(err.response?.data?.message || 'Failed to load events')
+    } finally {
+      setLoading(false)
     }
-    fetch()
-  }, [isSuper])
+  }
 
   async function handleCreate(data) {
     try {
       setBusy(true)
       setFormError('')
-      const token = user?.token || localStorage.getItem('token')
-      if (!token) {
-        setFormError('No authentication token found. Please log in again.')
-        setBusy(false)
-        return
-      }
-      const config = { headers: { Authorization: `Bearer ${token}` } }
+      
+      // Calculate total capacity and use first ticket type price as base price
+      const totalCapacity = data.ticketTypes.reduce((sum, t) => sum + Number(t.quantity), 0)
+      const basePrice = data.ticketTypes.length > 0 ? data.ticketTypes[0].price : 0
+      
       const payload = {
         title: data.title,
         description: data.description,
         location: data.location,
+        locationDetails: data.locationDetails || '',
         image: data.image,
         category: data.category,
-        price: Number(data.price) || 0,
+        price: basePrice,
         date: new Date(data.date).toISOString(),
-        totalTickets: Number(data.capacity),
-        availableTickets: Number(data.capacity),
+        totalTickets: totalCapacity,
+        availableTickets: totalCapacity,
+        status: 'active',
+        ticketTypes: data.ticketTypes || []
       }
-      const res = await API.post('/events', payload, config)
-      setEvents(prev => [{
-        ...res.data,
-        id: res.data._id || res.data.id,
-        capacity: res.data.capacity ?? res.data.totalTickets ?? data.capacity,
-        availableTickets: res.data.availableTickets ?? res.data.totalTickets ?? data.capacity,
-      }, ...prev])
+      const res = await API.post('/admin/events', payload)
+      const newEvent = res.data?.event || res.data
+      
+      // Add the new event to the list in real-time
+      setEvents((prev) => [newEvent, ...prev])
+      setTotal((prev) => prev + 1)
       setCreating(false)
     } catch (err) {
       console.error('Create event failed', err)
@@ -245,31 +306,29 @@ export default function AdminEvents() {
     try {
       setBusy(true)
       setFormError('')
-      const token = user?.token || localStorage.getItem('token')
-      if (!token) {
-        setFormError('No authentication token found. Please log in again.')
-        setBusy(false)
-        return
-      }
-      const config = { headers: { Authorization: `Bearer ${token}` } }
+      
+      // Calculate total capacity and use first ticket type price as base price
+      const totalCapacity = data.ticketTypes.reduce((sum, t) => sum + Number(t.quantity), 0)
+      const basePrice = data.ticketTypes.length > 0 ? data.ticketTypes[0].price : 0
+      
       const payload = {
         title: data.title,
         description: data.description,
         location: data.location,
+        locationDetails: data.locationDetails || '',
         image: data.image,
         category: data.category,
-        price: Number(data.price) || 0,
+        price: basePrice,
         date: new Date(data.date).toISOString(),
-        totalTickets: Number(data.capacity), // keep server-side logic to adjust availableTickets
+        totalTickets: totalCapacity,
+        status: 'active',
+        ticketTypes: data.ticketTypes || []
       }
-      const res = await API.put(`/events/${id}`, payload, config)
-      const updated = {
-        ...res.data,
-        id: res.data._id || res.data.id,
-        capacity: res.data.capacity ?? res.data.totalTickets ?? data.capacity,
-        availableTickets: res.data.availableTickets ?? res.data.totalTickets ?? data.capacity,
-      }
-      setEvents(prev => prev.map(ev => ev.id === id ? updated : ev))
+      const res = await API.put(`/admin/events/${id}`, payload)
+      const updated = res.data?.event || res.data
+      
+      // Update the events list in real-time without full refetch
+      setEvents((prev) => prev.map((e) => (e._id === updated._id ? { ...e, ...updated } : e)))
       setEditingEvent(null)
     } catch (err) {
       console.error('Update event failed', err)
@@ -280,15 +339,76 @@ export default function AdminEvents() {
     }
   }
 
+  const handleEventDetails = async (eventId) => {
+    try {
+      setFormError('')
+      const res = await API.get(`/admin/events/${eventId}`)
+      setSelectedEvent(res.data)
+      setEditingMode(false)
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to load event details')
+    }
+  }
+
+  const handleDeleteEvent = async (eventId, title) => {
+    if (!confirm(`Permanently delete "${title}" and all its bookings? This cannot be undone.`)) {
+      return
+    }
+    try {
+      setFormError('')
+      await API.delete(`/admin/events/${eventId}`)
+      setEvents(events.filter((e) => e._id !== eventId))
+      setSelectedEvent(null)
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to delete event')
+    }
+  }
+
+  const handleUpdateEventDetails = async (formData) => {
+    if (!selectedEvent?.event?._id) return
+    setSavingDetail(true)
+    try {
+      // Calculate total capacity and use first ticket type price as base price
+      const totalCapacity = formData.ticketTypes.reduce((sum, t) => sum + Number(t.quantity), 0)
+      const basePrice = formData.ticketTypes.length > 0 ? formData.ticketTypes[0].price : 0
+      
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        locationDetails: formData.locationDetails || '',
+        image: formData.image,
+        category: formData.category,
+        price: basePrice,
+        date: new Date(formData.date).toISOString(),
+        totalTickets: totalCapacity,
+        ticketTypes: formData.ticketTypes || []
+      }
+
+      const res = await API.put(`/admin/events/${selectedEvent.event._id}`, payload)
+      const updated = res.data?.event || res.data
+
+      setEvents((prev) => prev.map((e) => (e._id === updated._id ? { ...e, ...updated } : e)))
+      setSelectedEvent((prev) => (prev ? { ...prev, event: { ...prev.event, ...updated } } : prev))
+      setFormError('')
+      setEditingMode(false)
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to update event')
+    } finally {
+      setSavingDetail(false)
+    }
+  }
+
   async function handleDelete(id) {
     if (!confirm('Delete this event? This cannot be undone.')) return
     try {
       setBusy(true)
       setFormError('')
-      const token = user?.token || localStorage.getItem('token')
-      const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
-      await API.delete(`/events/${id}`, config)
-      setEvents(prev => prev.filter(ev => ev.id !== id))
+      await API.delete(`/admin/events/${id}`)
+      
+      // Remove the event from the list in real-time
+      setEvents((prev) => prev.filter((e) => e._id !== id))
+      setTotal((prev) => prev - 1)
     } catch (err) {
       console.error('Delete event failed', err)
       setFormError('Failed to delete event')
@@ -299,41 +419,311 @@ export default function AdminEvents() {
 
   return (
     <AdminLayout title="Events">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Manage Events</h2>
-        <div className="flex gap-2">
-          {!creating && !editingEvent && !isStaff && (
-            <button onClick={() => setCreating(true)} className="bg-indigo-600 text-white px-3 py-1 rounded">Add Event</button>
-          )}
+      {formError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {formError}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Event Management</h2>
+        {!creating && !editingEvent && (
+          <button onClick={() => setCreating(true)} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
+            + Create Event
+          </button>
+        )}
+      </div>
+
+      {/* Search and filters */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
+        <div className="flex flex-col md:flex-row gap-4 md:items-end">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search events by title or location..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <button
+            onClick={() => {
+              setSearch('')
+              setPage(1)
+            }}
+            className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition border border-gray-200 whitespace-nowrap"
+          >
+            Clear
+          </button>
         </div>
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Total Events</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">{total}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Page</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">{page} of {Math.ceil(total / limit)}</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      ) : (
+        <>
+          {/* Events grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            {events.length === 0 ? (
+              <div className="col-span-full text-center text-gray-500 py-12">
+                {search ? 'No events found matching your search.' : 'No events created yet.'}
+              </div>
+            ) : (
+              events.map((event) => (
+                <div key={event._id || event.id} className="bg-white rounded-lg shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-200">
+                  {event.image && (
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      className="w-full h-40 object-cover"
+                    />
+                  )}
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">{event.title}</h3>
+                        <p className="text-xs text-gray-500">{event.category || '—'}</p>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{formatINR(event.price || 0)}</span>
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>📅 {event.date ? new Date(event.date).toLocaleDateString() : '—'}</p>
+                      <p className="line-clamp-2">📍 {event.location || '—'}</p>
+                      <p>🎟️ {event.availableTickets}/{event.totalTickets || event.capacity || 0} tickets</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEventDetails(event._id || event.id)}
+                        className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                      >
+                        View Details
+                      </button>
+                      <button
+                        onClick={() => handleDelete(event._id || event.id)}
+                        className="px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 text-sm border border-red-100"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Pagination */}
+          {total > limit && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                Showing {events.length > 0 ? (page - 1) * limit + 1 : 0} to{' '}
+                {Math.min(page * limit, total)} of {total} events
+              </p>
+              <div className="space-x-2">
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={page * limit >= total}
+                  onClick={() => setPage(page + 1)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold text-gray-900">{editingMode ? 'Edit Event' : selectedEvent.event.title}</h3>
+                <button
+                  onClick={() => {
+                    setSelectedEvent(null)
+                    setEditingMode(false)
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              {formError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                  {formError}
+                </div>
+              )}
+
+              {!editingMode ? (
+                <>
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Event Details</h4>
+                      <div className="text-sm space-y-2 text-gray-600">
+                        <p><strong>Category:</strong> {selectedEvent.event.category || '—'}</p>
+                        <p><strong>Location:</strong> {[selectedEvent.event.location, selectedEvent.event.locationDetails].filter(Boolean).join(' — ') || '—'}</p>
+                        <p><strong>Date:</strong> {selectedEvent.event.date ? new Date(selectedEvent.event.date).toLocaleDateString() : '—'}</p>
+                        <p><strong>Available Tickets:</strong> {selectedEvent.event.availableTickets || 0}</p>
+                      </div>
+                    </div>
+
+                    {selectedEvent.event.ticketTypes && selectedEvent.event.ticketTypes.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Ticket Types</h4>
+                        <div className="space-y-2">
+                          {selectedEvent.event.ticketTypes.map((ticket, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                              <div>
+                                <p className="font-medium text-gray-900">{ticket.name}</p>
+                                {ticket.description && <p className="text-xs text-gray-600">{ticket.description}</p>}
+                              </div>
+                              <div className="text-right">
+                                <p className="font-medium text-gray-900">{formatINR(ticket.price)}</p>
+                                <p className="text-xs text-gray-600">{ticket.quantity} available</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                          <p className="text-sm font-medium text-blue-900">
+                            Total Capacity: {selectedEvent.event.ticketTypes.reduce((sum, t) => sum + Number(t.quantity), 0)} tickets
+                          </p>
+                          <p className="text-sm text-blue-800">
+                            Price Range: {formatINR(Math.min(...selectedEvent.event.ticketTypes.map(t => t.price)))} - {formatINR(Math.max(...selectedEvent.event.ticketTypes.map(t => t.price)))}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedEvent.event.organizer && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Event Manager (Staff Admin)</h4>
+                        <p className="text-sm">{selectedEvent.event.organizer.name}</p>
+                        <p className="text-sm text-gray-600">{selectedEvent.event.organizer.email}</p>
+                      </div>
+                    )}
+
+                    {selectedEvent.bookingStats && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Booking Statistics</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div className="bg-blue-50 p-3 rounded">
+                            <p className="text-gray-600">Total Bookings</p>
+                            <p className="font-bold text-lg">{selectedEvent.bookingStats.total}</p>
+                          </div>
+                          <div className="bg-green-50 p-3 rounded">
+                            <p className="text-gray-600">Confirmed</p>
+                            <p className="font-bold text-lg">{selectedEvent.bookingStats.confirmed}</p>
+                          </div>
+                          <div className="bg-orange-50 p-3 rounded">
+                            <p className="text-gray-600">Cancelled</p>
+                            <p className="font-bold text-lg">{selectedEvent.bookingStats.cancelled}</p>
+                          </div>
+                          <div className="bg-purple-50 p-3 rounded">
+                            <p className="text-gray-600">Revenue</p>
+                            <p className="font-bold text-lg">{formatINR(selectedEvent.bookingStats.totalRevenue)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <button
+                      onClick={() => setSelectedEvent(null)}
+                      className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => setEditingMode(true)}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Edit Event
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEvent(selectedEvent.event._id, selectedEvent.event.title)}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                      Delete Event
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <EventForm
+                  initial={{
+                    title: selectedEvent.event.title,
+                    description: selectedEvent.event.description || '',
+                        location: selectedEvent.event.location || '',
+                        locationDetails: selectedEvent.event.locationDetails || '',
+                    image: selectedEvent.event.image || '',
+                    category: selectedEvent.event.category || '',
+                    date: selectedEvent.event.date || '',
+                    ticketTypes: selectedEvent.event.ticketTypes || []
+                  }}
+                  onSave={handleUpdateEventDetails}
+                  onCancel={() => setEditingMode(false)}
+                  busy={savingDetail}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Event Modal */}
       <AnimatePresence>
         {(creating || editingEvent) && (
-          <motion.div className="fixed inset-0 z-50"
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <div className="absolute inset-0 bg-black/40" onClick={() => { setCreating(false); setEditingEvent(null) }} />
             <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'tween', duration: 0.25 }}
-              className="absolute right-0 top-0 h-full w-full sm:w-[480px] bg-white dark:bg-gray-900 shadow-xl p-4 overflow-y-auto"
+              initial={{ scale: 0.96, opacity: 0, y: 12 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 12 }}
+              transition={{ type: 'tween', duration: 0.22 }}
+              className="relative w-full max-w-3xl bg-white rounded-xl shadow-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold">{creating ? 'Create Event' : 'Edit Event'}</h3>
-                <button onClick={() => { setCreating(false); setEditingEvent(null) }} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                <button onClick={() => { setCreating(false); setEditingEvent(null) }} className="p-2 rounded hover:bg-gray-100">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
-              {formError && <div className="mb-3 p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-800">{formError}</div>}
-              {busy && <div className="mb-3 text-sm text-gray-500">Saving…</div>}
+              {formError && <div className="mb-3 p-2 text-sm text-red-600 bg-red-50 rounded border border-red-200">{formError}</div>}
               <EventForm
                 initial={editingEvent || undefined}
-                onSave={creating ? handleCreate : (data) => handleUpdate(editingEvent.id, data)}
+                onSave={creating ? handleCreate : (data) => handleUpdate(editingEvent._id || editingEvent.id, data)}
                 onCancel={() => { setCreating(false); setEditingEvent(null) }}
                 busy={busy}
               />
@@ -341,39 +731,6 @@ export default function AdminEvents() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <div className="space-y-3 mt-4">
-        {events.map(ev => (
-          <div key={ev.id} className="bg-white border rounded p-3 flex justify-between items-start">
-            <div>
-              <div className="font-semibold">{ev.title}</div>
-              <div className="text-sm text-gray-500">{ev.date} • {ev.location}</div>
-              <div className="text-sm mt-2">Category: {ev.category || '-'} • Price: {formatINR(ev.price)} • Capacity: {ev.capacity}</div>
-            </div>
-              <div className="flex flex-col gap-2">
-                <a href={`/event/${ev.id}`} className="text-indigo-600">View</a>
-                {!isStaff && (
-                  <>
-                    <button
-                      onClick={() => { setEditingEvent(ev); setCreating(false) }}
-                      className="text-sm px-3 py-1 border rounded"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(ev.id)}
-                      className="text-sm px-3 py-1 border rounded text-red-600 border-red-300 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
-              </div>
-          </div>
-        ))}
-      </div>
     </AdminLayout>
   )
 }
-
-export { EventForm }

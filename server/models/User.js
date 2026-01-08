@@ -20,12 +20,14 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String, unique: true, sparse: true }, // For Google OAuth
     role: {
       type: String,
-      enum: ["user", "organizer", ...ADMIN_ROLES],
+      enum: ["user", "staff", ...ADMIN_ROLES],
       default: "user",
     },
     active: { type: Boolean, default: true },
     tokenVersion: { type: Number, default: 0 },
-    assignedEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }], // Events assigned to event_admin/staff_admin
+    assignedEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }], // Events assigned to event_admin/staff_admin/staff
+    assignedGates: [{ type: String }], // Gate/Zone names for staff (e.g., ["Gate A", "Gate B"])
+    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Staff Admin who assigned this staff
     sessions: [sessionSchema],
     lastLoginAt: { type: Date },
     preferences: {

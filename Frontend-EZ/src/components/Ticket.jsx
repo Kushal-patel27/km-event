@@ -187,7 +187,7 @@ const Ticket = forwardRef(function Ticket({ booking }, ref) {
                           }`}>Guest Name</p>
                           <p className={`text-sm font-semibold ${
                             isDarkMode ? 'text-gray-200' : 'text-gray-800'
-                          }`}>{user.name}</p>
+                          }`}>{user?.name || 'Guest'}</p>
                         </div>
                       </div>
 
@@ -301,7 +301,7 @@ const Ticket = forwardRef(function Ticket({ booking }, ref) {
                         }`}>Authorized To</p>
                         <p className={`text-sm font-semibold ${
                           isDarkMode ? 'text-gray-200' : 'text-gray-800'
-                        }`}>{user.name}</p>
+                        }`}>{user?.name || 'Guest'}</p>
                         <p className={`text-xs mt-2 ${
                           isDarkMode ? 'text-gray-400' : 'text-gray-600'
                         }`}>Seat: {item.seatLabel}</p>

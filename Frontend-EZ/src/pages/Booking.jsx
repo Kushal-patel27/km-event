@@ -24,6 +24,7 @@ export default function Booking(){
   const [offer, setOffer] = useState(null)
   const [idVerified, setIdVerified] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [selectedTicketType, setSelectedTicketType] = useState(null)
 
   const location = useLocation()
 
@@ -64,6 +65,15 @@ export default function Booking(){
       })
   }, [id])
 
+  // Update available tickets when ticket type is selected
+  useEffect(() => {
+    if (selectedTicketType) {
+      setAvailable(selectedTicketType.available)
+    } else if (event && !hasTicketTypes) {
+      setAvailable(seatsAvailable(event))
+    }
+  }, [selectedTicketType, event])
+
   useEffect(()=>{
     // reset selected seats when quantity changes
     if(selectedSeats.length > quantity) setSelectedSeats(prev => prev.slice(0, quantity))
@@ -81,7 +91,9 @@ export default function Booking(){
   }, [])
 
   // Calculate discount
-  const subTotal = event ? event.price * quantity : 0
+  const hasTicketTypes = event?.ticketTypes && event.ticketTypes.length > 0
+  const currentPrice = selectedTicketType ? selectedTicketType.price : (event?.price || 0)
+  const subTotal = currentPrice * quantity
   let discountAmount = 0
   let isOfferValid = true
   let offerMessage = ''
@@ -101,7 +113,12 @@ export default function Booking(){
   if(loading) return <div className="text-center p-10">Loading...</div>
   if(!event) return <div className="text-center p-10">{error || 'Event not found'}</div>
 
-  if(available === 0) return <div className="max-w-xl mx-auto bg-white p-6 rounded shadow text-center">This event is sold out.</div>
+  // Check sold out - all ticket types are sold out
+  const isSoldOut = event.ticketTypes && event.ticketTypes.every(t => t.available === 0)
+
+  if(isSoldOut) {
+    return <div className="max-w-xl mx-auto bg-white p-6 rounded shadow text-center">This event is sold out.</div>
+  }
 
   const hasSeatLayout = event && isFinite(event.capacity) && event.capacity > 0
 
@@ -109,11 +126,18 @@ export default function Booking(){
     e.preventDefault()
     setError('')
     
+    // Always require ticket type selection
+    if(!selectedTicketType) {
+      return setError('Please select a ticket type')
+    }
+    
+    
     // Check if event has seat layout
     const hasSeatLayout = event && isFinite(event.capacity) && event.capacity > 0
     
     if(quantity < 1) return setError('Quantity must be at least 1')
     if(quantity > available) return setError(`Only ${available} seats are available`)
+    
     
     // If event has seats, require seat selection
     if(hasSeatLayout){
@@ -144,7 +168,11 @@ export default function Booking(){
     const token = (authUser && authUser.token) || storedToken
     if (token) {
       try {
-        const payload = { eventId: event.id, quantity }
+        const payload = { 
+          eventId: event.id, 
+          quantity,
+          ...(selectedTicketType && { ticketTypeId: selectedTicketType._id })
+        }
         if (hasSeatLayout && selectedSeats.length > 0) payload.seats = selectedSeats.map(Number)
         const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
         const res = await API.post('/bookings', payload, config)
@@ -266,7 +294,48 @@ export default function Booking(){
               </div>
             </div>
 
-            {/* Ticket Quantity */}
+            {/* Ticket Type Selection (if available) - Compact Version */}
+            {hasTicketTypes && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Ticket Type *</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {event.ticketTypes.map((ticketType, idx) => (
+                    <label 
+                      key={idx} 
+                      className={`flex flex-col items-start p-2 cursor-pointer transition-all ${
+                        selectedTicketType?.name === ticketType.name
+                          ? 'bg-gray-50'
+                          : 'bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <input
+                          type="radio"
+                          name="ticketType"
+                          checked={selectedTicketType?.name === ticketType.name}
+                          onChange={() => setSelectedTicketType(ticketType)}
+                          className="w-4 h-4 text-gray-600 flex-shrink-0"
+                          required
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900">{ticketType.name}</div>
+                        </div>
+                      </div>
+                      {ticketType.description && (
+                        <div className="text-xs text-gray-600 mt-1 ml-6">{ticketType.description}</div>
+                      )}
+                      <div className="mt-1 ml-6">
+                        <div className="text-sm font-bold text-gray-900">{formatINR(ticketType.price)}</div>
+                        <div className="text-xs text-gray-500">{ticketType.available} left</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ticket Quantity - Only show if ticket type selected or no types */}
+            {(!hasTicketTypes || selectedTicketType) && (
             <div>
               <h3 className={`text-lg font-semibold flex items-center gap-2 mb-4 transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
                 <svg className={`w-5 h-5 transition-colors ${isDarkMode ? 'text-red-500' : 'text-indigo-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -292,6 +361,7 @@ export default function Booking(){
                 </div>
               </div>
             </div>
+            )}
 
             {/* Seat Selection - only show if event has seat layout */}
             {hasSeatLayout && (

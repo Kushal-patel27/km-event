@@ -30,6 +30,13 @@ API.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
+    
+    // Silently handle 403 errors during login attempts (multi-endpoint fallback)
+    const isLoginEndpoint = original?.url?.includes('/auth/login') || original?.url?.includes('/auth/admin/login') || original?.url?.includes('/auth/staff/login');
+    if (error.response?.status === 403 && isLoginEndpoint) {
+      error.config._silent403 = true; // Mark for silent handling
+    }
+    
     if (error.response?.status === 401 && !original?._retry) {
       original._retry = true;
       try {
