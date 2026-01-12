@@ -20,26 +20,41 @@ export default function MyBookings() {
 
   const downloadTicket = async (bookingId) => {
     try {
-      const ticketElement = ticketRefs.current[bookingId]
-      if (!ticketElement) return
+      const booking = bookings.find(b => b._id === bookingId);
+      if (!booking) return;
 
-      // Dynamically import html2canvas
-      const html2canvas = (await import('html2canvas')).default
+      const token = localStorage.getItem('token');
       
-      const canvas = await html2canvas(ticketElement, {
-        backgroundColor: isDarkMode ? '#0B0F19' : '#ffffff',
-        scale: 2,
-        logging: false,
-        useCORS: true
-      })
-      
-      const link = document.createElement('a')
-      link.download = `ticket-${bookingId}.png`
-      link.href = canvas.toDataURL('image/png')
-      link.click()
+      // Download each ticket PDF
+      for (let i = 0; i < booking.quantity; i++) {
+        const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/ticket/${i}/pdf`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to download ticket');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Ticket_${booking.ticketIds?.[i] || i + 1}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        // Small delay between downloads to prevent browser blocking
+        if (i < booking.quantity - 1) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
     } catch (err) {
-      console.error('Download failed:', err)
-      alert('Failed to download ticket. Please try again.')
+      console.error('Download failed:', err);
+      alert('Failed to download ticket. Please try again.');
     }
   }
 
@@ -386,9 +401,9 @@ export default function MyBookings() {
                               }`}
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                               </svg>
-                              Download
+                              Download PDF{booking.quantity > 1 ? 's' : ''}
                             </button>
                           </div>
 

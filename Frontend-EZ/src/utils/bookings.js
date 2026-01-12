@@ -13,6 +13,12 @@ export function totalBookedForEvent(eventId){
 
 export function seatsAvailable(event){
   if(!event) return Infinity
+  // If ticket types exist, sum their available counts as source of truth
+  if (Array.isArray(event.ticketTypes) && event.ticketTypes.length > 0) {
+    const typeAvail = event.ticketTypes.reduce((sum, t) => sum + (Number(t.available) || 0), 0)
+    return Math.max(0, typeAvail)
+  }
+
   const avail = Number(event.availableTickets)
   if(!Number.isNaN(avail)) return avail
   const cap = Number(event.capacity)

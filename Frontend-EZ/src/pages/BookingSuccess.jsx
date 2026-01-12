@@ -58,44 +58,43 @@ export default function BookingSuccess() {
   }, [booking])
 
   const handleDownloadPdf = async () => {
-    if (!booking || !ticketRef.current) return
+    if (!booking) return
     setDownloading(true)
     try {
-      // Ensure all cards are on their front side for clean captures
-      ticketRef.current.resetFlips?.()
-      await new Promise(res => setTimeout(res, 150))
+      const token = localStorage.getItem('token')
+      const bookingId = booking._id || booking.id
+      const quantity = booking.quantity || 1
+      
+      // Download each ticket PDF from backend
+      for (let i = 0; i < quantity; i++) {
+        const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/ticket/${i}/pdf`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
 
-      const { fronts = [], backs = [] } = ticketRef.current.getTicketFaces?.() || {}
-      const pdfMod = await import('jspdf')
-      const JsPdfCtor = pdfMod.jsPDF || pdfMod.default
-      if (!JsPdfCtor) throw new Error('jsPDF failed to load')
-      const doc = new JsPdfCtor({ orientation: 'portrait', unit: 'px', format: 'a4' })
-      const pageBg = isDarkMode ? '#0B0F19' : '#ffffff'
-      let isFirstPage = true
+        if (!response.ok) {
+          throw new Error('Failed to download ticket')
+        }
 
-      for (let i = 0; i < fronts.length; i++) {
-        const faces = [fronts[i], backs[i]].filter(Boolean)
-        for (const face of faces) {
-          const canvas = await html2canvas(face, { scale: 2, useCORS: true, backgroundColor: pageBg })
-          const imgData = canvas.toDataURL('image/png')
-          const pageWidth = doc.internal.pageSize.getWidth()
-          const pageHeight = doc.internal.pageSize.getHeight()
-          const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height)
-          const width = canvas.width * ratio
-          const height = canvas.height * ratio
-          const x = (pageWidth - width) / 2
-          const y = (pageHeight - height) / 2
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `Ticket_${booking.ticketIds?.[i] || i + 1}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
 
-          if (!isFirstPage) doc.addPage()
-          doc.addImage(imgData, 'PNG', x, y, width, height, undefined, 'FAST')
-          isFirstPage = false
+        // Small delay between downloads
+        if (i < quantity - 1) {
+          await new Promise(resolve => setTimeout(resolve, 300))
         }
       }
-
-      doc.save(`tickets_${booking.id || booking._id || 'booking'}.pdf`)
     } catch (err) {
       console.error(err)
-      setError('Could not generate PDF. Please try again.')
+      setError('Could not download PDF. Please try again.')
     } finally {
       setDownloading(false)
     }
@@ -151,8 +150,8 @@ export default function BookingSuccess() {
   return (
     <div className={`min-h-screen py-12 px-4 transition-colors duration-300 ${
       isDarkMode
-        ? 'bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19]'
-        : 'bg-gradient-to-br from-indigo-50 via-white to-purple-50'
+        ? 'bg-[#0B0F19]'
+        : 'bg-gray-50'
     }`}>
       {/* Success Toast */}
       {showToast && (
@@ -160,11 +159,7 @@ export default function BookingSuccess() {
           initial={{ opacity: 0, x: 100 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 100 }}
-          className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 ${
-            isDarkMode
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white'
-              : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-          }`}
+          className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 bg-green-600 text-white`}
         >
           <div className="bg-white/20 rounded-full p-1">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -188,21 +183,17 @@ export default function BookingSuccess() {
           <motion.div
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className={`inline-flex items-center justify-center w-24 h-24 rounded-full mb-6 shadow-2xl ${
-              isDarkMode
-                ? 'bg-gradient-to-br from-green-600 to-emerald-700 text-white'
-                : 'bg-gradient-to-br from-green-400 to-emerald-600 text-white'
-            }`}
+            className={`inline-flex items-center justify-center w-24 h-24 rounded-full mb-6 shadow-2xl bg-green-600 text-white`}
           >
             <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
           </motion.div>
 
-          <h1 className={`text-4xl md:text-5xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r ${
+          <h1 className={`text-4xl md:text-5xl font-extrabold mb-4 ${
             isDarkMode
-              ? 'from-red-500 via-red-400 to-orange-400'
-              : 'from-indigo-600 via-purple-600 to-pink-600'
+              ? 'text-blue-400'
+              : 'text-blue-600'
           }`}>
             Booking Confirmed!
           </h1>
@@ -230,14 +221,14 @@ export default function BookingSuccess() {
           className={`max-w-2xl mx-auto rounded-3xl shadow-2xl overflow-hidden mb-10 border ${
             isDarkMode
               ? 'bg-[#1a1f2e] border-white/10'
-              : 'bg-white border-indigo-100'
+              : 'bg-white border-blue-100'
           }`}
         >
           {/* Header */}
-          <div className={`px-6 py-5 flex justify-between items-center bg-gradient-to-r ${
+          <div className={`px-6 py-5 flex justify-between items-center ${
             isDarkMode
-              ? 'from-red-600 to-red-700'
-              : 'from-indigo-600 to-purple-600'
+              ? 'bg-blue-600'
+              : 'bg-blue-600'
           }`}>
             <div className="flex items-center gap-3">
               <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -245,11 +236,7 @@ export default function BookingSuccess() {
               </svg>
               <h3 className="font-bold text-white text-lg">Payment Summary</h3>
             </div>
-            <span className={`px-4 py-1.5 text-xs font-bold uppercase rounded-full tracking-wide shadow-lg ${
-              isDarkMode
-                ? 'bg-green-600/80 text-white'
-                : 'bg-green-500 text-white'
-            }`}>
+            <span className={`px-4 py-1.5 text-xs font-bold uppercase rounded-full tracking-wide shadow-lg bg-green-500 text-white`}>
               ✓ Paid
             </span>
           </div>
@@ -288,10 +275,10 @@ export default function BookingSuccess() {
             <div className={`border-t-2 border-dashed pt-4 mt-4 ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
               <div className="flex justify-between items-center">
                 <span className={`font-bold text-xl ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Total Paid</span>
-                <span className={`font-extrabold text-3xl bg-gradient-to-r bg-clip-text text-transparent ${
+                <span className={`font-extrabold text-3xl ${
                   isDarkMode
-                    ? 'from-red-500 to-orange-400'
-                    : 'from-indigo-600 to-purple-600'
+                    ? 'text-blue-400'
+                    : 'text-blue-600'
                 }`}>
                   {formatINR(booking.total || 0)}
                 </span>
@@ -308,12 +295,12 @@ export default function BookingSuccess() {
           className={`max-w-2xl mx-auto rounded-3xl shadow-lg overflow-hidden mb-10 border ${
             isDarkMode
               ? 'bg-[#1a1f2e] border-white/10'
-              : 'bg-white border-indigo-100'
+              : 'bg-white border-blue-100'
           }`}
         >
           <div className="p-8">
             <h3 className={`font-bold text-lg mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              <svg className={`w-5 h-5 ${isDarkMode ? 'text-red-500' : 'text-indigo-600'}`} fill="currentColor" viewBox="0 0 20 20">
+              <svg className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM15 7a1 1 0 11-2 0 1 1 0 012 0zm2 2a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
               </svg>
               Event Details
@@ -377,10 +364,10 @@ export default function BookingSuccess() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleDownloadPdf}
-            className={`w-full sm:w-auto px-8 py-4 font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 border-2 ${
+            className={`w-full sm:w-auto px-8 py-4 font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-white ${
               isDarkMode
-                ? 'bg-[#1a1f2e] border-white/20 text-white hover:border-white/40 hover:bg-[#242a3a]'
-                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-blue-600 hover:bg-blue-700'
             }`}
             disabled={downloading}
           >
@@ -399,8 +386,8 @@ export default function BookingSuccess() {
               to="/"
               className={`w-full sm:w-auto px-8 py-4 font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-white ${
                 isDarkMode
-                  ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
-                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'
+                  ? 'bg-gray-600 hover:bg-gray-700'
+                  : 'bg-gray-600 hover:bg-gray-700'
               }`}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">

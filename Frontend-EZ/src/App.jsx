@@ -50,7 +50,7 @@ import SuperAdminStaff from './pages/SuperAdminStaff'
 import ProtectedSuperAdminRoute from './components/ProtectedSuperAdminRoute'
 import FAQ from './pages/FAQ'
 import HelpCenter from './pages/HelpCenter'
-import PrivacyPolicy from './pages/PrivacyPolicy'
+import Privacy from './pages/Privacy'
 import TermsOfService from './pages/TermsOfService'
 import Cookies from './pages/Cookies'
 import GenieAnimationDemo from './pages/GenieAnimationDemo'
@@ -77,7 +77,7 @@ export default function App(){
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/help" element={<HelpCenter />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/cookies" element={<Cookies />} />
               <Route path="/genie-demo" element={<GenieAnimationDemo />} />

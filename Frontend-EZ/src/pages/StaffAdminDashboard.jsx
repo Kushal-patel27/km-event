@@ -88,6 +88,12 @@ export default function StaffAdminDashboard() {
           <h2 className="text-lg font-bold mb-4">Quick Actions</h2>
           <div className="flex flex-wrap gap-3 text-sm">
             <Link 
+              to="/staff/scanner" 
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center gap-2"
+            >
+              <span>📱</span> Open Scanner
+            </Link>
+            <Link 
               to="/staff-admin/team" 
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
             >

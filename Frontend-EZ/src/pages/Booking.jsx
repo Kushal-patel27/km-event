@@ -24,6 +24,7 @@ export default function Booking(){
   const [offer, setOffer] = useState(null)
   const [idVerified, setIdVerified] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [bookingLoading, setBookingLoading] = useState(false)
   const [selectedTicketType, setSelectedTicketType] = useState(null)
 
   const location = useLocation()
@@ -125,9 +126,11 @@ export default function Booking(){
   async function handleSubmit(e){
     e.preventDefault()
     setError('')
+    setBookingLoading(true)
     
     // Always require ticket type selection
     if(!selectedTicketType) {
+      setBookingLoading(false)
       return setError('Please select a ticket type')
     }
     
@@ -135,13 +138,22 @@ export default function Booking(){
     // Check if event has seat layout
     const hasSeatLayout = event && isFinite(event.capacity) && event.capacity > 0
     
-    if(quantity < 1) return setError('Quantity must be at least 1')
-    if(quantity > available) return setError(`Only ${available} seats are available`)
+    if(quantity < 1) {
+      setBookingLoading(false)
+      return setError('Quantity must be at least 1')
+    }
+    if(quantity > available) {
+      setBookingLoading(false)
+      return setError(`Only ${available} seats are available`)
+    }
     
     
     // If event has seats, require seat selection
     if(hasSeatLayout){
-      if(selectedSeats.length !== Number(quantity)) return setError(`Please select ${quantity} seat(s)`) 
+      if(selectedSeats.length !== Number(quantity)) {
+        setBookingLoading(false)
+        return setError(`Please select ${quantity} seat(s)`)
+      }
       
       // Re-fetch booked seats to ensure they're up to date before submission
       try {
@@ -151,16 +163,19 @@ export default function Booking(){
         // Verify selected seats are still available
         for(const s of selectedSeats){
           if(currentBookedSeats.includes(Number(s))) {
+            setBookingLoading(false)
             return setError(`Seat ${s} was just booked. Please choose another.`)
           }
         }
       } catch (err) {
         console.error("Failed to verify seat availability:", err)
+        setBookingLoading(false)
         return setError("Could not verify seat availability. Please try again.")
       }
     }
     
     if (offer && offer.discount && offer.requiresId && !idVerified) {
+      setBookingLoading(false)
       return setError('Please verify your ID eligibility for this offer.')
     }
 
@@ -192,6 +207,7 @@ export default function Booking(){
       } catch (err) {
         console.error('Backend booking failed', err)
         const errorMsg = err.response?.data?.message || err.message
+        setBookingLoading(false)
         // If auth error, clear invalid token and redirect to login
         if (err.response?.status === 401) {
           localStorage.removeItem('token')
@@ -523,9 +539,20 @@ export default function Booking(){
               </Link>
               <button 
                 type="submit"
-                className={`flex-1 px-6 py-3 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition ${isDarkMode ? 'bg-gradient-to-r from-red-600 to-red-500' : 'bg-gradient-to-r from-indigo-600 to-blue-500'}`}
+                disabled={bookingLoading}
+                className={`flex-1 px-6 py-3 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition flex items-center justify-center gap-2 ${bookingLoading ? 'opacity-70 cursor-not-allowed' : ''} ${isDarkMode ? 'bg-gradient-to-r from-red-600 to-red-500' : 'bg-gradient-to-r from-indigo-600 to-blue-500'}`}
               >
-                Confirm Booking →
+                {bookingLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  'Confirm Booking →'
+                )}
               </button>
             </div>
           </form>

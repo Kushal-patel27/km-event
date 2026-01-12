@@ -23,13 +23,47 @@ export default function SuperAdminLogs() {
         limit,
       })
       const res = await API.get(`/super-admin/logs?${params}`)
+      console.log('Logs response:', res.data) // Debug log
       setLogs(res.data.logs)
       setTotal(res.data.pagination.total)
     } catch (err) {
+      console.error('Error fetching logs:', err)
       setError(err.response?.data?.message || 'Failed to load logs')
     } finally {
       setLoading(false)
     }
+  }
+
+  const getLogTypeStyle = (type) => {
+    switch(type) {
+      case 'login':
+        return 'bg-green-100 text-green-800'
+      case 'user_created':
+        return 'bg-blue-100 text-blue-800'
+      case 'booking_created':
+        return 'bg-purple-100 text-purple-800'
+      case 'session_activity':
+        return 'bg-yellow-100 text-yellow-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const formatLogType = (type) => {
+    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+  }
+
+  const getLogDetails = (log) => {
+    if (log.type === 'booking_created') {
+      return `Event: ${log.details?.event || 'N/A'}, Qty: ${log.details?.quantity || 0}`
+    }
+    if (log.details?.userAgent) {
+      return log.details.userAgent.substring(0, 50) + '...'
+    }
+    if (log.details?.role) {
+      return `Role: ${log.details.role}`
+    }
+    return '-'
   }
 
   return (
@@ -48,12 +82,12 @@ export default function SuperAdminLogs() {
       ) : (
         <>
             {/* Logs Table */}
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6 overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Timestamp</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
+                    <th className="px-3 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">User</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">IP Address</th>
@@ -73,22 +107,22 @@ export default function SuperAdminLogs() {
                         <td className="px-6 py-4 text-sm text-gray-700">
                           {new Date(log.timestamp).toLocaleString()}
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                            {log.type}
+                        <td className="px-3 py-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getLogTypeStyle(log.type)}`}>
+                            {formatLogType(log.type)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {log.userName}
+                          {log.userName || 'N/A'}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {log.userEmail}
+                          {log.userEmail || 'N/A'}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {log.details?.ip}
+                          {log.details?.ip || '-'}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {log.details?.userAgent ? log.details.userAgent.substring(0, 30) + '...' : '-'}
+                        <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                          {getLogDetails(log)}
                         </td>
                       </tr>
                     ))

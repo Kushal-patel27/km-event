@@ -23,6 +23,9 @@ export default function SuperAdminUsers() {
     role: 'user',
   })
   const [creatingUser, setCreatingUser] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({ userId: '', newPassword: '', confirmPassword: '' })
+  const [passwordSaving, setPasswordSaving] = useState(false)
   const [limit] = useState(20)
 
   const roles = [
@@ -128,6 +131,40 @@ export default function SuperAdminUsers() {
       setError(err.response?.data?.message || 'Failed to create user')
     } finally {
       setCreatingUser(false)
+    }
+  }
+
+  const openPasswordModal = (user) => {
+    setPasswordForm({ userId: user._id, newPassword: '', confirmPassword: '' })
+    setShowPasswordModal(true)
+    setError('')
+  }
+
+  const handleChangePasswordForUser = async () => {
+    if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
+      setError('New password must be at least 6 characters')
+      return
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setError('New password and confirmation must match')
+      return
+    }
+
+    try {
+      setPasswordSaving(true)
+      const { data } = await API.put(`/super-admin/users/${passwordForm.userId}/password`, {
+        newPassword: passwordForm.newPassword,
+      })
+      const updated = data?.user
+      if (updated?._id) {
+        setUsers((prev) => prev.map((u) => (u._id === updated._id ? { ...u, ...updated } : u)))
+      }
+      setShowPasswordModal(false)
+      setPasswordForm({ userId: '', newPassword: '', confirmPassword: '' })
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to change password')
+    } finally {
+      setPasswordSaving(false)
     }
   }
 
@@ -338,6 +375,12 @@ export default function SuperAdminUsers() {
                                 Change Role
                               </button>
                               <button
+                                onClick={() => openPasswordModal(user)}
+                                className="text-amber-600 hover:text-amber-900 font-medium"
+                              >
+                                Reset Password
+                              </button>
+                              <button
                                 onClick={() => handleDisableUser(user._id, user.active)}
                                 className={`font-medium ${
                                   user.active
@@ -515,6 +558,69 @@ export default function SuperAdminUsers() {
               </div>
             </div>
           </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full border border-amber-200">
+            <div className="p-6 space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">Reset User Password</h3>
+                  <p className="text-sm text-gray-600 mt-1">This forces sign-out on all devices for this user.</p>
+                </div>
+                <span className="text-amber-600 text-xl" aria-hidden>⚠️</span>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-md p-3">
+                Changing a password immediately invalidates active sessions. Notify the user that their password was reset by an administrator.
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">New password</label>
+                  <input
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="Enter new password"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Confirm new password</label>
+                  <input
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="Re-enter password"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowPasswordModal(false)
+                    setPasswordForm({ userId: '', newPassword: '', confirmPassword: '' })
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleChangePasswordForUser}
+                  disabled={passwordSaving}
+                  className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-60"
+                >
+                  {passwordSaving ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </SuperAdminLayout>
   )

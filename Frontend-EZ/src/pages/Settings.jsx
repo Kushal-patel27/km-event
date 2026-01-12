@@ -19,6 +19,12 @@ export default function Settings(){
   const [prefs, setPrefs] = useState({ emailUpdates: true, bookingReminders: true, newsletter: false, language: 'en', timezone: 'UTC' })
   const [prefsMsg, setPrefsMsg] = useState(null)
   const [dataExport, setDataExport] = useState(null)
+  const [resetOtp, setResetOtp] = useState('')
+  const [resetNewPassword, setResetNewPassword] = useState('')
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('')
+  const [resetStatus, setResetStatus] = useState(null)
+  const [sendingOtp, setSendingOtp] = useState(false)
+  const [resettingPassword, setResettingPassword] = useState(false)
 
   useEffect(()=>{
     const load = async () => {
@@ -68,6 +74,55 @@ export default function Settings(){
       setSecurityMsg({ type: 'error', text: err.response?.data?.message || 'Failed to change password' })
     } finally {
       setSecuritySaving(false)
+    }
+  }
+
+  const sendOtpForReset = async () => {
+    setResetStatus(null)
+    const targetEmail = profile.email || user?.email
+    if(!targetEmail){
+      setResetStatus({ type: 'error', text: 'Email is required to send OTP' })
+      return
+    }
+    try {
+      setSendingOtp(true)
+      const { data } = await API.post('/auth/password/forgot', { email: targetEmail })
+      setResetStatus({ type: 'success', text: data?.message || 'If the account exists, we sent an OTP' })
+    } catch (err) {
+      setResetStatus({ type: 'error', text: err.response?.data?.message || 'Failed to send OTP' })
+    } finally {
+      setSendingOtp(false)
+    }
+  }
+
+  const resetPasswordWithOtp = async (e) => {
+    e.preventDefault()
+    setResetStatus(null)
+    const targetEmail = profile.email || user?.email
+    if(!resetOtp || !resetNewPassword){
+      setResetStatus({ type: 'error', text: 'OTP and new password are required' })
+      return
+    }
+    if(resetNewPassword !== resetConfirmPassword){
+      setResetStatus({ type: 'error', text: 'New password and confirmation do not match' })
+      return
+    }
+    try {
+      setResettingPassword(true)
+      const { data } = await API.post('/auth/password/reset', {
+        email: targetEmail,
+        otp: resetOtp,
+        newPassword: resetNewPassword,
+      })
+      setResetStatus({ type: 'success', text: data?.message || 'Password reset successfully' })
+      setResetOtp('')
+      setResetNewPassword('')
+      setResetConfirmPassword('')
+      setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    } catch (err) {
+      setResetStatus({ type: 'error', text: err.response?.data?.message || 'Failed to reset password' })
+    } finally {
+      setResettingPassword(false)
     }
   }
 
@@ -180,6 +235,49 @@ export default function Settings(){
                 </button>
               </div>
             </form>
+
+            <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Reset via email OTP</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Send a code to {profile.email || user?.email || 'your email'} to reset without the current password.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={sendOtpForReset}
+                  disabled={sendingOtp}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-60"
+                >
+                  {sendingOtp ? 'Sending...' : 'Send OTP'}
+                </button>
+              </div>
+
+              {resetStatus && (
+                <div className={`mb-4 p-3 rounded-lg text-sm ${resetStatus.type==='success' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800'}`}>
+                  {resetStatus.text}
+                </div>
+              )}
+
+              <form onSubmit={resetPasswordWithOtp} className="grid sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OTP code</label>
+                  <input type="text" value={resetOtp} onChange={e=>setResetOtp(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="6-digit code" maxLength={6} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New password</label>
+                  <input type="password" value={resetNewPassword} onChange={e=>setResetNewPassword(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm new password</label>
+                  <input type="password" value={resetConfirmPassword} onChange={e=>setResetConfirmPassword(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
+                </div>
+                <div className="sm:col-span-3">
+                  <button disabled={resettingPassword} className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-60">
+                    {resettingPassword ? 'Updating...' : 'Reset password with OTP'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </section>
 
