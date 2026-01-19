@@ -1,59 +1,70 @@
 import React from 'react'
 import { Routes, Route, useLocation, Link } from 'react-router-dom'
-import Home from './pages/Home'
-import Events from './pages/Events'
-import EventDetail from './pages/EventDetail'
-import Booking from './pages/Booking'
-import MyBookings from './pages/MyBookings'
-import BookingSuccess from './pages/BookingSuccess'
-import Messages from './pages/Messages'
-import Settings from './pages/Settings'
-import About from './pages/About'
-import Contact from './pages/Contact'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
-import ScrollToTop from './components/ScrollToTop'
-import GenieEffect from './components/GenieEffect'
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import AuthCallback from './pages/AuthCallback'
-import ProtectedRoute from './components/ProtectedRoute'
-import AdminLogin from './pages/AdminLogin'
-import AdminEvents from './pages/AdminEvents'
-import AdminBookings from './pages/AdminBookings'
-import AdminDashboard from './pages/AdminDashboard'
-import EventAdminDashboard from './pages/EventAdminDashboard'
-import EventAdminEvents from './pages/EventAdminEvents'
-import EventAdminBookings from './pages/EventAdminBookings'
-import EventAdminLogin from './pages/EventAdminLogin'
-import StaffLogin from './pages/StaffLogin'
-import StaffAdminLogin from './pages/StaffAdminLogin'
-import StaffScanner from './pages/StaffScanner'
-import StaffAdminDashboard from './pages/StaffAdminDashboard'
-import StaffAdminTeam from './pages/StaffAdminTeam'
-import StaffAdminEntries from './pages/StaffAdminEntries'
-import StaffAdminSettings from './pages/StaffAdminSettings'
-import AdminContacts from './pages/AdminContacts'
-import AdminTeam from './pages/AdminTeam'
-import AdminFAQ from './pages/AdminFAQ'
-import AdminHelp from './pages/AdminHelp'
-import ProtectedAdminRoute from './components/ProtectedAdminRoute'
-import SuperAdminLogin from './pages/SuperAdminLogin'
-import SuperAdminDashboard from './pages/SuperAdminDashboard'
-import SuperAdminUsers from './pages/SuperAdminUsers'
-import SuperAdminEvents from './pages/SuperAdminEvents'
-import SuperAdminBookings from './pages/SuperAdminBookings'
-import SuperAdminLogs from './pages/SuperAdminLogs'
-import SuperAdminConfig from './pages/SuperAdminConfig'
-import SuperAdminExport from './pages/SuperAdminExport'
-import SuperAdminStaff from './pages/SuperAdminStaff'
-import ProtectedSuperAdminRoute from './components/ProtectedSuperAdminRoute'
-import FAQ from './pages/FAQ'
-import HelpCenter from './pages/HelpCenter'
-import PrivacyPolicy from './pages/PrivacyPolicy'
-import TermsOfService from './pages/TermsOfService'
-import Cookies from './pages/Cookies'
-import GenieAnimationDemo from './pages/GenieAnimationDemo'
+// Public Pages
+import Home from './pages/public/Home'
+import Events from './pages/public/Events'
+import EventDetail from './pages/public/EventDetail'
+import Booking from './pages/public/Booking'
+import MyBookings from './pages/public/MyBookings'
+import BookingSuccess from './pages/public/BookingSuccess'
+import Messages from './pages/public/Messages'
+import Settings from './pages/public/Settings'
+import About from './pages/public/About'
+import Contact from './pages/public/Contact'
+import FAQ from './pages/public/FAQ'
+import HelpCenter from './pages/public/HelpCenter'
+import Privacy from './pages/public/Privacy'
+import TermsOfService from './pages/public/TermsOfService'
+import Cookies from './pages/public/Cookies'
+// Auth Pages
+import Login from './pages/auth/Login'
+import Signup from './pages/auth/Signup'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import AuthCallback from './pages/auth/AuthCallback'
+// Admin Pages
+import AdminLogin from './pages/admin/AdminLogin'
+import AdminEvents from './pages/admin/AdminEvents'
+import AdminBookings from './pages/admin/AdminBookings'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminContacts from './pages/admin/AdminContacts'
+import AdminTeam from './pages/admin/AdminTeam'
+import AdminFAQ from './pages/admin/AdminFAQ'
+import AdminHelp from './pages/admin/AdminHelp'
+// Event Admin Pages
+import EventAdminDashboard from './pages/event-admin/EventAdminDashboard'
+import EventAdminEvents from './pages/event-admin/EventAdminEvents'
+import EventAdminBookings from './pages/event-admin/EventAdminBookings'
+import EventAdminLogin from './pages/event-admin/EventAdminLogin'
+// Staff Admin Pages
+import StaffAdminLogin from './pages/staff-admin/StaffAdminLogin'
+import StaffAdminDashboard from './pages/staff-admin/StaffAdminDashboard'
+import StaffAdminTeam from './pages/staff-admin/StaffAdminTeam'
+import StaffAdminEntries from './pages/staff-admin/StaffAdminEntries'
+import StaffAdminSettings from './pages/staff-admin/StaffAdminSettings'
+// Staff Pages
+import StaffLogin from './pages/staff/StaffLogin'
+import StaffScanner from './pages/staff/StaffScanner'
+// Super Admin Pages
+import SuperAdminLogin from './pages/super-admin/SuperAdminLogin'
+import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard'
+import SuperAdminUsers from './pages/super-admin/SuperAdminUsers'
+import SuperAdminEvents from './pages/super-admin/SuperAdminEvents'
+import SuperAdminBookings from './pages/super-admin/SuperAdminBookings'
+import SuperAdminLogs from './pages/super-admin/SuperAdminLogs'
+import SuperAdminConfig from './pages/super-admin/SuperAdminConfig'
+import SuperAdminExport from './pages/super-admin/SuperAdminExport'
+import SuperAdminStaff from './pages/super-admin/SuperAdminStaff'
+// Layout Components
+import Navbar from './components/layout/Navbar'
+import Footer from './components/layout/Footer'
+// Common Components
+import ScrollToTop from './components/common/ScrollToTop'
+import SessionNotification from './components/common/SessionNotification'
+// Auth Components
+import ProtectedRoute from './components/auth/ProtectedRoute'
+import ProtectedAdminRoute from './components/auth/ProtectedAdminRoute'
+import ProtectedSuperAdminRoute from './components/auth/ProtectedSuperAdminRoute'
+// Context
 import { DarkModeProvider } from './context/DarkModeContext'
 
 export default function App(){
@@ -66,10 +77,9 @@ export default function App(){
   return (
     <DarkModeProvider>
       <ScrollToTop />
-      <div className="min-h-screen flex flex-col">
-        {!isAdminRoute && !isEventAdminRoute && !isStaffAdminRoute && !isStaffRoute && !isSuperAdminRoute && <Navbar />}
+      <SessionNotification />
+      <div className="min-h-screen flex flex-col">{!isAdminRoute && !isEventAdminRoute && !isStaffAdminRoute && !isStaffRoute && !isSuperAdminRoute && <Navbar />}
         <main className={isAdminRoute || isEventAdminRoute || isStaffAdminRoute || isStaffRoute ? "flex-1" : "flex-1"}>
-          <GenieEffect key={location.pathname}>
             <Routes location={location}>
               <Route path="/" element={<Home />} />
               <Route path="/event/:id" element={<EventDetail />} />
@@ -77,16 +87,16 @@ export default function App(){
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/help" element={<HelpCenter />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/cookies" element={<Cookies />} />
-              <Route path="/genie-demo" element={<GenieAnimationDemo />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/book/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
               <Route path="/booking-success" element={<BookingSuccess />} />
               <Route path="/my-bookings" element={<MyBookings />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
 
@@ -129,7 +139,6 @@ export default function App(){
             <Route path="/super-admin/config" element={<ProtectedSuperAdminRoute><SuperAdminConfig /></ProtectedSuperAdminRoute>} />
             <Route path="/super-admin/export" element={<ProtectedSuperAdminRoute><SuperAdminExport /></ProtectedSuperAdminRoute>} />
           </Routes>
-          </GenieEffect>
         </main>
 
         {!isAdminRoute && !isEventAdminRoute && !isStaffAdminRoute && !isStaffRoute && !isSuperAdminRoute && <Footer />}

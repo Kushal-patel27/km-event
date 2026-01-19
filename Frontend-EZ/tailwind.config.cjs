@@ -5,7 +5,11 @@ module.exports = {
   ],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      animation: {
+        'slide-in-right': 'slide-in-right 0.3s ease-out',
+      },
+    },
   },
   plugins: [],
 }

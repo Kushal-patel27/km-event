@@ -17,20 +17,55 @@ import {
   createAdminUser,
   updateAdminUser,
   deleteAdminUser,
+  requestPasswordResetOtp,
+  verifyPasswordResetOtp,
+  resetPasswordWithToken,
 } from "../controllers/authController.js";
 import passport from "../config/passport.js";
 import jwt from "jsonwebtoken";
 import { protect, requireSuperAdmin } from "../middleware/authMiddleware.js";
+import rateLimit from "express-rate-limit";
 
 const router = express.Router();
+
+const otpRequestLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests. Please try again later." },
+});
+
+const otpVerifyLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many verification attempts. Please wait and try again." },
+});
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many reset attempts. Please try again later." },
+});
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/admin/login", loginAdmin);
 router.post("/staff/login", loginStaff);
+router.post("/password/forgot", otpRequestLimiter, requestPasswordResetOtp);
+router.post("/password/verify-otp", otpVerifyLimiter, verifyPasswordResetOtp);
+router.post("/password/reset", passwordResetLimiter, resetPasswordWithToken);
 router.post("/refresh", protect, refreshSession);
 router.post("/logout", logout);
 router.get("/me", protect, getMe);
+router.get("/verify-session", protect, (req, res) => {
+  // If middleware passed, session is valid
+  res.json({ valid: true, user: { _id: req.user._id, email: req.user.email, role: req.user.role } });
+});
 router.put("/profile", protect, updateProfile);
 router.put("/password", protect, changePassword);
 router.get("/preferences", protect, getPreferences);
@@ -58,7 +93,7 @@ router.get(
   }),
   (req, res) => {
     // Generate JWT token for the authenticated user
-    const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: req.user._id, tv: req.user.tokenVersion }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 

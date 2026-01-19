@@ -5,6 +5,7 @@ import {
   getAllUsers,
   getUserDetails,
   updateUser,
+  updateUserPassword,
   createUser,
   disableUser,
   reactivateUser,
@@ -46,6 +47,7 @@ router.get("/users", getAllUsers);
 router.get("/users/:userId", getUserDetails);
 router.post("/users", createUser);
 router.put("/users/:userId", updateUser);
+router.put("/users/:userId/password", updateUserPassword);
 router.post("/users/:userId/disable", disableUser);
 router.post("/users/:userId/reactivate", reactivateUser);
 router.put("/users/:userId/role", assignUserRole);

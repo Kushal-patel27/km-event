@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import User, { ADMIN_ROLE_SET } from "../models/User.js";
+import SecurityEvent from "../models/SecurityEvent.js";
+import { sendPasswordResetOtpEmail } from "../utils/emailService.js";
 
 const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || "15m";
 const REFRESH_TOKEN_TTL = process.env.REFRESH_TOKEN_TTL || "7d";
@@ -25,10 +27,33 @@ const ACCESS_COOKIE_OPTIONS = {
   maxAge: 15 * 60 * 1000,
 };
 
+const OTP_LENGTH = 6;
+const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute between sends
+const OTP_REQUEST_WINDOW_MS = 60 * 60 * 1000; // 1 hour window for request limit
+const OTP_REQUEST_LIMIT = 5; // per email per window
+const MAX_OTP_ATTEMPTS = 5; // per code
+const RESET_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const LOCK_DURATION_MS = 15 * 60 * 1000; // lock after too many attempts
+
 const adminRoles = new Set(["super_admin", "event_admin", "staff_admin", "admin"]);
+
+function generateOtp() {
+  const min = 10 ** (OTP_LENGTH - 1);
+  const max = 10 ** OTP_LENGTH;
+  return crypto.randomInt(min, max).toString().padStart(OTP_LENGTH, "0");
+}
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function timingSafeEqualHash(a, b) {
+  if (!a || !b) return false;
+  const buffA = Buffer.from(a, "hex");
+  const buffB = Buffer.from(b, "hex");
+  if (buffA.length !== buffB.length) return false;
+  return crypto.timingSafeEqual(buffA, buffB);
 }
 
 function signAccessToken(user) {
@@ -52,6 +77,30 @@ function getClientMetadata(req) {
     userAgent: req.get("user-agent") || "unknown",
     ip,
   };
+}
+
+async function logSecurityEvent({ req, email, userId, type, metadata = {} }) {
+  try {
+    const { ip, userAgent } = getClientMetadata(req);
+    await SecurityEvent.create({ email, user: userId, type, ip, userAgent, metadata });
+  } catch (err) {
+    console.error("Failed to record security event", err.message);
+  }
+}
+
+function resetPasswordResetState(user) {
+  user.passwordReset = undefined;
+}
+
+function normalizeOtpWindow(user, now) {
+  const pr = user.passwordReset || {};
+  const windowStart = pr.otpWindowStartedAt?.getTime?.() || 0;
+  if (!windowStart || now - windowStart > OTP_REQUEST_WINDOW_MS) {
+    pr.otpWindowStartedAt = new Date(now);
+    pr.otpRequestCount = 0;
+  }
+  user.passwordReset = pr;
+  return pr;
 }
 
 function buildUserResponse(user, token) {
@@ -358,6 +407,239 @@ export const changePassword = async (req, res) => {
     res.json({ message: "Password updated successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const requestPasswordResetOtp = async (req, res) => {
+  const email = req.body?.email?.trim().toLowerCase();
+  if (!email) return res.status(400).json({ message: "Email is required" });
+
+  const publicMessage = "If the account exists, a verification code was sent.";
+
+  try {
+    const user = await User.findOne({ email });
+
+    // Always return generic response for non-existent accounts
+    if (!user || !user.password) {
+      await logSecurityEvent({ req, email, type: "password_reset_requested_no_account" });
+      return res.json({ message: publicMessage });
+    }
+
+    const now = Date.now();
+    const pr = normalizeOtpWindow(user, now);
+
+    if (pr.lockedUntil && pr.lockedUntil.getTime() > now) {
+      await logSecurityEvent({
+        req,
+        email,
+        userId: user._id,
+        type: "password_reset_locked",
+        metadata: { lockedUntil: pr.lockedUntil },
+      });
+      return res.status(429).json({ message: "Too many attempts. Try again in a few minutes." });
+    }
+
+    if (pr.otpLastSentAt && now - pr.otpLastSentAt.getTime() < OTP_RESEND_COOLDOWN_MS) {
+      return res
+        .status(429)
+        .json({ message: "A code was just sent. Please check your email before requesting again." });
+    }
+
+    if (pr.otpRequestCount >= OTP_REQUEST_LIMIT) {
+      pr.lockedUntil = new Date(now + LOCK_DURATION_MS);
+      user.passwordReset = pr;
+      await user.save();
+      await logSecurityEvent({
+        req,
+        email,
+        userId: user._id,
+        type: "password_reset_rate_limited",
+      });
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
+    }
+
+    const otp = generateOtp();
+    const otpHash = hashToken(otp);
+
+    user.passwordReset = {
+      ...pr,
+      otpHash,
+      otpExpiresAt: new Date(now + OTP_TTL_MS),
+      otpAttempts: 0,
+      otpLastSentAt: new Date(now),
+      otpRequestCount: (pr.otpRequestCount || 0) + 1,
+      resetTokenHash: undefined,
+      resetTokenExpiresAt: undefined,
+      lockedUntil: undefined,
+      otpVerifiedAt: undefined,
+    };
+
+    await user.save();
+
+    const emailSent = await sendPasswordResetOtpEmail({
+      recipientEmail: email,
+      recipientName: user.name,
+      otp,
+      expiresInMinutes: Math.round(OTP_TTL_MS / 60000),
+    });
+
+    await logSecurityEvent({
+      req,
+      email,
+      userId: user._id,
+      type: emailSent ? "password_reset_otp_sent" : "password_reset_otp_send_failed",
+      metadata: { requestCount: user.passwordReset?.otpRequestCount || 0 },
+    });
+
+    if (!emailSent) {
+      return res.status(500).json({ message: "Unable to send verification code right now. Please try again." });
+    }
+
+    return res.json({ message: publicMessage });
+  } catch (error) {
+    await logSecurityEvent({ req, email, type: "password_reset_error", metadata: { error: error.message } });
+    return res.status(500).json({ message: "Something went wrong. Please try again." });
+  }
+};
+
+export const verifyPasswordResetOtp = async (req, res) => {
+  const email = req.body?.email?.trim().toLowerCase();
+  const otp = req.body?.otp?.trim();
+  if (!email || !otp) return res.status(400).json({ message: "Email and OTP are required" });
+
+  const invalidMessage = "Invalid or expired code.";
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user || !user.passwordReset?.otpHash) {
+      await logSecurityEvent({ req, email, type: "password_reset_verify_failed_no_user" });
+      return res.status(400).json({ message: invalidMessage });
+    }
+
+    const now = Date.now();
+    const pr = user.passwordReset;
+
+    if (pr.lockedUntil && pr.lockedUntil.getTime() > now) {
+      await logSecurityEvent({ req, email, userId: user._id, type: "password_reset_locked" });
+      return res.status(429).json({ message: "Too many attempts. Try again later." });
+    }
+
+    if (!pr.otpExpiresAt || pr.otpExpiresAt.getTime() < now) {
+      resetPasswordResetState(user);
+      await user.save();
+      await logSecurityEvent({ req, email, userId: user._id, type: "password_reset_otp_expired" });
+      return res.status(400).json({ message: invalidMessage });
+    }
+
+    const attempts = pr.otpAttempts || 0;
+    if (attempts >= MAX_OTP_ATTEMPTS) {
+      pr.lockedUntil = new Date(now + LOCK_DURATION_MS);
+      user.passwordReset = pr;
+      await user.save();
+      await logSecurityEvent({ req, email, userId: user._id, type: "password_reset_attempts_exceeded" });
+      return res.status(429).json({ message: "Too many attempts. Try again later." });
+    }
+
+    const providedHash = hashToken(otp);
+    const isMatch = timingSafeEqualHash(pr.otpHash, providedHash);
+
+    if (!isMatch) {
+      pr.otpAttempts = attempts + 1;
+
+      if (pr.otpAttempts >= MAX_OTP_ATTEMPTS) {
+        pr.lockedUntil = new Date(now + LOCK_DURATION_MS);
+      }
+
+      user.passwordReset = pr;
+      await user.save();
+      await logSecurityEvent({ req, email, userId: user._id, type: "password_reset_otp_invalid" });
+      return res.status(400).json({ message: invalidMessage });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenHash = hashToken(resetToken);
+
+    user.passwordReset = {
+      ...pr,
+      otpHash: undefined,
+      otpExpiresAt: undefined,
+      otpAttempts: 0,
+      resetTokenHash,
+      resetTokenExpiresAt: new Date(now + RESET_TOKEN_TTL_MS),
+      lockedUntil: undefined,
+      otpVerifiedAt: new Date(now),
+    };
+
+    await user.save();
+    await logSecurityEvent({ req, email, userId: user._id, type: "password_reset_otp_verified" });
+
+    return res.json({
+      message: "OTP verified. You can now reset your password.",
+      resetToken,
+      expiresInMinutes: Math.round(RESET_TOKEN_TTL_MS / 60000),
+    });
+  } catch (error) {
+    await logSecurityEvent({ req, email, type: "password_reset_verify_error", metadata: { error: error.message } });
+    return res.status(500).json({ message: "Something went wrong. Please try again." });
+  }
+};
+
+export const resetPasswordWithToken = async (req, res) => {
+  const email = req.body?.email?.trim().toLowerCase();
+  const resetToken = req.body?.resetToken?.trim();
+  const newPassword = req.body?.newPassword;
+
+  if (!email || !resetToken || !newPassword) {
+    return res.status(400).json({ message: "Email, reset token, and new password are required" });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ message: "Password must be at least 8 characters" });
+  }
+
+  const invalidMessage = "Invalid or expired reset request.";
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user || !user.passwordReset?.resetTokenHash) {
+      await logSecurityEvent({ req, email, type: "password_reset_finalize_failed_no_user" });
+      return res.status(400).json({ message: invalidMessage });
+    }
+
+    const pr = user.passwordReset;
+    const now = Date.now();
+
+    if (!pr.resetTokenExpiresAt || pr.resetTokenExpiresAt.getTime() < now) {
+      resetPasswordResetState(user);
+      await user.save();
+      await logSecurityEvent({ req, email, userId: user._id, type: "password_reset_token_expired" });
+      return res.status(400).json({ message: invalidMessage });
+    }
+
+    const isMatch = timingSafeEqualHash(pr.resetTokenHash, hashToken(resetToken));
+    if (!isMatch) {
+      pr.lockedUntil = new Date(now + LOCK_DURATION_MS);
+      pr.resetTokenHash = undefined;
+      pr.resetTokenExpiresAt = undefined;
+      user.passwordReset = pr;
+      await user.save();
+      await logSecurityEvent({ req, email, userId: user._id, type: "password_reset_token_invalid" });
+      return res.status(400).json({ message: invalidMessage });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.tokenVersion = (user.tokenVersion || 0) + 1; // invalidate existing JWTs
+    user.sessions = [];
+    resetPasswordResetState(user);
+
+    await user.save();
+    await logSecurityEvent({ req, email, userId: user._id, type: "password_reset_success" });
+
+    return res.json({ message: "Password reset successful. You can now log in." });
+  } catch (error) {
+    await logSecurityEvent({ req, email, type: "password_reset_finalize_error", metadata: { error: error.message } });
+    return res.status(500).json({ message: "Something went wrong. Please try again." });
   }
 };
 

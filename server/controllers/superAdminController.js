@@ -128,6 +128,44 @@ export const updateUser = async (req, res) => {
   }
 };
 
+// Update a user's password (super admin only)
+export const updateUserPassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const incomingPassword = req.body?.password || req.body?.newPassword;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    if (!incomingPassword || incomingPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Allow super admins to reset any account, but keep basic guard for their own account
+    if (user.role === "super_admin" && user._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Cannot change password for another super admin" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(incomingPassword, salt);
+    // Invalidate all active sessions/tokens so old password cannot be used
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    user.sessions = [];
+    await user.save();
+
+    const sanitized = user.toObject({ versionKey: false, transform: (_, obj) => { delete obj.password; return obj; } });
+    return res.json({ message: "Password updated successfully", user: sanitized });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 /**
  * Disable/ban a user
  */
@@ -1103,41 +1141,118 @@ export const getSystemLogs = async (req, res) => {
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
 
-    // Get recent user sessions as a proxy for activity logs
-    const users = await User.find({}, { sessions: 1, _id: 1, email: 1, name: 1 })
-      .lean()
-      .limit(100);
-
     const logs = [];
+
+    // Get recent users and their sessions
+    const users = await User.find({}, { sessions: 1, _id: 1, email: 1, name: 1, createdAt: 1, lastLoginAt: 1, role: 1 })
+      .lean()
+      .limit(200)
+      .sort({ lastLoginAt: -1 });
+
     users.forEach((user) => {
+      // Get most recent session for IP info
+      const mostRecentSession = user.sessions && user.sessions.length > 0 
+        ? user.sessions.sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt))[0]
+        : null;
+
+      // Add user creation log
+      if (user.createdAt) {
+        logs.push({
+          type: "user_created",
+          userId: user._id,
+          userEmail: user.email,
+          userName: user.name,
+          timestamp: user.createdAt,
+          details: {
+            role: user.role,
+            ip: mostRecentSession?.ip,
+          },
+        });
+      }
+
+      // Add last login log
+      if (user.lastLoginAt) {
+        logs.push({
+          type: "login",
+          userId: user._id,
+          userEmail: user.email,
+          userName: user.name,
+          timestamp: user.lastLoginAt,
+          details: {
+            role: user.role,
+            ip: mostRecentSession?.ip,
+            userAgent: mostRecentSession?.userAgent,
+          },
+        });
+      }
+
+      // Add session logs
       if (user.sessions && Array.isArray(user.sessions)) {
         user.sessions.forEach((session) => {
-          logs.push({
-            type: "login",
-            userId: user._id,
-            userEmail: user.email,
-            userName: user.name,
-            timestamp: session.lastSeenAt,
-            details: {
-              ip: session.ip,
-              userAgent: session.userAgent,
-            },
-          });
+          if (session.lastSeenAt) {
+            logs.push({
+              type: "session_activity",
+              userId: user._id,
+              userEmail: user.email,
+              userName: user.name,
+              timestamp: session.lastSeenAt,
+              details: {
+                ip: session.ip,
+                userAgent: session.userAgent,
+                role: user.role,
+              },
+            });
+          }
         });
       }
     });
 
-    const sortedLogs = logs.sort((a, b) => b.timestamp - a.timestamp);
+    // Get recent bookings
+    const recentBookings = await Booking.find()
+      .populate('user', 'name email')
+      .populate('event', 'title')
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    recentBookings.forEach((booking) => {
+      logs.push({
+        type: "booking_created",
+        userId: booking.user?._id,
+        userEmail: booking.user?.email,
+        userName: booking.user?.name,
+        timestamp: booking.createdAt,
+        details: {
+          event: booking.event?.title,
+          quantity: booking.quantity,
+          status: booking.status,
+        },
+      });
+    });
+
+    // Sort all logs by timestamp
+    const sortedLogs = logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    // Apply filters
+    let filteredLogs = sortedLogs;
+    if (type) {
+      filteredLogs = filteredLogs.filter(log => log.type === type);
+    }
+    if (userId) {
+      filteredLogs = filteredLogs.filter(log => log.userId?.toString() === userId);
+    }
+
+    // Paginate
     const start = (pageNum - 1) * limitNum;
-    const paginatedLogs = sortedLogs.slice(start, start + limitNum);
+    const paginatedLogs = filteredLogs.slice(start, start + limitNum);
 
     res.json({
       logs: paginatedLogs,
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total: sortedLogs.length,
-        pages: Math.ceil(sortedLogs.length / limitNum),
+        total: filteredLogs.length,
+        pages: Math.ceil(filteredLogs.length / limitNum),
       },
     });
   } catch (error) {

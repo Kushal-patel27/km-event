@@ -4,6 +4,8 @@ import generateQR from "../utils/generateQR.js";
 import { ADMIN_ROLE_SET } from "../models/User.js";
 import SystemConfig from "../models/SystemConfig.js";
 import crypto from "crypto";
+import { sendBookingConfirmationEmail } from "../utils/emailService.js";
+import { generateTicketPDF } from "../utils/generateTicketPDF.js";
 
 function generateUniqueTicketId() {
   // Generate a short ticket ID like A1B2C3D4 (8 characters)
@@ -29,11 +31,24 @@ export const createBooking = async (req, res) => {
     if (!event)
       return res.status(404).json({ message: "Event not found" });
 
+    const hasTicketTypes = Array.isArray(event.ticketTypes) && event.ticketTypes.length > 0;
+    const totalAvailableFromTypes = hasTicketTypes
+      ? event.ticketTypes.reduce((sum, t) => sum + (t?.available ?? 0), 0)
+      : null;
+
     // Handle ticket type selection
     let ticketTypeData = null;
     let price = event.price;
 
-    if (ticketTypeId && event.ticketTypes && event.ticketTypes.length > 0) {
+    if (hasTicketTypes) {
+      if (!ticketTypeId) {
+        return res.status(400).json({ message: "Ticket type is required" });
+      }
+
+      if (totalAvailableFromTypes < quantity) {
+        return res.status(400).json({ message: `Only ${totalAvailableFromTypes} tickets available` });
+      }
+
       const selectedType = event.ticketTypes.id(ticketTypeId);
       if (!selectedType) {
         return res.status(400).json({ message: "Invalid ticket type" });
@@ -41,18 +56,19 @@ export const createBooking = async (req, res) => {
       if (selectedType.available < quantity) {
         return res.status(400).json({ message: `Only ${selectedType.available} tickets available for ${selectedType.name}` });
       }
+
       price = selectedType.price;
       ticketTypeData = {
         name: selectedType.name,
         price: selectedType.price,
         description: selectedType.description || ''
       };
-      // Reduce ticket type availability
-      selectedType.available -= quantity;
+      // Reduce ticket type availability for the selected bucket now
+      selectedType.available = Math.max(0, selectedType.available - quantity);
+    } else {
+      if (event.availableTickets < quantity)
+        return res.status(400).json({ message: "Not enough tickets" });
     }
-
-    if (event.availableTickets < quantity)
-      return res.status(400).json({ message: "Not enough tickets" });
 
     // If seats are provided, validate them
     if (seats && Array.isArray(seats)) {
@@ -124,8 +140,15 @@ export const createBooking = async (req, res) => {
 
     const booking = await Booking.create(bookingData);
 
-    // Reduce tickets
-    event.availableTickets -= quantity;
+    // Reduce tickets and keep aggregate fields in sync
+    if (hasTicketTypes) {
+      const aggregatedAvailable = event.ticketTypes.reduce((sum, t) => sum + (t?.available ?? 0), 0);
+      const aggregatedTotal = event.ticketTypes.reduce((sum, t) => sum + (t?.quantity ?? 0), 0);
+      event.availableTickets = Math.max(0, aggregatedAvailable);
+      event.totalTickets = Math.max(0, aggregatedTotal);
+    } else {
+      event.availableTickets = Math.max(0, event.availableTickets - quantity);
+    }
     await event.save();
 
     // Check system config for QR code generation
@@ -176,6 +199,39 @@ export const createBooking = async (req, res) => {
 
     console.log(`[BOOKING] QR Code generation: ${qrEnabled ? 'ENABLED' : 'DISABLED'} - Generated ${qrCodes.length} QR codes`);
 
+    // Populate event and user data for email
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate('event', 'title location date image')
+      .populate('user', 'name email');
+
+    // Send booking confirmation email asynchronously (don't wait for it)
+    const eventDateObj = new Date(populatedBooking.event.date);
+    const eventTime = eventDateObj.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    sendBookingConfirmationEmail({
+      recipientEmail: populatedBooking.user.email,
+      recipientName: populatedBooking.user.name,
+      eventName: populatedBooking.event.title,
+      eventDate: populatedBooking.event.date,
+      eventTime: eventTime,
+      venue: populatedBooking.event.location,
+      ticketIds: populatedBooking.ticketIds,
+      ticketType: populatedBooking.ticketType?.name || 'Standard',
+      seats: populatedBooking.seats,
+      quantity: populatedBooking.quantity,
+      totalAmount: populatedBooking.totalAmount,
+      bookingDate: populatedBooking.createdAt,
+      bookingId: populatedBooking._id.toString(),
+      qrCodes: populatedBooking.qrCodes
+    }).then(() => {
+      console.log('[BOOKING] Confirmation email sent successfully');
+    }).catch(emailError => {
+      console.error('[BOOKING] Failed to send email:', emailError.message);
+    });
 
     res.status(201).json(booking);
   } catch (error) {
@@ -315,6 +371,61 @@ export const getBookedSeats = async (req, res) => {
       totalBooked: bookedSeats.length 
     });
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Download ticket PDF
+export const downloadTicketPDF = async (req, res) => {
+  try {
+    const { bookingId, ticketIndex } = req.params;
+
+    const booking = await Booking.findById(bookingId)
+      .populate('event', 'title location date')
+      .populate('user', 'name email');
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Verify ownership
+    if (booking.user._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    const index = parseInt(ticketIndex);
+    if (index < 0 || index >= booking.quantity) {
+      return res.status(400).json({ message: "Invalid ticket index" });
+    }
+
+    const eventDateObj = new Date(booking.event.date);
+    const eventTime = eventDateObj.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const ticketData = {
+      recipientName: booking.user.name,
+      eventName: booking.event.title,
+      eventDate: booking.event.date,
+      eventTime: eventTime,
+      venue: booking.event.location,
+      ticketId: booking.ticketIds[index] || 'N/A',
+      ticketType: booking.ticketType?.name || 'Standard',
+      seat: booking.seats && booking.seats[index] ? booking.seats[index] : null,
+      bookingId: booking._id.toString(),
+      bookingDate: booking.createdAt,
+      qrCode: booking.qrCodes && booking.qrCodes[index] ? booking.qrCodes[index].image : null
+    };
+
+    const pdfBuffer = await generateTicketPDF(ticketData);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Ticket_${ticketData.ticketId}.pdf`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('[DOWNLOAD PDF ERROR]', error);
     res.status(500).json({ message: error.message });
   }
 };

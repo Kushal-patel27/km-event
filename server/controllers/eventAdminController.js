@@ -3,6 +3,30 @@ import Booking from "../models/Booking.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 
+// Recalculate aggregate inventory for events with ticket types
+function recomputeTicketInventory(event) {
+  if (!event.ticketTypes || event.ticketTypes.length === 0) {
+    event.totalTickets = 0;
+    event.availableTickets = 0;
+    return;
+  }
+
+  let totalQty = 0;
+  let totalAvail = 0;
+
+  event.ticketTypes.forEach((t) => {
+    const qty = Number(t.quantity) || 0;
+    // Ensure available never exceeds quantity and is non-negative
+    const avail = Math.max(0, Math.min(Number(t.available) || 0, qty));
+    t.available = avail;
+    totalQty += qty;
+    totalAvail += avail;
+  });
+
+  event.totalTickets = totalQty;
+  event.availableTickets = totalAvail;
+}
+
 /**
  * Get all events assigned to this event admin
  */
@@ -97,6 +121,9 @@ export const createTicketType = async (req, res) => {
       description: description || ''
     });
 
+    // Recompute aggregate totals
+    recomputeTicketInventory(event);
+
     await event.save();
 
     res.json({ message: "Ticket type created successfully", event });
@@ -133,8 +160,16 @@ export const updateTicketType = async (req, res) => {
     if (updates.quantity !== undefined) {
       const diff = updates.quantity - ticketType.quantity;
       ticketType.quantity = updates.quantity;
-      ticketType.available = Math.max(0, ticketType.available + diff);
+      ticketType.available = Math.max(0, Math.min(ticketType.available + diff, ticketType.quantity));
     }
+
+    // Ensure available not above quantity
+    if (ticketType.available > ticketType.quantity) {
+      ticketType.available = ticketType.quantity;
+    }
+
+    // Recompute aggregate totals
+    recomputeTicketInventory(event);
 
     await event.save();
 
@@ -158,6 +193,9 @@ export const deleteTicketType = async (req, res) => {
     }
 
     event.ticketTypes.pull(ticketTypeId);
+
+    // Recompute aggregate totals after deletion
+    recomputeTicketInventory(event);
     await event.save();
 
     res.json({ message: "Ticket type deleted successfully", event });

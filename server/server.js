@@ -90,7 +90,6 @@ async function seedFAQs(createdByUser){
   try {
     const count = await FAQ.countDocuments()
     if (count >= 5) {
-      console.log(`FAQ already sufficiently populated (${count} entries).`)
       return
     }
 
@@ -137,7 +136,6 @@ async function seedHelpArticles(createdByUser) {
   try {
     const count = await HelpArticle.countDocuments()
     if (count >= 6) {
-      console.log(`Help articles already sufficiently populated (${count} entries).`)
       return
     }
 
