@@ -61,3 +61,8 @@ export const createHelpArticle = (data) => API.post('/help', data)
 export const updateHelpArticle = (id, data) => API.put(`/help/${id}`, data)
 export const deleteHelpArticle = (id) => API.delete(`/help/${id}`)
 export const seedHelpArticlesAdmin = () => API.post('/help/admin/seed')
+
+// Password reset helpers
+export const requestPasswordResetOtp = (email) => API.post('/auth/password/forgot', { email })
+export const verifyPasswordResetOtp = (data) => API.post('/auth/password/verify-otp', data)
+export const resetPasswordWithToken = (data) => API.post('/auth/password/reset', data)

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
@@ -7,19 +8,35 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Load environment variables even when this module is imported before server.js runs dotenv.config
+dotenv.config({ path: path.join(__dirname, "..", ".env"), override: true });
+
+const emailUser = process.env.EMAIL_USER;
+const emailPass = process.env.EMAIL_PASS;
+const emailSender = emailUser || "k.m.easyevents@gmail.com";
+
 // Create transporter (using Gmail or other SMTP)
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER || "k.m.easyevents@gmail.com",
-    pass: process.env.EMAIL_PASS || "your-app-password",
-  },
-});
+const transporter = (emailUser && emailPass)
+  ? nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    })
+  : null;
+
+function ensureTransporter() {
+  if (!transporter) {
+    throw new Error("EMAIL_USER and EMAIL_PASS must be set to send email");
+  }
+  return transporter;
+}
 
 export const sendReplyEmail = async (recipientEmail, name, subject, reply) => {
   try {
     const mailOptions = {
-      from: process.env.EMAIL_USER || "k.m.easyevents@gmail.com",
+      from: emailSender,
       to: recipientEmail,
       subject: `Re: ${subject} - K&M Events Support`,
       html: `
@@ -41,11 +58,85 @@ export const sendReplyEmail = async (recipientEmail, name, subject, reply) => {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    await ensureTransporter().sendMail(mailOptions);
     console.log(`Email sent to ${recipientEmail}`);
     return true;
   } catch (error) {
     console.error("Email send failed:", error);
+    return false;
+  }
+};
+
+export const sendPasswordResetOtpEmail = async ({ recipientEmail, recipientName, otp, expiresInMinutes }) => {
+  try {
+    const mailOptions = {
+      from: emailSender,
+      to: recipientEmail,
+      subject: "Your K&M Events password reset code",
+      html: `
+       <div style="margin:0;padding:18px;background-color:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;">
+    <tr>
+      <td style="padding:24px;">
+
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+          <tr>
+            <td width="12" style="background:#dc2626;border-radius:999px;">&nbsp;</td>
+            <td style="padding-left:10px;">
+              <h2 style="margin:0;color:#111827;font-size:22px;font-weight:700;">
+                Password reset verification
+              </h2>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Greeting -->
+        <p style="margin:0 0 10px 0;color:#374151;font-size:14px;">
+          Hi ${recipientName || "there"},
+        </p>
+
+        <!-- Message -->
+        <p style="margin:0 0 16px 0;color:#374151;font-size:14px;line-height:1.6;">
+          Use the one-time code below to reset your password.
+          This code expires in <strong>${expiresInMinutes} minutes</strong>.
+        </p>
+
+        <!-- OTP Box -->
+        <table align="center" cellpadding="0" cellspacing="0" style="margin:18px auto;">
+          <tr>
+            <td style="padding:14px 24px;border:1px dashed #d1d5db;border-radius:12px;background:#fef2f2;text-align:center;">
+              <div style="letter-spacing:6px;font-size:26px;font-weight:700;color:#dc2626;">
+                ${otp}
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer Text -->
+        <p style="margin:16px 0 0 0;color:#4b5563;font-size:13px;line-height:1.5;">
+          If you did not request this, you can safely ignore this email.
+          For your security, this code becomes invalid after one use.
+        </p>
+
+        <p style="margin-top:20px;color:#6b7280;font-size:12px;line-height:1.4;">
+          Stay safe,<br>
+          <strong>K&amp;M Events Security Team</strong>
+        </p>
+
+      </td>
+    </tr>
+  </table>
+</div>
+
+      `,
+    };
+
+    await ensureTransporter().sendMail(mailOptions);
+    console.log(`Sent password reset OTP to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    console.error("Failed to send password reset OTP:", error.message);
     return false;
   }
 };

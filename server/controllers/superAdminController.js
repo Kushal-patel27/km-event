@@ -128,6 +128,44 @@ export const updateUser = async (req, res) => {
   }
 };
 
+// Update a user's password (super admin only)
+export const updateUserPassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const incomingPassword = req.body?.password || req.body?.newPassword;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    if (!incomingPassword || incomingPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Allow super admins to reset any account, but keep basic guard for their own account
+    if (user.role === "super_admin" && user._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Cannot change password for another super admin" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(incomingPassword, salt);
+    // Invalidate all active sessions/tokens so old password cannot be used
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    user.sessions = [];
+    await user.save();
+
+    const sanitized = user.toObject({ versionKey: false, transform: (_, obj) => { delete obj.password; return obj; } });
+    return res.json({ message: "Password updated successfully", user: sanitized });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 /**
  * Disable/ban a user
  */

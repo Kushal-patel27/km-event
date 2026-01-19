@@ -37,6 +37,18 @@ const userSchema = new mongoose.Schema(
       language: { type: String, default: "en" },
       timezone: { type: String, default: "UTC" },
     },
+    passwordReset: {
+      otpHash: { type: String },
+      otpExpiresAt: { type: Date },
+      otpAttempts: { type: Number, default: 0 },
+      otpLastSentAt: { type: Date },
+      otpRequestCount: { type: Number, default: 0 },
+      otpWindowStartedAt: { type: Date },
+      resetTokenHash: { type: String },
+      resetTokenExpiresAt: { type: Date },
+      lockedUntil: { type: Date },
+      otpVerifiedAt: { type: Date },
+    },
   },
   { timestamps: true }
 );
