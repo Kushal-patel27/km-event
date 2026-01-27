@@ -39,31 +39,56 @@ export function AuthProvider({ children }){
     }
   }, [user])
 
-  // Periodic session verification
+  // Periodic session verification with resilience to transient network/auth blips
   useEffect(() => {
     if (!user?.token) return
+
+    let consecutiveAuthFailures = 0
 
     const verifySession = async () => {
       try {
         await API.get('/auth/verify-session')
+        consecutiveAuthFailures = 0
       } catch (error) {
         // Ignore network errors (connection issues, network changes, etc.)
-        // Only handle actual authentication errors
-        if (error.code === 'ERR_NETWORK' || error.code === 'ERR_NETWORK_CHANGED' || 
-            error.message === 'Network Error' || !error.response) {
+        if (
+          error.code === 'ERR_NETWORK' ||
+          error.code === 'ERR_NETWORK_CHANGED' ||
+          error.message === 'Network Error' ||
+          !error.response
+        ) {
           // Network issue - don't logout, just skip this check
           return
         }
 
-        // Session is invalid - force logout only for auth errors
+        // Authentication-related errors
         if (error.response?.status === 401 || error.response?.status === 403) {
-          const message = error.response?.data?.message || 'Your session has expired. Please log in again.'
-          setAuthToken(null)
-          setUser(null)
-          setSessionMessage(message)
-          
-          // Clear message after showing
-          setTimeout(() => setSessionMessage(null), 5000)
+          consecutiveAuthFailures += 1
+
+          // Try one quick retry after a short delay to handle transient cookie/token issues
+          if (consecutiveAuthFailures === 1) {
+            setTimeout(async () => {
+              try {
+                await API.get('/auth/verify-session')
+                consecutiveAuthFailures = 0
+              } catch (err2) {
+                // If second attempt still fails with auth error, then logout
+                if (err2.response?.status === 401 || err2.response?.status === 403) {
+                  const message = err2.response?.data?.message || 'Your session has expired. Please log in again.'
+                  setAuthToken(null)
+                  setUser(null)
+                  setSessionMessage(message)
+                  setTimeout(() => setSessionMessage(null), 5000)
+                }
+              }
+            }, 500)
+          } else if (consecutiveAuthFailures >= 2) {
+            const message = error.response?.data?.message || 'Your session has expired. Please log in again.'
+            setAuthToken(null)
+            setUser(null)
+            setSessionMessage(message)
+            setTimeout(() => setSessionMessage(null), 5000)
+          }
         }
       }
     }
@@ -71,8 +96,8 @@ export function AuthProvider({ children }){
     // Check immediately on mount
     verifySession()
 
-    // Then check every 5 seconds
-    const interval = setInterval(verifySession, 5000)
+    // Poll less frequently to reduce churn during network switches
+    const interval = setInterval(verifySession, 15000)
 
     return () => clearInterval(interval)
   }, [user?.token])

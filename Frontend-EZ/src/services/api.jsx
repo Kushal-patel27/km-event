@@ -37,15 +37,12 @@ API.interceptors.response.use(
       error.config._silent403 = true; // Mark for silent handling
     }
 
-    // Avoid refresh loops: our backend refresh route requires a valid token, so
-    // if we hit 401, clear session and surface the error without retrying.
+    // Do not globally clear auth state on 401s.
+    // Let feature-specific callers decide (e.g., AuthContext verify/session).
+    // This prevents unintended logout on transient network changes.
     if (error.response?.status === 401) {
-      if (!original?._retry && !original?.url?.includes('/auth/refresh')) {
-        original._retry = true;
-        // Clear local auth state
-        setAuthToken(null);
-        localStorage.removeItem('authUser');
-      }
+      original._retry = original?._retry || false;
+      // No global side effects here; simply reject so caller can handle.
     }
 
     return Promise.reject(error);

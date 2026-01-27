@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 
 const Ticket = forwardRef(function Ticket({ booking }, ref) {
   const { isDarkMode } = useDarkMode()
-  const { event, user, id, _id, seats, quantity, date, qrCodes, qrCode, ticketIds, scans } = booking
+  const { event, user, id, _id, seats, quantity, date, qrCodes, qrCode, ticketIds, scans, qrCheckInEnabled = true } = booking
   const [flipped, setFlipped] = useState({})
   const frontRefs = useRef([])
   const backRefs = useRef([])
@@ -196,7 +196,7 @@ const Ticket = forwardRef(function Ticket({ booking }, ref) {
                         <p className={`text-xs text-center font-bold uppercase tracking-widest flex items-center justify-center gap-2 ${
                           isDarkMode ? 'text-cyan-400' : 'text-slate-500'
                         }`}>
-                          <span>Flip for QR code</span>
+                          <span>{qrCheckInEnabled ? 'Flip for QR code' : 'Flip for ticket details'}</span>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
@@ -216,7 +216,9 @@ const Ticket = forwardRef(function Ticket({ booking }, ref) {
                       <p className={`text-xs ${
                         isDarkMode ? 'text-gray-300' : 'text-gray-700'
                       }`}>
-                        This ticket authorizes entry to the specified event. Present QR code at entrance for verification.
+                        {qrCheckInEnabled 
+                          ? 'This ticket authorizes entry to the specified event. Present QR code at entrance for verification.'
+                          : 'This ticket authorizes entry to the specified event. Follow organizer instructions for check-in procedure.'}
                       </p>
                     </div>
                   </div>
@@ -258,27 +260,52 @@ const Ticket = forwardRef(function Ticket({ booking }, ref) {
                           <div className={`w-2 h-2 rounded-full animate-pulse ${isDarkMode ? 'bg-gray-300' : 'bg-gray-600'}`}></div>
                         </div>
                       </motion.div>
-                      <p className={`text-xs tracking-wide ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Present at entrance for verification</p>
+                      <p className={`text-xs tracking-wide ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {qrCheckInEnabled ? 'Present at entrance for verification' : 'Check-in method as directed by organizer'}
+                      </p>
                     </div>
 
-                    {/* Middle - QR Code */}
-                    <motion.div
-                      animate={{ scale: [1, 1.03, 1] }}
-                      transition={{ duration: 2.5, repeat: Infinity }}
-                      className="relative"
-                    >
-                      <div className={`p-5 rounded-2xl shadow-lg border-2 ${
-                        isDarkMode
-                          ? 'bg-white border-gray-400'
-                          : 'bg-white border-gray-300'
-                      }`}>
-                        <img 
-                          src={qrUrl} 
-                          alt="QR Code" 
-                          className="w-48 h-48 object-contain"
-                        />
+                    {/* Middle - QR Code or Disabled Message */}
+                    {qrCheckInEnabled ? (
+                      <motion.div
+                        animate={{ scale: [1, 1.03, 1] }}
+                        transition={{ duration: 2.5, repeat: Infinity }}
+                        className="relative"
+                      >
+                        <div className={`p-5 rounded-2xl shadow-lg border-2 ${
+                          isDarkMode
+                            ? 'bg-white border-gray-400'
+                            : 'bg-white border-gray-300'
+                        }`}>
+                          <img 
+                            src={qrUrl} 
+                            alt="QR Code" 
+                            className="w-48 h-48 object-contain"
+                          />
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <div className="relative w-full">
+                        <div className={`p-8 rounded-2xl shadow-lg border-2 text-center ${
+                          isDarkMode
+                            ? 'bg-gray-800/50 border-gray-600'
+                            : 'bg-gray-100 border-gray-300'
+                        }`}>
+                          <svg className={`w-16 h-16 mx-auto mb-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          <p className={`text-sm font-bold uppercase tracking-wide mb-2 ${
+                            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                          }`}>QR Check-In Not Available</p>
+                          <p className={`text-xs leading-relaxed ${
+                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                          }`}>
+                            QR code check-in is not enabled for this event.<br />
+                            Please follow the organizer's instructions for entry.
+                          </p>
+                        </div>
                       </div>
-                    </motion.div>
+                    )}
 
                     {/* Bottom - Ticket Info */}
                     <div className="w-full space-y-4">

@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Booking from "../models/Booking.js";
 import EntryLog from "../models/EntryLog.js";
 import Event from "../models/Event.js";
+import FeatureToggle from "../models/FeatureToggle.js";
 
 // Scan ticket by QR code or Booking ID
 export const scanTicket = async (req, res) => {
@@ -19,6 +20,20 @@ export const scanTicket = async (req, res) => {
 
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Check if scanner app feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: booking.event });
+      if (featureToggle && featureToggle.features?.scannerApp?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Scanner app is disabled for this event",
+          feature: "scannerApp"
+        });
+      }
+    } catch (featureError) {
+      console.error('[SCANNER] Error checking feature toggle:', featureError.message);
+      // Continue if feature check fails to avoid blocking legitimate scans
     }
 
     // Check if cancelled

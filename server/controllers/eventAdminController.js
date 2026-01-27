@@ -1,6 +1,7 @@
 import Event from "../models/Event.js";
 import Booking from "../models/Booking.js";
 import User from "../models/User.js";
+import FeatureToggle from "../models/FeatureToggle.js";
 import bcrypt from "bcryptjs";
 
 // Recalculate aggregate inventory for events with ticket types
@@ -108,6 +109,20 @@ export const createTicketType = async (req, res) => {
     const { eventId } = req.params;
     const { name, price, quantity, description } = req.body;
 
+    // Check if ticketing feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.ticketing?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Ticketing is disabled for this event",
+          feature: "ticketing"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking ticketing feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
@@ -213,6 +228,20 @@ export const getEventBookings = async (req, res) => {
     const { eventId } = req.params;
     const { page = 1, limit = 50, status } = req.query;
 
+    // Check if ticketing feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.ticketing?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Ticketing is disabled for this event",
+          feature: "ticketing"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking ticketing feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (pageNum - 1) * limitNum;
@@ -252,6 +281,20 @@ export const getEventBookings = async (req, res) => {
 export const getEventStats = async (req, res) => {
   try {
     const { eventId } = req.params;
+
+    // Check if analytics feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.analytics?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Analytics is disabled for this event",
+          feature: "analytics"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking analytics feature:', featureError.message);
+      // Continue if feature check fails
+    }
 
     const event = await Event.findById(eventId);
     if (!event) {
@@ -343,6 +386,20 @@ export const assignStaff = async (req, res) => {
   try {
     const { eventId } = req.params;
     const { userId, role = 'staff' } = req.body;
+
+    // Check if subAdmins feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.subAdmins?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Sub-admin management is disabled for this event",
+          feature: "subAdmins"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking subAdmins feature:', featureError.message);
+      // Continue if feature check fails
+    }
 
     if (!['staff', 'staff_admin'].includes(role)) {
       return res.status(400).json({ message: "Invalid role. Must be 'staff' or 'staff_admin'" });
@@ -548,6 +605,20 @@ export const getEntryLogs = async (req, res) => {
   try {
     const { eventId } = req.params;
     const { page = 1, limit = 50 } = req.query;
+
+    // Check if scannerApp feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.scannerApp?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Scanner app and entry logs are disabled for this event",
+          feature: "scannerApp"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking scannerApp feature:', featureError.message);
+      // Continue if feature check fails
+    }
 
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));

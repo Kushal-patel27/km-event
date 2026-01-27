@@ -15,7 +15,9 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
     { to: '/super-admin/users', label: 'Users & Roles', icon: '👥' },
     { to: '/super-admin/staff', label: 'Staff (Scanner)', icon: '🎫📱' },
     { to: '/super-admin/events', label: 'Events', icon: '📅' },
+    { to: '/super-admin/event-requests', label: 'Event Requests', icon: '✉️', matchPrefix: '/super-admin/event-requests' },
     { to: '/super-admin/bookings', label: 'Bookings', icon: '🎫' },
+    { to: '/super-admin/subscriptions', label: 'Subscriptions', icon: '💳' },
     { to: '/super-admin/config', label: 'System Config', icon: '⚙️' },
     { to: '/super-admin/logs', label: 'Logs', icon: '🗒️' },
     { to: '/super-admin/export', label: 'Export', icon: '📦' },
@@ -26,7 +28,12 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
     navigate('/super-admin/login')
   }
 
-  const isActive = (path) => location.pathname === path
+  const isActive = (item) => {
+    if (item.matchPrefix) {
+      return location.pathname.startsWith(item.matchPrefix)
+    }
+    return location.pathname === item.to
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -94,7 +101,7 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
                       to={item.to}
                       onClick={() => setOpen(false)}
                       className={`px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium ${
-                        isActive(item.to)
+                        isActive(item)
                           ? 'bg-purple-600 text-white shadow'
                           : 'hover:bg-slate-100 text-slate-700'
                       }`}
@@ -115,7 +122,7 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
                   key={item.to}
                   to={item.to}
                   className={`px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium ${
-                    isActive(item.to)
+                    isActive(item)
                       ? 'bg-purple-600 text-white shadow'
                       : 'hover:bg-slate-100 text-slate-700'
                   }`}

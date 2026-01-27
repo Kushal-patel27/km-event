@@ -198,11 +198,18 @@ export default function SuperAdminDashboard() {
                     color: 'bg-orange-50 border-orange-200',
                   },
                   {
+                    title: 'Subscription Plans',
+                    description: 'Manage pricing tiers, features, and limits',
+                    icon: '💳',
+                    to: '/super-admin/subscriptions',
+                    color: 'bg-green-50 border-green-200',
+                  },
+                  {
                     title: 'System Configuration',
                     description: 'Configure QR rules, ticket limits, security',
                     icon: '⚙️',
                     to: '/super-admin/config',
-                    color: 'bg-green-50 border-green-200',
+                    color: 'bg-cyan-50 border-cyan-200',
                   },
                   {
                     title: 'System Logs',

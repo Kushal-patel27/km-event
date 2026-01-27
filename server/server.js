@@ -20,6 +20,9 @@ import contactRoutes from "./routes/contactRoutes.js";
 import aboutRoutes from "./routes/aboutRoutes.js";
 import faqRoutes from "./routes/faqRoutes.js";
 import helpRoutes from "./routes/helpRoutes.js";
+import eventRequestRoutes from "./routes/eventRequestRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import organizersPageRoutes from "./routes/organizersPageRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
 import weatherAlertRoutes from "./routes/weatherAlertRoutes.js";
 import superAdminWeatherRoutes from "./routes/superAdminWeatherRoutes.js";
@@ -27,6 +30,8 @@ import { startWeatherAlertsScheduler } from "./utils/weatherNotifier.js";
 import User from "./models/User.js";
 import HelpArticle from "./models/HelpArticle.js";
 import FAQ from "./models/FAQ.js";
+import SubscriptionPlan from "./models/SubscriptionPlan.js";
+import seedSubscriptionPlans from "./utils/seedSubscriptionPlans.js";
 import bcrypt from "bcryptjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -57,7 +62,8 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
 // Debug middleware
@@ -91,6 +97,9 @@ app.use(passport.session());
 app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/event-requests", eventRequestRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/organizers-page", organizersPageRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/scanner", scannerRoutes);
 app.use("/api/staff-admin", staffAdminRoutes);
@@ -272,11 +281,12 @@ async function seedHelpArticles(createdByUser) {
       }
     }
 
-    // After ensuring admin exists, seed FAQs and Help Center articles
+    // After ensuring admin exists, seed FAQs, Help Center articles, and Subscription Plans
     const adminUser = await User.findOne({ email: adminEmail })
     if (adminUser) {
       await seedFAQs(adminUser)
       await seedHelpArticles(adminUser)
+      await seedSubscriptionPlans()
     } else {
       console.warn('Admin user not found; skipping FAQ and help seeds.')
     }

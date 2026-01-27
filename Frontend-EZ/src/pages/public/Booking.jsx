@@ -26,6 +26,8 @@ export default function Booking(){
   const [loading, setLoading] = useState(true)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [selectedTicketType, setSelectedTicketType] = useState(null)
+  const [features, setFeatures] = useState(null)
+  const [loadingFeatures, setLoadingFeatures] = useState(true)
 
   const location = useLocation()
 
@@ -35,6 +37,31 @@ export default function Booking(){
       navigate('/login', { state: { from: location.pathname } })
     }
   }, [authUser, storedToken, navigate, location])
+
+  // Fetch event features
+  useEffect(() => {
+    if (!id) return;
+    const fetchFeatures = async () => {
+      try {
+        setLoadingFeatures(true);
+        const res = await API.get(`/event-requests/${id}/features`);
+        setFeatures(res.data.features || {});
+        
+        // If ticketing is disabled, redirect back to event detail page
+        if (res.data.features?.ticketing?.enabled === false) {
+          setError('Ticketing is not available for this event');
+          setTimeout(() => navigate(`/event/${id}`), 2000);
+        }
+      } catch (err) {
+        console.error('Failed to fetch features:', err);
+        // Default to enabled if fetch fails (graceful degradation)
+        setFeatures({ ticketing: { enabled: true } });
+      } finally {
+        setLoadingFeatures(false);
+      }
+    };
+    fetchFeatures();
+  }, [id, navigate]);
 
   useEffect(()=>{
     setLoading(true)
@@ -114,8 +141,8 @@ export default function Booking(){
   if(loading) return <div className="text-center p-10">Loading...</div>
   if(!event) return <div className="text-center p-10">{error || 'Event not found'}</div>
 
-  // Check sold out - all ticket types are sold out
-  const isSoldOut = event.ticketTypes && event.ticketTypes.every(t => t.available === 0)
+  // Check sold out - all ticket types are sold out (but not if array is empty)
+  const isSoldOut = event.ticketTypes && event.ticketTypes.length > 0 && event.ticketTypes.every(t => (t.available ?? 0) === 0)
 
   if(isSoldOut) {
     return (
@@ -147,8 +174,8 @@ export default function Booking(){
     setError('')
     setBookingLoading(true)
     
-    // Always require ticket type selection
-    if(!selectedTicketType) {
+    // Only require ticket type selection if event has ticket types
+    if(hasTicketTypes && !selectedTicketType) {
       setBookingLoading(false)
       return setError('Please select a ticket type')
     }
@@ -226,7 +253,9 @@ export default function Booking(){
       } catch (err) {
         console.error('Backend booking failed', err)
         const errorMsg = err.response?.data?.message || err.message
+        const feature = err.response?.data?.feature
         setBookingLoading(false)
+        
         // If auth error, clear invalid token and redirect to login
         if (err.response?.status === 401) {
           localStorage.removeItem('token')
@@ -234,6 +263,14 @@ export default function Booking(){
           setTimeout(() => navigate('/login', { state: { from: location.pathname } }), 2000)
           return
         }
+        
+        // If ticketing feature is disabled
+        if (err.response?.status === 403 && feature === 'ticketing') {
+          setError('Ticketing is currently disabled for this event')
+          setTimeout(() => navigate(`/event/${id}`), 2000)
+          return
+        }
+        
         // For other errors, show message and don't fallback
         setError(`Booking failed: ${errorMsg}`)
         return
@@ -571,10 +608,10 @@ export default function Booking(){
               </Link>
               <button 
                 type="submit"
-                disabled={bookingLoading || (hasTicketTypes && !selectedTicketType)}
+                disabled={bookingLoading || loadingFeatures || (hasTicketTypes && !selectedTicketType) || features?.ticketing?.enabled === false}
                 className={`flex-1 px-4 py-2.5 text-white rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:shadow-lg disabled:hover:translate-y-0 ${isDarkMode ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600' : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600'}`}
               >
-                {bookingLoading ? (
+                {bookingLoading || loadingFeatures ? (
                   <>
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
