@@ -3,6 +3,7 @@ import Event from "../models/Event.js";
 import generateQR from "../utils/generateQR.js";
 import { ADMIN_ROLE_SET } from "../models/User.js";
 import SystemConfig from "../models/SystemConfig.js";
+import FeatureToggle from "../models/FeatureToggle.js";
 import crypto from "crypto";
 import { sendBookingConfirmationEmail } from "../utils/emailService.js";
 import { generateTicketPDF } from "../utils/generateTicketPDF.js";
@@ -30,6 +31,20 @@ export const createBooking = async (req, res) => {
     const event = await Event.findById(eventId);
     if (!event)
       return res.status(404).json({ message: "Event not found" });
+
+    // Check if ticketing feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.ticketing?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Ticketing is disabled for this event",
+          feature: "ticketing"
+        });
+      }
+    } catch (featureError) {
+      console.error('[BOOKING] Error checking ticketing feature:', featureError.message);
+      // Continue if feature check fails
+    }
 
     const hasTicketTypes = Array.isArray(event.ticketTypes) && event.ticketTypes.length > 0;
     const totalAvailableFromTypes = hasTicketTypes
@@ -118,6 +133,20 @@ export const createBooking = async (req, res) => {
 
     const totalAmount = quantity * price;
 
+    // Check if payments feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.payments?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Payment processing is disabled for this event",
+          feature: "payments"
+        });
+      }
+    } catch (featureError) {
+      console.error('[BOOKING] Error checking payments feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
     // Generate unique ticket IDs
     const ticketIds = [];
     for (let i = 0; i < quantity; i++) {
@@ -154,22 +183,30 @@ export const createBooking = async (req, res) => {
     // Check system config for QR code generation
     let qrEnabled = true; // default: enabled
     try {
-      const systemConfig = await SystemConfig.findById("system_config");
-      
-      if (systemConfig) {
-        // Explicitly check the boolean value
-        const isQrEnabled = systemConfig.qrCodeRules?.enabled;
-        if (isQrEnabled === false) {
-          qrEnabled = false;
-          console.log(`[QR BOOKING] QR Code generation DISABLED`);
-        } else if (isQrEnabled === true) {
-          qrEnabled = true;
-          console.log(`[QR BOOKING] QR Code generation ENABLED`);
-        } else {
-          console.log(`[QR BOOKING] qrCodeRules.enabled not explicitly set, defaulting to: true`);
-        }
+      // First check event-specific feature toggle
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.qrCheckIn?.enabled === false) {
+        qrEnabled = false;
+        console.log(`[QR BOOKING] QR Code generation DISABLED for event ${eventId} via feature toggle`);
       } else {
-        console.log(`[QR BOOKING] No SystemConfig found, defaulting to: true`);
+        // Fall back to system config if feature toggle doesn't disable it
+        const systemConfig = await SystemConfig.findById("system_config");
+        
+        if (systemConfig) {
+          // Explicitly check the boolean value
+          const isQrEnabled = systemConfig.qrCodeRules?.enabled;
+          if (isQrEnabled === false) {
+            qrEnabled = false;
+            console.log(`[QR BOOKING] QR Code generation DISABLED via system config`);
+          } else if (isQrEnabled === true) {
+            qrEnabled = true;
+            console.log(`[QR BOOKING] QR Code generation ENABLED`);
+          } else {
+            console.log(`[QR BOOKING] qrCodeRules.enabled not explicitly set, defaulting to: true`);
+          }
+        } else {
+          console.log(`[QR BOOKING] No SystemConfig found, defaulting to: true`);
+        }
       }
     } catch (configError) {
       console.error('[QR BOOKING ERROR]', configError.message);
@@ -204,36 +241,66 @@ export const createBooking = async (req, res) => {
       .populate('event', 'title location date image')
       .populate('user', 'name email');
 
-    // Send booking confirmation email asynchronously (don't wait for it)
-    const eventDateObj = new Date(populatedBooking.event.date);
-    const eventTime = eventDateObj.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
+    // Check if email/SMS feature is enabled for this event
+    let emailEnabled = true;
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      console.log(`[BOOKING] Checking email feature for event ${eventId}`);
+      console.log(`[BOOKING] Feature toggle found:`, featureToggle ? 'Yes' : 'No');
+      if (featureToggle) {
+        console.log(`[BOOKING] emailSms feature:`, JSON.stringify(featureToggle.features?.emailSms));
+      }
+      
+      if (featureToggle && featureToggle.features?.emailSms?.enabled === false) {
+        emailEnabled = false;
+        console.log(`[BOOKING] Email/SMS DISABLED for event ${eventId}`);
+      } else {
+        console.log(`[BOOKING] Email/SMS ENABLED for event ${eventId}`);
+      }
+    } catch (featureError) {
+      console.error('[BOOKING] Error checking feature toggle:', featureError.message);
+      // Continue with default (enabled) if feature check fails
+    }
 
-    sendBookingConfirmationEmail({
-      recipientEmail: populatedBooking.user.email,
-      recipientName: populatedBooking.user.name,
-      eventName: populatedBooking.event.title,
-      eventDate: populatedBooking.event.date,
-      eventTime: eventTime,
-      venue: populatedBooking.event.location,
-      ticketIds: populatedBooking.ticketIds,
-      ticketType: populatedBooking.ticketType?.name || 'Standard',
-      seats: populatedBooking.seats,
-      quantity: populatedBooking.quantity,
-      totalAmount: populatedBooking.totalAmount,
-      bookingDate: populatedBooking.createdAt,
-      bookingId: populatedBooking._id.toString(),
-      qrCodes: populatedBooking.qrCodes
-    }).then(() => {
-      console.log('[BOOKING] Confirmation email sent successfully');
-    }).catch(emailError => {
-      console.error('[BOOKING] Failed to send email:', emailError.message);
-    });
+    console.log(`[BOOKING] Final emailEnabled value: ${emailEnabled}`);
 
-    res.status(201).json(booking);
+    // Send booking confirmation email only if feature is enabled
+    if (emailEnabled) {
+      const eventDateObj = new Date(populatedBooking.event.date);
+      const eventTime = eventDateObj.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+
+      sendBookingConfirmationEmail({
+        recipientEmail: populatedBooking.user.email,
+        recipientName: populatedBooking.user.name,
+        eventName: populatedBooking.event.title,
+        eventDate: populatedBooking.event.date,
+        eventTime: eventTime,
+        venue: populatedBooking.event.location,
+        ticketIds: populatedBooking.ticketIds,
+        ticketType: populatedBooking.ticketType?.name || 'Standard',
+        seats: populatedBooking.seats,
+        quantity: populatedBooking.quantity,
+        totalAmount: populatedBooking.totalAmount,
+        bookingDate: populatedBooking.createdAt,
+        bookingId: populatedBooking._id.toString(),
+        qrCodes: populatedBooking.qrCodes
+      }).then(() => {
+        console.log('[BOOKING] Confirmation email sent successfully');
+      }).catch(emailError => {
+        console.error('[BOOKING] Failed to send email:', emailError.message);
+      });
+    } else {
+      console.log('[BOOKING] Skipping email - Email/SMS feature disabled for this event');
+    }
+
+    // Return booking with qrCheckIn status for frontend
+    const bookingResponse = booking.toObject();
+    bookingResponse.qrCheckInEnabled = qrEnabled;
+    res.status(201).json(bookingResponse);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

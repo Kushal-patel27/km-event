@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import API from "../../services/api";
 import formatINR from "../../utils/currency";
 import { getEventImage } from "../../utils/images";
@@ -13,6 +13,8 @@ export default function EventDetail() {
 
   const [event, setEvent] = useState(null);
   const [fetching, setFetching] = useState(true);
+  const [features, setFeatures] = useState(null);
+  const [loadingFeatures, setLoadingFeatures] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -33,6 +35,25 @@ export default function EventDetail() {
       .finally(() => mounted && setFetching(false));
 
     return () => (mounted = false);
+  }, [id]);
+
+  // Fetch event features
+  useEffect(() => {
+    if (!id) return;
+    const fetchFeatures = async () => {
+      try {
+        setLoadingFeatures(true);
+        const res = await API.get(`/event-requests/${id}/features`);
+        setFeatures(res.data.features || {});
+      } catch (err) {
+        console.error('Failed to fetch features:', err);
+        // Default to all enabled if fetch fails
+        setFeatures({ ticketing: { enabled: true } });
+      } finally {
+        setLoadingFeatures(false);
+      }
+    };
+    fetchFeatures();
   }, [id]);
 
   if (fetching) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-900 dark:text-white">Loading event...</div>;
@@ -177,17 +198,44 @@ export default function EventDetail() {
                 )}
               </div>
 
-              <button
-                onClick={() => navigate(`/book/${eventId}`)}
-                disabled={available === 0}
-                className={`px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-white ${
-                  isDarkMode
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {available === 0 ? "Sold Out" : "Book Tickets"}
-              </button>
+              {/* Check if ticketing feature is enabled */}
+              {loadingFeatures ? (
+                <div className={`px-8 py-3 rounded-lg font-semibold ${isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'}`}>
+                  Loading...
+                </div>
+              ) : features?.ticketing?.enabled === false ? (
+                <div className="flex flex-col items-end gap-2">
+                  <div className={`px-6 py-3 rounded-lg border ${isDarkMode ? 'bg-yellow-900/20 border-yellow-800 text-yellow-300' : 'bg-yellow-50 border-yellow-300 text-yellow-900'}`}>
+                    <div className="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span className="font-medium">Ticketing Not Available</span>
+                    </div>
+                    <p className={`text-sm mt-1 ${isDarkMode ? 'text-yellow-400/80' : 'text-yellow-800'}`}>
+                      Ticket sales are currently disabled for this event
+                    </p>
+                  </div>
+                  <Link
+                    to="/for-organizers"
+                    className="text-sm font-medium px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all"
+                  >
+                    Contact Event Organizer
+                  </Link>
+                </div>
+              ) : (
+                <button
+                  onClick={() => navigate(`/book/${eventId}`)}
+                  disabled={available === 0}
+                  className={`px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-white ${
+                    isDarkMode
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {available === 0 ? "Sold Out" : "Book Tickets"}
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@ import EventAdminLayout from '../../components/layout/EventAdminLayout'
 import API from '../../services/api'
 import formatINR from '../../utils/currency'
 import { EventForm } from '../admin/AdminEvents'
+import { Link } from 'react-router-dom'
 
 export default function EventAdminEvents() {
   const [events, setEvents] = useState([])
@@ -129,6 +130,8 @@ function EventDetails({ event, onBack, onUpdate }) {
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editError, setEditError] = useState('')
+  const [features, setFeatures] = useState(null)
+  const [loadingFeatures, setLoadingFeatures] = useState(true)
 
   const refreshEvent = async () => {
     try {
@@ -177,6 +180,24 @@ function EventDetails({ event, onBack, onUpdate }) {
     }
   }
 
+  // Fetch event features on mount
+  useEffect(() => {
+    const fetchFeatures = async () => {
+      try {
+        setLoadingFeatures(true)
+        const res = await API.get(`/event-requests/${event._id}/features`)
+        setFeatures(res.data.features || {})
+      } catch (err) {
+        console.error('Failed to fetch features:', err)
+        // Default to all enabled if fetch fails
+        setFeatures({ analytics: { enabled: true } })
+      } finally {
+        setLoadingFeatures(false)
+      }
+    }
+    fetchFeatures()
+  }, [event._id])
+
   useEffect(() => {
     if (editMode) {
       document.body.style.overflow = 'hidden'
@@ -186,13 +207,27 @@ function EventDetails({ event, onBack, onUpdate }) {
     return () => { document.body.style.overflow = 'unset' }
   }, [editMode])
 
+  // Filter tabs based on features
+  const analyticsEnabled = features?.analytics?.enabled !== false
+  const ticketingEnabled = features?.ticketing?.enabled !== false
+  const subAdminsEnabled = features?.subAdmins?.enabled !== false
+  const scannerEnabled = features?.scannerApp?.enabled !== false
+  
   const tabs = [
-    { id: 'overview', label: '📊 Overview' },
-    { id: 'tickets', label: '🎫 Ticket Types' },
-    { id: 'staff', label: '👥 Staff' },
-    { id: 'bookings', label: '📋 Bookings' },
-    { id: 'logs', label: '📝 Entry Logs' },
-  ]
+    analyticsEnabled && { id: 'overview', label: '📊 Overview' },
+    ticketingEnabled && { id: 'tickets', label: '🎫 Ticket Types' },
+    subAdminsEnabled && { id: 'staff', label: '👥 Staff' },
+    ticketingEnabled && { id: 'bookings', label: '📋 Bookings' },
+    scannerEnabled && { id: 'logs', label: '📝 Entry Logs' },
+  ].filter(Boolean)
+
+  // Adjust active tab if current tab is disabled
+  useEffect(() => {
+    const tabExists = tabs.some(tab => tab.id === activeTab)
+    if (!tabExists && tabs.length > 0) {
+      setActiveTab(tabs[0].id)
+    }
+  }, [analyticsEnabled, ticketingEnabled, subAdminsEnabled, scannerEnabled, activeTab])
 
   return (
     <div>
@@ -276,11 +311,98 @@ function EventDetails({ event, onBack, onUpdate }) {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'overview' && <OverviewTab event={eventData} />}
-      {activeTab === 'tickets' && <TicketTypesTab event={eventData} onRefresh={refreshEvent} />}
-      {activeTab === 'staff' && <StaffTab event={eventData} onRefresh={refreshEvent} />}
-      {activeTab === 'bookings' && <BookingsTab eventId={eventData._id} />}
-      {activeTab === 'logs' && <EntryLogsTab eventId={eventData._id} />}
+      {loadingFeatures ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="text-gray-500 mt-2">Loading features...</p>
+        </div>
+      ) : (
+        <>
+          {activeTab === 'overview' && (
+            analyticsEnabled ? (
+              <OverviewTab event={eventData} />
+            ) : (
+              <FeatureDisabledMessage featureName="Analytics" featureIcon="📊" />
+            )
+          )}
+          {activeTab === 'tickets' && (
+            ticketingEnabled ? (
+              <TicketTypesTab event={eventData} onRefresh={refreshEvent} />
+            ) : (
+              <FeatureDisabledMessage featureName="Ticketing" featureIcon="🎫" />
+            )
+          )}
+          {activeTab === 'staff' && (
+            subAdminsEnabled ? (
+              <StaffTab event={eventData} onRefresh={refreshEvent} />
+            ) : (
+              <FeatureDisabledMessage featureName="Sub-Admins" featureIcon="👥" />
+            )
+          )}
+          {activeTab === 'bookings' && (
+            ticketingEnabled ? (
+              <BookingsTab eventId={eventData._id} />
+            ) : (
+              <FeatureDisabledMessage featureName="Bookings" featureIcon="📋" />
+            )
+          )}
+          {activeTab === 'logs' && (
+            scannerEnabled ? (
+              <EntryLogsTab eventId={eventData._id} />
+            ) : (
+              <FeatureDisabledMessage featureName="Entry Logs & Scanner" featureIcon="📝" />
+            )
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// Reusable component for feature disabled message
+function FeatureDisabledMessage({ featureName, featureIcon = '🔒' }) {
+  return (
+    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-2xl p-10 text-center shadow-lg">
+      <div className="bg-white rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6 shadow-md">
+        <svg className="w-14 h-14 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h3 className="text-3xl font-bold text-gray-900 mb-4">{featureIcon} {featureName} Not Available</h3>
+      <p className="text-lg text-gray-700 mb-6 max-w-lg mx-auto">
+        {featureName} features are not enabled for this event.
+      </p>
+      <div className="bg-white border border-yellow-200 rounded-xl p-6 max-w-md mx-auto mb-6">
+        <p className="text-sm font-bold text-gray-900 mb-3 flex items-center justify-center gap-2">
+          <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          How to Enable {featureName}
+        </p>
+        <ul className="text-sm text-gray-600 space-y-2 text-left">
+          <li className="flex items-start gap-2">
+            <span className="text-yellow-600 font-bold mt-0.5">1.</span>
+            <span>Contact your system administrator or super admin</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-yellow-600 font-bold mt-0.5">2.</span>
+            <span>Request {featureName.toLowerCase()} feature activation for this event</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-yellow-600 font-bold mt-0.5">3.</span>
+            <span>Or consider upgrading your subscription plan</span>
+          </li>
+        </ul>
+      </div>
+      <Link
+        to="/for-organizers"
+        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+        Upgrade Plan
+      </Link>
     </div>
   )
 }
@@ -288,22 +410,34 @@ function EventDetails({ event, onBack, onUpdate }) {
 function OverviewTab({ event }) {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     let cancelled = false
     const fetchStats = async () => {
       try {
         const res = await API.get(`/event-admin/events/${event._id}/stats`)
-        if (!cancelled) setStats(res.data.stats)
+        if (!cancelled) {
+          setStats(res.data.stats)
+          setError(null)
+        }
       } catch (err) {
         console.error('Failed to load stats:', err)
+        if (!cancelled) {
+          // Check if it's a feature disabled error
+          if (err.response?.status === 403 && err.response?.data?.feature === 'analytics') {
+            setError({ type: 'disabled', message: err.response.data.message })
+          } else {
+            setError({ type: 'error', message: err.response?.data?.message || 'Failed to load statistics' })
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
 
     fetchStats()
-    const intervalId = setInterval(fetchStats, 1000) // keep overview numbers live
+    const intervalId = setInterval(fetchStats, 30000) // Refresh every 30 seconds instead of 1 second
     return () => {
       cancelled = true
       clearInterval(intervalId)
@@ -311,6 +445,48 @@ function OverviewTab({ event }) {
   }, [event._id])
 
   if (loading) return <div className="text-center py-8">Loading stats...</div>
+
+  if (error) {
+    if (error.type === 'disabled') {
+      return (
+        <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-8 text-center">
+          <svg className="w-20 h-20 mx-auto mb-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <h3 className="text-2xl font-bold text-gray-900 mb-3">📊 Analytics Feature Disabled</h3>
+          <p className="text-lg text-gray-700 mb-2">
+            {error.message}
+          </p>
+          <p className="text-gray-600 mb-4">
+            Event analytics and reporting features are currently not available for this event.
+          </p>
+          <div className="bg-white border border-yellow-200 rounded-lg p-4 mt-4 text-left max-w-md mx-auto mb-6">
+            <p className="text-sm font-semibold text-gray-900 mb-2">To enable analytics:</p>
+            <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+              <li>Contact your system administrator</li>
+              <li>Request analytics feature activation</li>
+              <li>Or upgrade your subscription plan</li>
+            </ul>
+          </div>
+          <Link
+            to="/for-organizers"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            View Pricing & Upgrade
+          </Link>
+        </div>
+      )
+    }
+    
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <p className="text-red-700">{error.message}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -361,7 +537,11 @@ function TicketTypesTab({ event, onRefresh }) {
       setAdding(false)
       onRefresh()
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add ticket type')
+      if (err.response?.status === 403 && err.response?.data?.feature === 'ticketing') {
+        setError('⚠️ Ticketing feature is disabled for this event. Please contact your administrator or upgrade your plan.')
+      } else {
+        setError(err.response?.data?.message || 'Failed to add ticket type')
+      }
     }
   }
 

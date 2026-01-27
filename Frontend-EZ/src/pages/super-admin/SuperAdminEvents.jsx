@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import API from '../../services/api'
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout'
 import formatCurrency from '../../utils/currency'
 import { EventForm } from '../admin/AdminEvents'
 
+const featuresList = [
+  { key: 'ticketing', label: 'Ticketing' },
+  { key: 'qrCheckIn', label: 'QR Check-in' },
+  { key: 'scannerApp', label: 'Scanner App' },
+  { key: 'analytics', label: 'Analytics' },
+  { key: 'emailSms', label: 'Email/SMS' },
+  { key: 'payments', label: 'Payments' },
+  { key: 'weatherAlerts', label: 'Weather Alerts' },
+  { key: 'subAdmins', label: 'Sub-Admins' },
+  { key: 'reports', label: 'Reports' }
+]
+
 export default function SuperAdminEvents() {
+  const navigate = useNavigate()
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -69,7 +83,18 @@ export default function SuperAdminEvents() {
   const handleEventDetails = async (eventId) => {
     try {
       const res = await API.get(`/super-admin/events/${eventId}`)
-      setSelectedEvent(res.data)
+      const data = res.data
+      
+      // Initialize features if not present
+      if (!data.features) {
+        const initialFeatures = {}
+        featuresList.forEach(feature => {
+          initialFeatures[feature.key] = { enabled: true, description: '' }
+        })
+        data.features = initialFeatures
+      }
+      
+      setSelectedEvent(data)
       setEditingMode(false)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load event details')
@@ -276,6 +301,12 @@ export default function SuperAdminEvents() {
                         className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
                       >
                         Close
+                      </button>
+                      <button
+                        onClick={() => navigate(`/super-admin/event-requests/${selectedEvent.event._id}/features`)}
+                        className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                      >
+                        Manage Features
                       </button>
                       <button
                         onClick={() => setEditingMode(true)}

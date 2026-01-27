@@ -33,6 +33,12 @@ function ensureTransporter() {
   return transporter;
 }
 
+// Exported pre-flight check so callers can fail fast if mail is misconfigured
+export const ensureEmailConfigured = () => {
+  ensureTransporter();
+  return true;
+};
+
 export const sendReplyEmail = async (recipientEmail, name, subject, reply) => {
   try {
     const mailOptions = {
@@ -511,6 +517,153 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
     return true;
   } catch (error) {
     console.error("Booking confirmation email failed:", error);
+    return false;
+  }
+};
+
+export const sendEventApprovalEmail = async ({ recipientEmail, organizerName, eventTitle, eventDate, planSelected }) => {
+  try {
+    const formattedDate = new Date(eventDate).toLocaleDateString('en-IN', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    const mailOptions = {
+      from: emailSender,
+      to: recipientEmail,
+      subject: "🎉 Your Event Has Been Approved - K&M Events",
+      html: `
+        <div style="margin:0;padding:18px;background-color:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;">
+            <tr>
+              <td style="padding:24px;text-align:center;border-bottom:1px solid #e5e7eb;">
+                <h1 style="margin:0;font-size:28px;font-weight:bold;color:#10b981;">🎉 Event Approved!</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;">
+                <p style="margin:0 0 16px 0;font-size:16px;color:#374151;">Hi <strong>${organizerName}</strong>,</p>
+                
+                <p style="margin:0 0 16px 0;font-size:14px;color:#374151;">
+                  Great news! Your event request has been <strong style="color:#10b981;">approved</strong> by our admin team.
+                </p>
+
+                <div style="background-color:#f0fdf4;border-left:4px solid #10b981;padding:16px;margin:20px 0;border-radius:4px;">
+                  <h3 style="margin:0 0 12px 0;color:#10b981;font-size:14px;font-weight:bold;">Event Details</h3>
+                  <p style="margin:0 0 8px 0;color:#374151;font-size:14px;">
+                    <strong>Event Title:</strong> ${eventTitle}
+                  </p>
+                  <p style="margin:0 0 8px 0;color:#374151;font-size:14px;">
+                    <strong>Event Date:</strong> ${formattedDate}
+                  </p>
+                  <p style="margin:0;color:#374151;font-size:14px;">
+                    <strong>Plan:</strong> ${planSelected}
+                  </p>
+                </div>
+
+                <div style="background-color:#fef3c7;border-left:4px solid #f59e0b;padding:16px;margin:20px 0;border-radius:4px;">
+                  <p style="margin:0 0 8px 0;font-size:14px;color:#92400e;font-weight:bold;">🎯 Important: You now have Event Admin access!</p>
+                  <p style="margin:0;font-size:13px;color:#78350f;">
+                    Your account has been upgraded to <strong>Event Admin</strong>. Please <strong>logout and login again</strong> to access your Event Admin Dashboard.
+                  </p>
+                </div>
+
+                <p style="margin:0 0 16px 0;font-size:14px;color:#374151;">
+                  As an Event Admin, you can now:
+                </p>
+                <ul style="margin:0 0 16px 0;padding-left:20px;font-size:14px;color:#374151;">
+                  <li>Access the Event Admin Dashboard</li>
+                  <li>Manage ticket types and pricing</li>
+                  <li>View and download bookings</li>
+                  <li>Assign staff members to your event</li>
+                  <li>Monitor real-time analytics</li>
+                </ul>
+
+                <div style="text-align:center;margin:24px 0;">
+                  <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/event-admin/login" style="display:inline-block;background-color:#10b981;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">
+                    Login to Event Admin Dashboard
+                  </a>
+                </div>
+
+                <p style="margin:16px 0 0 0;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;">
+                  Questions? <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/contact" style="color:#10b981;text-decoration:none;">Contact our support team</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </div>
+      `
+    };
+
+    await ensureTransporter().sendMail(mailOptions);
+    console.log(`Event approval email sent to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    console.error("Event approval email failed:", error);
+    return false;
+  }
+};
+
+export const sendEventRejectionEmail = async ({ recipientEmail, organizerName, eventTitle, rejectReason }) => {
+  try {
+    const mailOptions = {
+      from: emailSender,
+      to: recipientEmail,
+      subject: "Your Event Request - K&M Events",
+      html: `
+        <div style="margin:0;padding:18px;background-color:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;">
+            <tr>
+              <td style="padding:24px;text-align:center;border-bottom:1px solid #e5e7eb;">
+                <h1 style="margin:0;font-size:28px;font-weight:bold;color:#dc2626;">⚠️ Request Under Review</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;">
+                <p style="margin:0 0 16px 0;font-size:16px;color:#374151;">Hi <strong>${organizerName}</strong>,</p>
+                
+                <p style="margin:0 0 16px 0;font-size:14px;color:#374151;">
+                  Thank you for submitting your event request for <strong>"${eventTitle}"</strong>. 
+                </p>
+
+                <div style="background-color:#fef2f2;border-left:4px solid #dc2626;padding:16px;margin:20px 0;border-radius:4px;">
+                  <h3 style="margin:0 0 12px 0;color:#dc2626;font-size:14px;font-weight:bold;">Reason for Review</h3>
+                  <p style="margin:0;color:#374151;font-size:14px;">
+                    ${rejectReason}
+                  </p>
+                </div>
+
+                <p style="margin:0 0 16px 0;font-size:14px;color:#374151;">
+                  We appreciate your understanding. If you believe this is an error or would like to resubmit with changes, please:
+                </p>
+                <ul style="margin:0 0 16px 0;padding-left:20px;font-size:14px;color:#374151;">
+                  <li>Review the feedback provided above</li>
+                  <li>Make necessary adjustments</li>
+                  <li>Resubmit your event request</li>
+                </ul>
+
+                <div style="text-align:center;margin:24px 0;">
+                  <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/create-event" style="display:inline-block;background-color:#dc2626;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">
+                    Resubmit Event Request
+                  </a>
+                </div>
+
+                <p style="margin:16px 0 0 0;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;">
+                  Need help? <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/contact" style="color:#dc2626;text-decoration:none;">Get in touch with our team</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </div>
+      `
+    };
+
+    await ensureTransporter().sendMail(mailOptions);
+    console.log(`Event rejection email sent to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    console.error("Event rejection email failed:", error);
     return false;
   }
 };
