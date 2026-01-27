@@ -37,6 +37,34 @@ const userSchema = new mongoose.Schema(
       language: { type: String, default: "en" },
       timezone: { type: String, default: "UTC" },
     },
+    // Notification preferences for alerts
+    notificationPreferences: {
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      sms: {
+        type: Boolean,
+        default: false,
+      },
+      whatsapp: {
+        type: Boolean,
+        default: false,
+      },
+      push: {
+        type: Boolean,
+        default: true,
+      },
+      weatherAlerts: {
+        type: Boolean,
+        default: true,
+      },
+    },
+    // Phone number for SMS/WhatsApp
+    phone: {
+      type: String,
+      default: "",
+    },
     passwordReset: {
       otpHash: { type: String },
       otpExpiresAt: { type: Date },

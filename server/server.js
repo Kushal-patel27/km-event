@@ -20,6 +20,10 @@ import contactRoutes from "./routes/contactRoutes.js";
 import aboutRoutes from "./routes/aboutRoutes.js";
 import faqRoutes from "./routes/faqRoutes.js";
 import helpRoutes from "./routes/helpRoutes.js";
+import weatherRoutes from "./routes/weatherRoutes.js";
+import weatherAlertRoutes from "./routes/weatherAlertRoutes.js";
+import superAdminWeatherRoutes from "./routes/superAdminWeatherRoutes.js";
+import { startWeatherAlertsScheduler } from "./utils/weatherNotifier.js";
 import User from "./models/User.js";
 import HelpArticle from "./models/HelpArticle.js";
 import FAQ from "./models/FAQ.js";
@@ -38,11 +42,34 @@ connectDB();
 
 const app = express();
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || "http://localhost:5173",
+      "http://localhost:5174", // Alternative dev port
+      "http://localhost:3000",  // Common dev port
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Debug middleware
+app.use((req, res, next) => {
+  if (req.path.includes('/auth/login') || req.path.includes('/auth/admin/login') || req.path.includes('/auth/staff/login')) {
+    console.log(`[${req.method}] ${req.path}`, {
+      body: req.body,
+      contentType: req.get('content-type'),
+    });
+  }
+  next();
+});
 
 // Session configuration
 app.use(
@@ -74,6 +101,9 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/about", aboutRoutes);
 app.use("/api/faq", faqRoutes);
 app.use("/api/help", helpRoutes);
+app.use("/api/weather", weatherRoutes);
+app.use("/api/weather-alerts", weatherAlertRoutes);
+app.use("/api/super-admin/weather", superAdminWeatherRoutes);
 
 
 app.get("/", (req, res) => {
@@ -84,6 +114,9 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`Server running on port ${PORT} `)
 );
+
+// Start background weather alerts scheduler
+startWeatherAlertsScheduler();
 
 // Seed default FAQs if the collection is empty
 async function seedFAQs(createdByUser){

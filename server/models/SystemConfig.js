@@ -72,6 +72,43 @@ const systemConfigSchema = new mongoose.Schema(
       }, { _id: false }),
       default: () => ({ enabled: true, confirmationEmail: true, reminderEmail: true }),
     },
+    // Weather Alert Module Configuration
+    weatherAlerts: {
+      type: new mongoose.Schema({
+        enabled: {
+          type: Boolean,
+          default: false,
+        },
+        autoPolling: {
+          type: Boolean,
+          default: true,
+        },
+        pollingInterval: {
+          type: Number,
+          default: 60, // minutes
+          min: 5,
+          max: 1440,
+        },
+        allowedRoles: [
+          {
+            type: String,
+            enum: ["super_admin", "event_admin", "staff_admin"],
+            default: "super_admin",
+          },
+        ],
+        requireApproval: {
+          type: Boolean,
+          default: true,
+        },
+      }, { _id: false }),
+      default: () => ({ 
+        enabled: false, 
+        autoPolling: true, 
+        pollingInterval: 60,
+        allowedRoles: ["super_admin"],
+        requireApproval: true 
+      }),
+    },
   },
   { 
     timestamps: true,

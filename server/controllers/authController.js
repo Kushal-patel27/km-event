@@ -180,20 +180,35 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
+  console.log("[LOGIN] Attempt - Email:", email, "Body keys:", Object.keys(req.body));
+
+  if (!email || !password) {
+    console.log("[LOGIN] Missing credentials:", { email: !!email, password: !!password });
+    return res.status(400).json({ message: "Email and password are required" });
+  }
+
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (!user) {
+      console.log("[LOGIN] User not found:", email);
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     if (!user.active) {
+      console.log("[LOGIN] User inactive:", email);
       return res.status(403).json({ message: "Account disabled. Contact support." });
     }
 
     if (!user.password) {
+      console.log("[LOGIN] No password hash for user:", email);
       return res.status(400).json({ message: "Password login not available for this account" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password || "");
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch) {
+      console.log("[LOGIN] Password mismatch for:", email);
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     user.lastLoginAt = new Date();
     await user.save();
@@ -202,6 +217,7 @@ export const loginUser = async (req, res) => {
       expiresIn: "7d",
     });
 
+    console.log("[LOGIN] Success:", email);
     res.json({
       _id: user._id,
       name: user.name,
@@ -211,6 +227,7 @@ export const loginUser = async (req, res) => {
       token,
     });
   } catch (error) {
+    console.error("[LOGIN] Error:", error.message);
     res.status(500).json({ message: error.message });
   }
 };

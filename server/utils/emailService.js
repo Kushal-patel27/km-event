@@ -515,4 +515,129 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
   }
 };
 
+/**
+ * Send weather alert email to user who booked tickets
+ */
+export const sendWeatherAlertEmail = async (bookingDetails, weatherAlert) => {
+  try {
+    const weatherIcon = {
+      warning: "⚠️",
+      caution: "⚡",
+      info: "ℹ️",
+    }[weatherAlert.type] || "📍";
+
+    const mailOptions = {
+      from: emailSender,
+      to: bookingDetails.user.email,
+      subject: `${weatherIcon} Weather Alert for Your Event: ${bookingDetails.event.name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333; border-bottom: 3px solid #ff9800; padding-bottom: 10px;">
+            ${weatherIcon} Weather Alert Notification
+          </h2>
+          
+          <p style="font-size: 16px; color: #333;">
+            Hello <strong>${bookingDetails.user.name}</strong>,
+          </p>
+          
+          <p style="font-size: 14px; color: #666;">
+            We've detected <strong>${weatherAlert.type.toUpperCase()}</strong> weather conditions for your upcoming event. Please review the details below:
+          </p>
+
+          <!-- Event Details Card -->
+          <div style="background-color: #f9f9f9; border-left: 5px solid #2196f3; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">📅 Event Details</h3>
+            <table style="width: 100%; font-size: 14px; color: #666;">
+              <tr>
+                <td style="padding: 5px 0;"><strong>Event Name:</strong></td>
+                <td style="padding: 5px 0;">${bookingDetails.event.name}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;"><strong>Location:</strong></td>
+                <td style="padding: 5px 0;">📍 ${bookingDetails.event.location}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;"><strong>Date & Time:</strong></td>
+                <td style="padding: 5px 0;">📅 ${new Date(bookingDetails.event.date).toLocaleDateString("en-US", { 
+                  year: "numeric", 
+                  month: "long", 
+                  day: "numeric" 
+                })} at ${bookingDetails.event.time || "TBD"}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;"><strong>Tickets Booked:</strong></td>
+                <td style="padding: 5px 0;">🎫 ${bookingDetails.quantity} ticket(s)</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Weather Alert Card -->
+          <div style="background-color: ${weatherAlert.type === 'warning' ? '#ffebee' : weatherAlert.type === 'caution' ? '#fff3e0' : '#e3f2fd'}; border-left: 5px solid ${weatherAlert.type === 'warning' ? '#ff4444' : weatherAlert.type === 'caution' ? '#ff9800' : '#2196f3'}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">⛈️ Weather Alert</h3>
+            <p style="margin: 0 0 15px 0; color: #666; line-height: 1.6;">
+              ${weatherAlert.message}
+            </p>
+            
+            <table style="width: 100%; font-size: 14px; color: #666;">
+              <tr>
+                <td style="padding: 5px 0;"><strong>Condition:</strong></td>
+                <td style="padding: 5px 0;">${weatherAlert.condition}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;"><strong>🌡️ Temperature:</strong></td>
+                <td style="padding: 5px 0;">${weatherAlert.temperature}°C (Feels like ${weatherAlert.feelsLike || weatherAlert.temperature}°C)</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;"><strong>💧 Humidity:</strong></td>
+                <td style="padding: 5px 0;">${weatherAlert.humidity}%</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0;"><strong>💨 Wind Speed:</strong></td>
+                <td style="padding: 5px 0;">${weatherAlert.windSpeed} km/h</td>
+              </tr>
+              ${weatherAlert.rainfall > 0 ? `<tr>
+                <td style="padding: 5px 0;"><strong>🌧️ Rainfall:</strong></td>
+                <td style="padding: 5px 0;">${weatherAlert.rainfall}mm</td>
+              </tr>` : ''}
+            </table>
+          </div>
+
+          <!-- Action Required Section -->
+          <div style="background-color: #f0f0f0; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">✅ What You Can Do</h3>
+            <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #666; line-height: 1.8;">
+              <li>Check your booking details for any updates from the event organizer</li>
+              <li>Prepare appropriate clothing and gear for the weather conditions</li>
+              <li>Consider alternative transportation if needed</li>
+              <li>Keep an eye on event updates for any schedule changes</li>
+              <li>Contact the event organizer if you have questions or concerns</li>
+            </ul>
+          </div>
+
+          <!-- Call to Action -->
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="http://localhost:3000/my-bookings" style="background: #2196f3; color: white; padding: 12px 30px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">
+              View Your Bookings
+            </a>
+          </div>
+
+          <!-- Footer -->
+          <div style="border-top: 1px solid #ddd; margin-top: 20px; padding-top: 15px; font-size: 12px; color: #999; text-align: center;">
+            <p>This is an automated weather alert notification.</p>
+            <p>For more information, visit: <a href="http://localhost:3000" style="color: #2196f3; text-decoration: none;">K&M Events</a></p>
+            <p>&copy; ${new Date().getFullYear()} K&M Events. All rights reserved.</p>
+          </div>
+        </div>
+      `
+    };
+
+    await ensureTransporter().sendMail(mailOptions);
+    console.log("✅ Weather alert email sent to:", bookingDetails.user.email);
+    return true;
+  } catch (error) {
+    console.error("❌ Error sending weather alert email:", error);
+    return false;
+  }
+};
+
 export default transporter;

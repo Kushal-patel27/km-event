@@ -1,0 +1,195 @@
+/* Weather Notification Styles */
+.weather-notification {
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideDown 0.4s ease-out;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Notification Types */
+.notification-warning {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+  color: white;
+  border-left: 4px solid #ff4444;
+}
+
+.notification-caution {
+  background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%);
+  color: white;
+  border-left: 4px solid #ff7700;
+}
+
+.notification-info {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a9b3 100%);
+  color: white;
+  border-left: 4px solid #2db8a8;
+}
+
+/* Notification Content */
+.notification-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.notification-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.notification-message {
+  flex: 1;
+}
+
+.notification-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.notification-text {
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.95;
+}
+
+.notification-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 14px;
+}
+
+.notification-list li {
+  padding: 6px 0;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.notification-list li::before {
+  content: "•";
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+/* Close Button */
+.notification-close {
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.notification-close:hover {
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .weather-notification {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .weather-notification {
+    padding: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .notification-content {
+    width: 100%;
+  }
+
+  .notification-icon {
+    font-size: 20px;
+  }
+
+  .notification-title {
+    font-size: 14px;
+  }
+
+  .notification-text,
+  .notification-list li {
+    font-size: 13px;
+  }
+
+  .notification-close {
+    align-self: flex-end;
+    margin-top: -8px;
+  }
+}
+
+/* Success Animation */
+@keyframes successPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+
+.notification-warning {
+  animation: slideDown 0.4s ease-out, pulse-warning 2s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}

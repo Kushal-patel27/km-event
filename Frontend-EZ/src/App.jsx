@@ -30,6 +30,7 @@ import AdminContacts from './pages/admin/AdminContacts'
 import AdminTeam from './pages/admin/AdminTeam'
 import AdminFAQ from './pages/admin/AdminFAQ'
 import AdminHelp from './pages/admin/AdminHelp'
+import WeatherAlertsAdmin from './pages/admin/WeatherAlertsAdmin'
 // Event Admin Pages
 import EventAdminDashboard from './pages/event-admin/EventAdminDashboard'
 import EventAdminEvents from './pages/event-admin/EventAdminEvents'
@@ -106,6 +107,7 @@ export default function App(){
             <Route path="/admin/team" element={<ProtectedAdminRoute><AdminTeam /></ProtectedAdminRoute>} />
               <Route path="/admin/events" element={<ProtectedAdminRoute><AdminEvents /></ProtectedAdminRoute>} />
               <Route path="/admin/bookings" element={<ProtectedAdminRoute><AdminBookings /></ProtectedAdminRoute>} />
+              <Route path="/admin/weather-alerts" element={<ProtectedAdminRoute><WeatherAlertsAdmin /></ProtectedAdminRoute>} />
               <Route path="/admin/contacts" element={<ProtectedAdminRoute><AdminContacts /></ProtectedAdminRoute>} />
               <Route path="/admin/faq" element={<ProtectedAdminRoute><AdminFAQ /></ProtectedAdminRoute>} />
               <Route path="/admin/help" element={<ProtectedAdminRoute><AdminHelp /></ProtectedAdminRoute>} />

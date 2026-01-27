@@ -28,6 +28,26 @@ const eventSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    latitude: {
+      type: Number,
+      default: null
+    },
+    longitude: {
+      type: Number,
+      default: null
+    },
+    // Weather-related status
+    weatherStatus: {
+      type: String,
+      enum: [
+        "normal",
+        "on_hold",
+        "delayed",
+        "entry_restricted",
+        "cancelled_weather",
+      ],
+      default: "normal",
+    },
     price: { 
       type: Number, 
       default: 0,
