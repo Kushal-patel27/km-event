@@ -131,7 +131,16 @@ function EventDetails({ event, onBack, onUpdate }) {
   const [saving, setSaving] = useState(false)
   const [editError, setEditError] = useState('')
   const [features, setFeatures] = useState(null)
-  const [loadingFeatures, setLoadingFeatures] = useState(true)
+  const [loadingFeatures, setLoadingFeatures] = useState(false)
+  const [showPricingDetails, setShowPricingDetails] = useState(true)
+  const [showPlansModal, setShowPlansModal] = useState(false)
+  const [plans, setPlans] = useState([])
+  const [currentPlan, setCurrentPlan] = useState(null)
+  const [selectedPlan, setSelectedPlan] = useState(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [upgradingPlan, setUpgradingPlan] = useState(false)
+  const [planPrice, setPlanPrice] = useState(null)
+  const [loadingPlanPrice, setLoadingPlanPrice] = useState(false)
 
   const refreshEvent = async () => {
     try {
@@ -180,7 +189,7 @@ function EventDetails({ event, onBack, onUpdate }) {
     }
   }
 
-  // Fetch event features on mount
+  // Fetch event features and subscription plan on mount
   useEffect(() => {
     const fetchFeatures = async () => {
       try {
@@ -188,15 +197,112 @@ function EventDetails({ event, onBack, onUpdate }) {
         const res = await API.get(`/event-requests/${event._id}/features`)
         setFeatures(res.data.features || {})
       } catch (err) {
-        console.error('Failed to fetch features:', err)
-        // Default to all enabled if fetch fails
-        setFeatures({ analytics: { enabled: true } })
+        // 403 is expected when features endpoint is not accessible (normal for event admins)
+        if (err.response?.status === 403) {
+          // Default to all enabled if access is forbidden
+          setFeatures({ analytics: { enabled: true }, ticketing: { enabled: true }, qrCheckIn: { enabled: true }, scannerApp: { enabled: true }, subAdmins: { enabled: true } })
+        } else {
+          console.error('Failed to fetch features:', err)
+          // Default to all enabled if fetch fails
+          setFeatures({ analytics: { enabled: true }, ticketing: { enabled: true }, qrCheckIn: { enabled: true }, scannerApp: { enabled: true }, subAdmins: { enabled: true } })
+        }
       } finally {
         setLoadingFeatures(false)
       }
     }
     fetchFeatures()
+    fetchSubscriptionPlan()
   }, [event._id])
+
+  const fetchSubscriptionPlan = async () => {
+    try {
+      setLoadingPlanPrice(true)
+      const res = await API.get(`/event-admin/events/${event._id}/subscription`)
+      if (res.data && res.data.plan) {
+        setCurrentPlan(res.data.plan)
+        setPlanPrice(res.data.plan.price)
+      }
+    } catch (err) {
+      console.log('No subscription plan found, using event price')
+      setPlanPrice(null)
+    } finally {
+      setLoadingPlanPrice(false)
+    }
+  }
+
+  // Fetch subscription plans when modal opens
+  const fetchPlans = async () => {
+    try {
+      console.log('Fetching plans from /subscriptions/plans')
+      const res = await API.get('/subscriptions/plans')
+      console.log('Plans response:', res.data)
+      const plansData = res.data.plans || res.data
+      const plansArray = Array.isArray(plansData) ? plansData : (Array.isArray(res.data) ? res.data : [])
+      console.log('Plans array:', plansArray)
+      setPlans(plansArray)
+      
+      // Fetch current subscription
+      try {
+        const currentRes = await API.get(`/event-admin/events/${event._id}/subscription`)
+        if (currentRes.data && currentRes.data.plan) {
+          setCurrentPlan(currentRes.data.plan)
+        }
+      } catch (err) {
+        console.log('No current subscription found')
+      }
+    } catch (err) {
+      console.error('Failed to fetch plans:', err.message, err.response?.data)
+      setPlans([])
+    }
+  }
+
+  const handlePlanSelect = (plan) => {
+    const isCurrent = currentPlan && (currentPlan._id === plan._id || currentPlan.name === plan.name)
+    if (isCurrent) {
+      return
+    }
+    setSelectedPlan(plan)
+    setShowConfirmModal(true)
+  }
+
+  const handleConfirmUpgrade = async () => {
+    if (!selectedPlan) return
+    
+    try {
+      setUpgradingPlan(true)
+      const res = await API.post(`/event-admin/events/${event._id}/subscription`, {
+        planId: selectedPlan._id
+      })
+      
+      if (res.data.success) {
+        setCurrentPlan(selectedPlan)
+        setShowConfirmModal(false)
+        setShowPlansModal(false)
+        // Refresh features after plan update
+        const featuresRes = await API.get(`/event-requests/${event._id}/features`)
+        if (featuresRes.data.features) {
+          setFeatures(featuresRes.data.features)
+        }
+        alert('Subscription plan updated successfully!')
+        // Refresh the page to apply new features
+        window.location.reload()
+      }
+    } catch (err) {
+      console.error('Failed to upgrade plan:', err)
+      alert(err.response?.data?.message || 'Failed to upgrade plan. Please try again.')
+    } finally {
+      setUpgradingPlan(false)
+    }
+  }
+
+  const handleShowPlans = () => {
+    console.log('handleShowPlans called')
+    setShowPlansModal(true)
+    // Fetch plans after modal is shown
+    setTimeout(() => {
+      fetchPlans()
+    }, 100)
+  }
 
   useEffect(() => {
     if (editMode) {
@@ -254,6 +360,45 @@ function EventDetails({ event, onBack, onUpdate }) {
             ✏️ Edit Event
           </button>
         </div>
+      </div>
+
+      {/* Pricing Details */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <button 
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            handleShowPlans()
+          }}
+          className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl p-6 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
+        >
+          <p className="text-sm text-gray-600 mb-2">{planPrice ? 'Plan Price' : 'Base Price'}</p>
+          <p className="text-3xl font-bold text-indigo-600">
+            {loadingPlanPrice ? '...' : formatINR(planPrice || eventData.price)}
+          </p>
+          {planPrice && currentPlan && (
+            <p className="text-xs text-indigo-500 mt-2 font-medium">{currentPlan.name}</p>
+          )}
+        </button>
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+          <p className="text-sm text-gray-600 mb-2">Total Capacity</p>
+          <p className="text-3xl font-bold text-green-600">{eventData.totalTickets}</p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
+          <p className="text-sm text-gray-600 mb-2">Available Tickets</p>
+          <p className="text-3xl font-bold text-purple-600">{eventData.availableTickets}</p>
+        </div>
+      </div>
+
+      {/* View Plans Button */}
+      <div className="mb-6 flex justify-center">
+        <button
+          type="button"
+          onClick={handleShowPlans}
+          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-all hover:shadow-lg"
+        >
+          📋 View All Subscription Plans
+        </button>
       </div>
 
       {/* Edit Event Modal */}
@@ -320,47 +465,262 @@ function EventDetails({ event, onBack, onUpdate }) {
         <>
           {activeTab === 'overview' && (
             analyticsEnabled ? (
-              <OverviewTab event={eventData} />
+              <OverviewTab event={eventData} onShowPlans={handleShowPlans} />
             ) : (
-              <FeatureDisabledMessage featureName="Analytics" featureIcon="📊" />
+              <FeatureDisabledMessage featureName="Analytics" featureIcon="📊" onShowPlans={handleShowPlans} />
             )
           )}
           {activeTab === 'tickets' && (
             ticketingEnabled ? (
               <TicketTypesTab event={eventData} onRefresh={refreshEvent} />
             ) : (
-              <FeatureDisabledMessage featureName="Ticketing" featureIcon="🎫" />
+              <FeatureDisabledMessage featureName="Ticketing" featureIcon="🎫" onShowPlans={handleShowPlans} />
             )
           )}
           {activeTab === 'staff' && (
             subAdminsEnabled ? (
               <StaffTab event={eventData} onRefresh={refreshEvent} />
             ) : (
-              <FeatureDisabledMessage featureName="Sub-Admins" featureIcon="👥" />
+              <FeatureDisabledMessage featureName="Sub-Admins" featureIcon="👥" onShowPlans={handleShowPlans} />
             )
           )}
           {activeTab === 'bookings' && (
             ticketingEnabled ? (
               <BookingsTab eventId={eventData._id} />
             ) : (
-              <FeatureDisabledMessage featureName="Bookings" featureIcon="📋" />
+              <FeatureDisabledMessage featureName="Bookings" featureIcon="📋" onShowPlans={handleShowPlans} />
             )
           )}
           {activeTab === 'logs' && (
             scannerEnabled ? (
               <EntryLogsTab eventId={eventData._id} />
             ) : (
-              <FeatureDisabledMessage featureName="Entry Logs & Scanner" featureIcon="📝" />
+              <FeatureDisabledMessage featureName="Entry Logs & Scanner" featureIcon="📝" onShowPlans={handleShowPlans} />
             )
           )}
         </>
+      )}
+
+      {/* Plans Modal */}
+      {showPlansModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] overflow-y-auto flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">📋 Subscription Plans</h3>
+                {currentPlan && (
+                  <p className="text-sm text-gray-600 mt-1">Current Plan: <span className="font-semibold text-indigo-600">{currentPlan.displayName || currentPlan.name}</span></p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPlansModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              {plans.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600 text-lg font-medium">Loading subscription plans...</p>
+                  <p className="text-gray-500 text-sm mt-2">Please wait while we fetch the available plans</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {plans.map((plan) => (
+                      <PlanCard 
+                        key={plan._id || plan.name} 
+                        plan={plan} 
+                        currentPlan={currentPlan}
+                        onSelect={() => handlePlanSelect(plan)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && selectedPlan && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-[10000] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Subscription Change</h3>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to {currentPlan ? 'change' : 'subscribe'} to the <span className="font-bold text-indigo-600">{selectedPlan.displayName || selectedPlan.name}</span> plan?
+            </p>
+            
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Plan:</span>
+                  <span className="font-semibold">{selectedPlan.displayName || selectedPlan.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Price:</span>
+                  <span className="font-semibold text-indigo-600">
+                    {selectedPlan.price > 0 ? `₹${selectedPlan.price.toLocaleString('en-IN')}` : 'Custom Pricing'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmModal(false)
+                  setSelectedPlan(null)
+                }}
+                disabled={upgradingPlan}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmUpgrade}
+                disabled={upgradingPlan}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {upgradingPlan ? 'Updating...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
 }
 
+// Plan Card Component
+function PlanCard({ plan, currentPlan, onSelect }) {
+  if (!plan) return null
+  
+  const isCurrentPlan = currentPlan && (currentPlan._id === plan._id || currentPlan.name === plan.name)
+  
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={isCurrentPlan}
+      className={`border-2 rounded-xl p-5 hover:shadow-lg transition-all bg-white text-left w-full ${
+        isCurrentPlan 
+          ? 'border-green-500 bg-green-50 cursor-not-allowed opacity-90' 
+          : 'border-gray-200 hover:border-indigo-400'
+      }`}
+    >
+      {isCurrentPlan && (
+        <div className="mb-2">
+          <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
+            Current Plan
+          </span>
+        </div>
+      )}
+      <h4 className="text-lg font-bold text-gray-900 mb-2">{plan.displayName || plan.name || 'Unknown Plan'}</h4>
+      <div className="mb-4">
+        {plan.price && plan.price > 0 ? (
+          <p className="text-2xl font-bold text-indigo-600">₹{plan.price.toLocaleString('en-IN')}</p>
+        ) : (
+          <p className="text-2xl font-bold text-gray-600">Custom Pricing</p>
+        )}
+        {plan.description && (
+          <p className="text-xs text-gray-600 mt-1">{plan.description}</p>
+        )}
+      </div>
+      
+      <div className="space-y-2 text-xs border-t border-gray-200 pt-3">
+        {plan.features ? (
+          <>
+            {plan.features.ticketing?.enabled && (
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span>Ticketing {plan.features.ticketing.limit ? `(${plan.features.ticketing.limit})` : ''}</span>
+              </div>
+            )}
+            {plan.features.qrCheckIn?.enabled && (
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span>QR Check-in</span>
+              </div>
+            )}
+            {plan.features.scannerApp?.enabled && (
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span>Scanner App</span>
+              </div>
+            )}
+            {plan.features.analytics?.enabled && (
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span>Analytics</span>
+              </div>
+            )}
+            {plan.features.emailSms?.enabled && (
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span>Email/SMS</span>
+              </div>
+            )}
+            {plan.features.payments?.enabled && (
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span>Payments {plan.features.payments.transactionFee ? `(${plan.features.payments.transactionFee}%)` : ''}</span>
+              </div>
+            )}
+            {plan.features.weatherAlerts?.enabled && (
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span>Weather Alerts</span>
+              </div>
+            )}
+            {plan.features.subAdmins?.enabled && (
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span>Sub-Admins</span>
+              </div>
+            )}
+            {plan.features.reports?.enabled && (
+              <div className="flex items-center gap-2 text-green-700">
+                <span>✓</span>
+                <span>Reports</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-gray-600">No features data available</p>
+        )}
+      </div>
+      
+      {plan.limits && (
+        <div className="mt-3 pt-3 border-t border-gray-200 space-y-1 text-xs text-gray-600">
+          {plan.limits.attendeesPerEvent && (
+            <div>Attendees: {plan.limits.attendeesPerEvent.toLocaleString()}</div>
+          )}
+          {plan.limits.eventsPerMonth && (
+            <div>Events/month: {plan.limits.eventsPerMonth}</div>
+          )}
+        </div>
+      )}
+      
+      {!isCurrentPlan && (
+        <div className="mt-4 pt-3 border-t border-gray-200">
+          <div className="text-xs font-medium text-indigo-600">Click to select this plan</div>
+        </div>
+      )}
+    </button>
+  )
+}
+
 // Reusable component for feature disabled message
-function FeatureDisabledMessage({ featureName, featureIcon = '🔒' }) {
+function FeatureDisabledMessage({ featureName, featureIcon = '🔒', onShowPlans }) {
   return (
     <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-2xl p-10 text-center shadow-lg">
       <div className="bg-white rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6 shadow-md">
@@ -382,32 +742,39 @@ function FeatureDisabledMessage({ featureName, featureIcon = '🔒' }) {
         <ul className="text-sm text-gray-600 space-y-2 text-left">
           <li className="flex items-start gap-2">
             <span className="text-yellow-600 font-bold mt-0.5">1.</span>
-            <span>Contact your system administrator or super admin</span>
+            <span>Upgrade your subscription plan</span>
           </li>
           <li className="flex items-start gap-2">
             <span className="text-yellow-600 font-bold mt-0.5">2.</span>
-            <span>Request {featureName.toLowerCase()} feature activation for this event</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-yellow-600 font-bold mt-0.5">3.</span>
-            <span>Or consider upgrading your subscription plan</span>
+            <span>Or contact your administrator to manually enable this feature</span>
           </li>
         </ul>
       </div>
-      <Link
-        to="/for-organizers"
-        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-        </svg>
-        Upgrade Plan
-      </Link>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <button
+          onClick={onShowPlans}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+          View Plans with {featureName}
+        </button>
+        <Link
+          to="/for-organizers"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Learn More
+        </Link>
+      </div>
     </div>
   )
 }
 
-function OverviewTab({ event }) {
+function OverviewTab({ event, onShowPlans }) {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -422,12 +789,14 @@ function OverviewTab({ event }) {
           setError(null)
         }
       } catch (err) {
-        console.error('Failed to load stats:', err)
         if (!cancelled) {
           // Check if it's a feature disabled error
           if (err.response?.status === 403 && err.response?.data?.feature === 'analytics') {
+            // This is expected - analytics feature is disabled
             setError({ type: 'disabled', message: err.response.data.message })
           } else {
+            // Log actual errors
+            console.error('Failed to load stats:', err)
             setError({ type: 'error', message: err.response?.data?.message || 'Failed to load statistics' })
           }
         }
@@ -468,15 +837,16 @@ function OverviewTab({ event }) {
               <li>Or upgrade your subscription plan</li>
             </ul>
           </div>
-          <Link
-            to="/for-organizers"
+          <button
+            type="button"
+            onClick={onShowPlans}
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
             View Pricing & Upgrade
-          </Link>
+          </button>
         </div>
       )
     }

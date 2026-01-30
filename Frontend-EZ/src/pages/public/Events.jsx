@@ -62,7 +62,11 @@ export default function Events(){
     
     const matchesCategory = selectedCategory === 'All' || e.category === selectedCategory
     
-    return matchesSearch && matchesCategory
+    // Filter out past events (show only upcoming events)
+    const eventDate = e.date ? new Date(e.date) : null
+    const isFutureEvent = !eventDate || eventDate >= new Date()
+    
+    return matchesSearch && matchesCategory && isFutureEvent
   })
 
   return (

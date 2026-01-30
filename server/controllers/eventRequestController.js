@@ -3,6 +3,7 @@ import SubscriptionPlan from '../models/SubscriptionPlan.js'
 import FeatureToggle from '../models/FeatureToggle.js'
 import Event from '../models/Event.js'
 import User from '../models/User.js'
+import Category from '../models/Category.js'
 import { ensureEmailConfigured, sendEventApprovalEmail, sendEventRejectionEmail } from '../utils/emailService.js'
 
 // Organizer: Create event request
@@ -63,9 +64,37 @@ export const createEventRequest = async (req, res) => {
       : []
 
 
-    // Validate category
-    const allowedCategories = ['Music','Sports','Comedy','Arts','Culture','Travel','Festival','Workshop','Conference','Other']
-    const normalizedCategory = allowedCategories.includes(category) ? category : 'Other'
+    // Process category - use custom category as-is, ensure it's not empty
+    const normalizedCategory = category && category.trim() ? category.trim() : 'Other'
+
+    // If a custom category is provided, create or update it in the Category collection
+    if (normalizedCategory && normalizedCategory !== 'Other') {
+      try {
+        // Check if category exists (case-insensitive)
+        const existingCategory = await Category.findOne({ 
+          name: { $regex: new RegExp(`^${normalizedCategory}$`, 'i') } 
+        })
+
+        if (existingCategory) {
+          // Increment usage count and ensure it's active
+          existingCategory.usageCount += 1
+          existingCategory.isActive = true
+          await existingCategory.save()
+        } else {
+          // Create new category
+          await Category.create({
+            name: normalizedCategory,
+            isDefault: false,
+            createdBy: user._id || user.id,
+            usageCount: 1,
+            isActive: true
+          })
+        }
+      } catch (catError) {
+        console.error('Error creating/updating category:', catError)
+        // Continue even if category creation fails - it's not critical
+      }
+    }
 
     // Validate subscription plan
     const subscriptionPlan = await SubscriptionPlan.findOne({ 
@@ -574,14 +603,18 @@ export const getEnabledFeatures = async (req, res) => {
     const { eventId } = req.params
     const user = req.user
 
-    // Check if user has access to this event (event_admin or organizer of an approved event)
-    if (user.role === 'event_admin') {
-      // Verify user has access to this event
-      const hasAccess = user.assignedEvents && user.assignedEvents.some(id => id.toString() === eventId.toString())
-      if (!hasAccess) {
-        return res.status(403).json({ message: 'You do not have access to this event' })
+    // Only check permissions if user is authenticated
+    if (user) {
+      // Check if user has access to this event (event_admin or organizer of an approved event)
+      if (user.role === 'event_admin') {
+        // Verify user has access to this event
+        const hasAccess = user.assignedEvents && user.assignedEvents.some(id => id.toString() === eventId.toString())
+        if (!hasAccess) {
+          return res.status(403).json({ message: 'You do not have access to this event' })
+        }
       }
     }
+    // If no user (public access), allow checking features for booking purposes
 
     const featureToggle = await FeatureToggle.findOne({ eventId })
     if (!featureToggle) {

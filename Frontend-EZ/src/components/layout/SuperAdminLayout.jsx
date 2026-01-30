@@ -17,6 +17,7 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
     { to: '/super-admin/events', label: 'Events', icon: '📅' },
     { to: '/super-admin/event-requests', label: 'Event Requests', icon: '✉️', matchPrefix: '/super-admin/event-requests' },
     { to: '/super-admin/bookings', label: 'Bookings', icon: '🎫' },
+    { to: '/super-admin/scanner-analytics', label: '⚡ QR Analytics', icon: '📊🎫' },
     { to: '/super-admin/subscriptions', label: 'Subscriptions', icon: '💳' },
     { to: '/super-admin/config', label: 'System Config', icon: '⚙️' },
     { to: '/super-admin/logs', label: 'Logs', icon: '🗒️' },

@@ -15,6 +15,7 @@ import {
   getContacts,
   replyContact,
 } from "../controllers/adminController.js";
+import { sendNotification, listNotifications, listTemplates, saveTemplate } from "../controllers/notificationController.js";
 
 const router = express.Router();
 
@@ -43,5 +44,11 @@ router.put("/bookings/:bookingId/status", updateBookingStatus);
 // ============ CONTACTS ============
 router.get("/contacts", getContacts);
 router.put("/contacts/:contactId/reply", replyContact);
+
+// ============ NOTIFICATIONS / EMAIL BLAST ============
+router.post("/notifications/send", sendNotification);
+router.get("/notifications", listNotifications);
+router.get("/notifications/templates", listTemplates);
+router.post("/notifications/templates", saveTemplate);
 
 export default router;

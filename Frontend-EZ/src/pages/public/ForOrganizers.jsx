@@ -373,14 +373,14 @@ export default function ForOrganizers() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.15 }}
-                className="relative"
+                className="relative h-full"
               >
                 {/* Connector Line */}
                 {idx < steps.length - 1 && (
                   <div className={`hidden lg:block absolute top-12 left-full w-full h-0.5 ${isDarkMode ? 'bg-blue-500/30' : 'bg-blue-300'}`} />
                 )}
 
-                <div className={`relative z-10 p-8 rounded-2xl backdrop-blur-sm transition-all duration-300 ${
+                <div className={`relative z-10 p-8 rounded-2xl backdrop-blur-sm transition-all duration-300 h-full flex flex-col ${
                   isDarkMode
                     ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15'
                     : 'bg-white border border-gray-200 shadow-md'
@@ -391,7 +391,7 @@ export default function ForOrganizers() {
                   <h3 className={`text-xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     {step.title}
                   </h3>
-                  <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-auto`}>
                     {step.description}
                   </p>
                 </div>

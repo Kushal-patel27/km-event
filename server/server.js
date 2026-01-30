@@ -6,11 +6,13 @@ import cors from "cors";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
+import { connectRedis, disconnectRedis } from "./config/redis.js";
 import authRoutes from "./routes/authRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import staffRoutes from "./routes/staffRoutes.js";
 import scannerRoutes from "./routes/scannerRoutes.js";
+import highPerformanceScannerRoutes from "./routes/highPerformanceScannerRoutes.js";
 import staffAdminRoutes from "./routes/staffAdminRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import superAdminRoutes from "./routes/superAdminRoutes.js";
@@ -23,11 +25,14 @@ import helpRoutes from "./routes/helpRoutes.js";
 import eventRequestRoutes from "./routes/eventRequestRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import organizersPageRoutes from "./routes/organizersPageRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
 import User from "./models/User.js";
 import HelpArticle from "./models/HelpArticle.js";
 import FAQ from "./models/FAQ.js";
 import SubscriptionPlan from "./models/SubscriptionPlan.js";
 import seedSubscriptionPlans from "./utils/seedSubscriptionPlans.js";
+import { seedNotificationTemplates } from "./utils/seedNotificationTemplates.js";
+import seedCategories from "./utils/seedCategories.js";
 import bcrypt from "bcryptjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,7 +44,12 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+// Initialize database and Redis
 connectDB();
+connectRedis().catch(err => {
+  console.error('[STARTUP] Redis connection failed:', err);
+  console.warn('[STARTUP] Server will run with degraded performance (no caching)');
+});
 
 const app = express();
 app.use(cors({
@@ -73,8 +83,10 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/event-requests", eventRequestRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/organizers-page", organizersPageRoutes);
+app.use("/api/categories", categoryRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/scanner", scannerRoutes);
+app.use("/api/hp-scanner", highPerformanceScannerRoutes); // High-performance scanner endpoints
 app.use("/api/staff-admin", staffAdminRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/super-admin", superAdminRoutes);
@@ -90,9 +102,30 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`Server running on port ${PORT} `)
-);
+const server = app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log('[STARTUP] High-performance QR scanning enabled');
+  console.log('[STARTUP] Ready for 10K-20K concurrent attendees');
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('[SHUTDOWN] SIGTERM received, closing gracefully...');
+  await disconnectRedis();
+  server.close(() => {
+    console.log('[SHUTDOWN] Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('[SHUTDOWN] SIGINT received, closing gracefully...');
+  await disconnectRedis();
+  server.close(() => {
+    console.log('[SHUTDOWN] Server closed');
+    process.exit(0);
+  });
+});
 
 // Seed default FAQs if the collection is empty
 async function seedFAQs(createdByUser){
@@ -254,6 +287,8 @@ async function seedHelpArticles(createdByUser) {
       await seedFAQs(adminUser)
       await seedHelpArticles(adminUser)
       await seedSubscriptionPlans()
+      await seedNotificationTemplates()
+      await seedCategories()
     } else {
       console.warn('Admin user not found; skipping FAQ and help seeds.')
     }

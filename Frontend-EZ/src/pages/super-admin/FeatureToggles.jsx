@@ -84,11 +84,10 @@ export default function FeatureToggles() {
       
       if (data.success || data.message) {
         setMessage({ type: 'success', text: 'Features updated successfully!' })
-        // Refresh features to confirm changes
+        // Auto-hide success message after 3 seconds
         setTimeout(() => {
-          fetchFeatures()
           setMessage(null)
-        }, 1500)
+        }, 3000)
       }
     } catch (err) {
       console.error('Save error:', err)

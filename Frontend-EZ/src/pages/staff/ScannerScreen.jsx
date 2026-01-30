@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import API from '../../services/api'
+import StaffLayout from '../../components/layout/StaffLayout'
 
 export default function ScannerScreen() {
   const [assignedInfo, setAssignedInfo] = useState(null)
@@ -69,29 +70,29 @@ export default function ScannerScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4">Loading scanner...</p>
+      <StaffLayout title="Scanner">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading scanner...</p>
+          </div>
         </div>
-      </div>
+      </StaffLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-indigo-900 p-4">
-      <div className="max-w-2xl mx-auto">
+    <StaffLayout title="Scanner">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">🎫 Scanner</h1>
-          <p className="text-gray-600 mt-1">Welcome, {assignedInfo?.name}</p>
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-900">Welcome, {assignedInfo?.name}</h2>
         </div>
 
         {/* Event & Gate Selection */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Event</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Event</label>
               <select
                 value={selectedEvent}
                 onChange={(e) => setSelectedEvent(e.target.value)}
@@ -103,9 +104,8 @@ export default function ScannerScreen() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Gate/Zone</label>
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Gate/Zone</label>
               <select
                 value={gate}
                 onChange={(e) => setGate(e.target.value)}
@@ -118,12 +118,11 @@ export default function ScannerScreen() {
                   </option>
                 ))}
               </select>
-            </div>
           </div>
         </div>
 
         {/* Scan Input */}
-        <form onSubmit={handleScan} className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <form onSubmit={handleScan} className="bg-white rounded-lg shadow-lg p-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">Booking ID</label>
           <input
             type="text"
@@ -131,11 +130,11 @@ export default function ScannerScreen() {
             onChange={(e) => setScanInput(e.target.value)}
             placeholder="Enter booking ID or scan QR code"
             autoFocus
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-200"
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-200 text-lg"
           />
           <button
             type="submit"
-            className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold transition-colors"
+            className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-lg font-semibold text-lg transition-colors"
           >
             🔍 Scan Ticket
           </button>
@@ -144,7 +143,7 @@ export default function ScannerScreen() {
         {/* Scan Result */}
         {scanResult && (
           <div
-            className={`rounded-lg shadow-lg p-6 mb-6 ${
+            className={`rounded-lg shadow-lg p-6 ${
               scanResult.success
                 ? 'bg-green-50 border-2 border-green-500'
                 : 'bg-red-50 border-2 border-red-500'
@@ -191,6 +190,6 @@ export default function ScannerScreen() {
           </div>
         )}
       </div>
-    </div>
+    </StaffLayout>
   )
 }

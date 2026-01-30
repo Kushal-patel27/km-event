@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import AdminLayout from '../../components/layout/AdminLayout'
 import { AnimatePresence, motion } from 'framer-motion'
 
-const CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference']
+const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference']
 const CITY_SUGGESTIONS = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Chandigarh']
 
 function toInputDateTime(value) {
@@ -25,7 +25,7 @@ function toInputDateTime(value) {
   }
 }
 
-function EventForm({ initial = {}, onSave, onCancel, busy = false }) {
+function EventForm({ initial = {}, onSave, onCancel, busy = false, categories = FALLBACK_CATEGORIES }) {
   const [form, setForm] = useState({
     title: '',
     location: '',
@@ -136,7 +136,7 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false }) {
           <label className="text-sm font-medium">Category</label>
           <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="p-2 border rounded w-full">
             <option value="">Select category</option>
-            {CATEGORIES.map(c => (
+            {categories.map(c => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
@@ -225,6 +225,25 @@ export default function AdminEvents() {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [editingMode, setEditingMode] = useState(false)
   const [savingDetail, setSavingDetail] = useState(false)
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories()
+  }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const { data } = await API.get('/categories/all')
+      if (data && data.length > 0) {
+        const categoryNames = data.map(cat => cat.name).filter(name => name !== 'Other')
+        setCategories([...categoryNames, 'Other'])
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+      // Keep fallback categories
+    }
+  }
 
   // Prevent background scroll when any modal is open
   useEffect(() => {
@@ -689,6 +708,7 @@ export default function AdminEvents() {
                     ticketTypes: selectedEvent.event.ticketTypes || []
                   }}
                   onSave={handleUpdateEventDetails}
+                  categories={categories}
                   onCancel={() => setEditingMode(false)}
                   busy={savingDetail}
                 />
@@ -728,6 +748,7 @@ export default function AdminEvents() {
                 onSave={creating ? handleCreate : (data) => handleUpdate(editingEvent._id || editingEvent.id, data)}
                 onCancel={() => { setCreating(false); setEditingEvent(null) }}
                 busy={busy}
+                categories={categories}
               />
             </motion.div>
           </motion.div>

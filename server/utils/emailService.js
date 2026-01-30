@@ -4,6 +4,7 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { generateAllCalendarLinks } from "./calendarUtils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -206,6 +207,26 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
       minute: '2-digit'
     });
 
+    // Generate calendar links
+    // eventDate is already a Date object from MongoDB
+    const eventDateTime = new Date(eventDate);
+    
+    // Validate the date before generating calendar links
+    if (isNaN(eventDateTime.getTime())) {
+      console.error('[EMAIL] Invalid event date:', eventDate);
+      // Skip calendar links if date is invalid
+      var calendarLinks = { google: '#', apple: '#', outlook: '#', yahoo: '#', ical: '' };
+    } else {
+      var calendarLinks = generateAllCalendarLinks({
+        title: eventName,
+        description: `Your ticket booking for ${eventName}. Booking ID: ${bookingId}`,
+        location: venue,
+        startDate: eventDateTime,
+        endDate: new Date(eventDateTime.getTime() + 3 * 60 * 60 * 1000), // Default 3 hours duration
+        timeZone: 'Asia/Kolkata'
+      });
+    }
+
     const hasSeats = seats && Array.isArray(seats) && seats.length > 0;
 
     let ticketRows = '';
@@ -327,6 +348,13 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
     const attachments = [];
     if (logoRes.attachment) attachments.push(logoRes.attachment);
     attachments.push(...pdfBuffers);
+
+    // Add .ics calendar file attachment
+    attachments.push({
+      filename: 'event.ics',
+      content: calendarLinks.ical,
+      contentType: 'text/calendar'
+    });
 
     const mailOptions = {
       from: process.env.EMAIL_USER || "k.m.easyevents@gmail.com",
@@ -476,6 +504,43 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
                       <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px;">
                         <p style="margin: 0; font-size: 14px; color: #1e40af;"><strong>📎 Your PDF ticket${quantity > 1 ? 's are' : ' is'} attached to this email.</strong> Please save ${quantity > 1 ? 'them' : 'it'} or show ${quantity > 1 ? 'them' : 'it'} on your mobile device at the venue.</p>
                       </div>
+                    </td>
+                  </tr>
+
+                  <!-- Add to Calendar Section -->
+                  <tr>
+                    <td style="padding: 20px 30px;">
+                      <h2 style="margin: 0 0 15px 0; font-size: 18px; color: #111827;">📅 Add to Your Calendar</h2>
+                      <p style="margin: 0 0 15px 0; font-size: 14px; color: #6b7280;">Don't miss the event! Add it to your calendar with one click:</p>
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="padding: 8px;">
+                            <a href="${calendarLinks.google}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #4285f4; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center; min-width: 120px;">
+                              📅 Google Calendar
+                            </a>
+                          </td>
+                          <td style="padding: 8px;">
+                            <a href="${calendarLinks.outlook}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #0078d4; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center; min-width: 120px;">
+                              📧 Outlook
+                            </a>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px;">
+                            <a href="${calendarLinks.yahoo}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #6001d2; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center; min-width: 120px;">
+                              🟣 Yahoo
+                            </a>
+                          </td>
+                          <td style="padding: 8px;">
+                            <a href="${calendarLinks.apple}" style="display: inline-block; padding: 12px 24px; background-color: #111827; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center; min-width: 120px;">
+                              🍎 Apple Calendar
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      <p style="margin: 15px 0 0 0; font-size: 12px; color: #9ca3af;">
+                        <em>💡 Tip: Download the .ics file attached to import into any calendar app!</em>
+                      </p>
                     </td>
                   </tr>
 
@@ -664,6 +729,75 @@ export const sendEventRejectionEmail = async ({ recipientEmail, organizerName, e
     return true;
   } catch (error) {
     console.error("Event rejection email failed:", error);
+    return false;
+  }
+};
+
+export const sendNotificationEmail = async ({ to, subject, title, htmlContent, messageType = "custom", recipientName = "there" }) => {
+  const { src: logoSrc, attachment } = getLogoResource();
+  const typeStyles = {
+    offer: { badge: "#f97316", pillBg: "#fff7ed", border: "#fed7aa" },
+    announcement: { badge: "#2563eb", pillBg: "#eff6ff", border: "#bfdbfe" },
+    update: { badge: "#16a34a", pillBg: "#ecfdf3", border: "#bbf7d0" },
+    custom: { badge: "#6b7280", pillBg: "#f3f4f6", border: "#e5e7eb" }
+  };
+  const style = typeStyles[messageType] || typeStyles.custom;
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+
+  const mailOptions = {
+    from: emailSender,
+    to,
+    subject,
+    attachments: attachment ? [attachment] : [],
+    html: `
+      <div style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;">
+          <tr>
+            <td style="padding:24px 24px 8px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img src="${logoSrc}" alt="K&M Events" style="max-width:110px;height:auto;display:block;" />
+                  </td>
+                  <td style="text-align:right;vertical-align:middle;">
+                    <span style="display:inline-block;padding:6px 12px;border:1px solid ${style.border};background:${style.pillBg};color:${style.badge};border-radius:999px;font-size:12px;font-weight:700;text-transform:capitalize;">${messageType}</span>
+                  </td>
+                </tr>
+              </table>
+              <h1 style="margin:0 0 6px 0;font-size:22px;color:#111827;font-weight:800;">${title}</h1>
+              <p style="margin:0 0 16px 0;color:#4b5563;font-size:14px;">Hi ${recipientName},</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 24px 8px 24px;">
+              <div style="border:1px solid #e5e7eb;border-radius:10px;padding:18px;background:#f9fafb;">
+                ${htmlContent}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px 24px 6px 24px;">
+              <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5;">
+                Best regards,<br/>K&M Events Team
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px 24px 24px 24px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0 0 6px 0;color:#9ca3af;font-size:11px;">You received this email because you are registered with K&M Events.</p>
+              <a href="${baseUrl}/settings" style="color:#2563eb;font-size:11px;text-decoration:none;">Manage email preferences</a>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
+  };
+
+  try {
+    await ensureTransporter().sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error("Notification email failed", error);
     return false;
   }
 };

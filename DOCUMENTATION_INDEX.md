@@ -76,6 +76,63 @@
 
 ---
 
+### **5. Feature Documentation** ⭐
+
+#### [CALENDAR_INTEGRATION_FEATURE.md](./CALENDAR_INTEGRATION_FEATURE.md)
+**Calendar integration feature documentation**
+- Feature overview
+- Multi-platform calendar support (Google, Apple, Outlook, Yahoo)
+- Email integration with calendar buttons
+- Technical implementation details
+- Calendar link formats
+- Security considerations
+- Mobile support
+- Future enhancements
+
+**Best for:** Understanding calendar feature, implementation details, calendar formats
+
+#### [CALENDAR_INTEGRATION_TESTING.md](./CALENDAR_INTEGRATION_TESTING.md)
+**Testing guide for calendar integration**
+- Test scenarios (7 detailed scenarios)
+- Email client compatibility tests
+- Verification checklist
+- Troubleshooting guide
+- Performance testing
+- Success criteria
+
+**Best for:** QA testing, feature validation, troubleshooting calendar issues
+
+#### [CALENDAR_INTEGRATION_COMPLETE.md](./CALENDAR_INTEGRATION_COMPLETE.md)
+**Calendar feature implementation summary**
+- What was implemented
+- Files created/modified
+- Benefits for users and business
+- Next steps and enhancements
+- Completion checklist
+
+**Best for:** Quick overview of calendar feature, implementation summary
+
+#### [DYNAMIC_CATEGORY_FEATURE.md](./DYNAMIC_CATEGORY_FEATURE.md)
+**Dynamic category system documentation**
+- Feature overview and benefits
+- Implementation details
+- API endpoints
+- Frontend integration
+- Testing guide
+
+**Best for:** Understanding category system, implementing category features
+
+#### [MODULE_SUGGESTIONS.md](./MODULE_SUGGESTIONS.md)
+**Current modules and future feature suggestions**
+- Complete list of existing modules (22+)
+- Suggested new features (40+) with priority ratings
+- Implementation guidelines
+- Feature descriptions
+
+**Best for:** Product planning, feature roadmap, understanding system capabilities
+
+---
+
 ### **4. API Reference** 🔌
 
 #### [API_EXAMPLES.md](./API_EXAMPLES.md)
@@ -140,13 +197,18 @@ Frontend-EZ/src/
 
 ```
 Root/
-├── EVENT_MODULE_README.md               ✅ Main entry point
-├── CREATE_EVENT_MODULE_DOCUMENTATION.md ✅ Complete technical docs
-├── QUICK_START_IMPLEMENTATION.md        ✅ Integration guide
-├── API_EXAMPLES.md                      ✅ API reference
-├── ARCHITECTURE_DIAGRAMS.md             ✅ Visual diagrams
-├── MODULE_SUMMARY.md                    ✅ Quick summary
-└── DOCUMENTATION_INDEX.md               ✅ This file
+├── EVENT_MODULE_README.md                    ✅ Main entry point
+├── CREATE_EVENT_MODULE_DOCUMENTATION.md      ✅ Complete technical docs
+├── QUICK_START_IMPLEMENTATION.md             ✅ Integration guide
+├── API_EXAMPLES.md                           ✅ API reference
+├── ARCHITECTURE_DIAGRAMS.md                  ✅ Visual diagrams
+├── MODULE_SUMMARY.md                         ✅ Quick summary
+├── MODULE_SUGGESTIONS.md                     ✅ Feature roadmap
+├── CALENDAR_INTEGRATION_FEATURE.md           ✅ Calendar feature docs
+├── CALENDAR_INTEGRATION_TESTING.md           ✅ Calendar testing guide
+├── CALENDAR_INTEGRATION_COMPLETE.md          ✅ Calendar implementation summary
+├── DYNAMIC_CATEGORY_FEATURE.md               ✅ Category system docs
+└── DOCUMENTATION_INDEX.md                    ✅ This file
 ```
 
 ---

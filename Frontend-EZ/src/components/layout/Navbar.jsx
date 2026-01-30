@@ -210,6 +210,25 @@ export default function Navbar(){
                 <span className={`text-base font-semibold whitespace-nowrap ${(isHomePage || isDarkMode) ? 'text-gray-300' : 'text-gray-700'}`}>
                   Hi, {user.name}
                 </span>
+                {/* Staff Scanner Link */}
+                {user.role === 'staff' && (
+                  <Link
+                    to="/staff/hp-scanner"
+                    className={`p-2 rounded-lg transition flex items-center gap-1 ${
+                      location.pathname === '/staff/hp-scanner'
+                        ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                        : (isHomePage || isDarkMode)
+                        ? 'text-gray-300 hover:text-blue-400'
+                        : 'text-gray-700 hover:text-blue-600'
+                    } ${(isHomePage || isDarkMode) ? 'hover:bg-gray-800' : 'hover:bg-blue-50 dark:hover:bg-blue-900/30'}`}
+                    title="QR Scanner"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    📱
+                  </Link>
+                )}
                 <Link
                   to="/settings"
                   className={`p-2 rounded-lg transition ${

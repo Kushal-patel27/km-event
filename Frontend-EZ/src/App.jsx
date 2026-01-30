@@ -19,6 +19,7 @@ import Cookies from './pages/public/Cookies'
 import CreateEventRequest from './pages/public/CreateEventRequest'
 import MyEventRequests from './pages/public/MyEventRequests'
 import ForOrganizers from './pages/public/ForOrganizers'
+import QRScannerTestPage from './pages/public/QRScannerTestPage'
 // Auth Pages
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
@@ -49,6 +50,8 @@ import StaffAdminSettings from './pages/staff-admin/StaffAdminSettings'
 // Staff Pages
 import StaffLogin from './pages/staff/StaffLogin'
 import StaffScanner from './pages/staff/StaffScanner'
+import HighPerformanceScannerScreen from './pages/staff/HighPerformanceScannerScreen'
+import ScannerAnalyticsDashboard from './pages/admin/ScannerAnalyticsDashboard'
 // Super Admin Pages
 import SuperAdminLogin from './pages/super-admin/SuperAdminLogin'
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard'
@@ -100,6 +103,7 @@ export default function App(){
               <Route path="/cookies" element={<Cookies />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/for-organizers" element={<ForOrganizers />} />
+              <Route path="/qr-scanner-test" element={<QRScannerTestPage />} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/book/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
               <Route path="/booking-success" element={<BookingSuccess />} />
@@ -135,6 +139,7 @@ export default function App(){
             {/* Staff Scanner area (Scanner Only) */}
             <Route path="/staff/login" element={<StaffLogin />} />
             <Route path="/staff/scanner" element={<ProtectedRoute><StaffScanner /></ProtectedRoute>} />
+            <Route path="/staff/hp-scanner" element={<ProtectedRoute><HighPerformanceScannerScreen /></ProtectedRoute>} />
 
             {/* Super Admin routes */}
             <Route path="/super-admin/login" element={<SuperAdminLogin />} />
@@ -149,6 +154,7 @@ export default function App(){
             <Route path="/super-admin/export" element={<ProtectedSuperAdminRoute><SuperAdminExport /></ProtectedSuperAdminRoute>} />
             <Route path="/super-admin/subscriptions" element={<ProtectedSuperAdminRoute><Subscriptions /></ProtectedSuperAdminRoute>} />
             <Route path="/super-admin/event-requests/:eventId/features" element={<ProtectedSuperAdminRoute><FeatureToggles /></ProtectedSuperAdminRoute>} />
+            <Route path="/super-admin/scanner-analytics" element={<ProtectedSuperAdminRoute><ScannerAnalyticsDashboard /></ProtectedSuperAdminRoute>} />
           </Routes>
         </main>
 

@@ -5,6 +5,8 @@ import SuperAdminLayout from '../../components/layout/SuperAdminLayout'
 import formatCurrency from '../../utils/currency'
 import { EventForm } from '../admin/AdminEvents'
 
+const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference']
+
 const featuresList = [
   { key: 'ticketing', label: 'Ticketing' },
   { key: 'qrCheckIn', label: 'QR Check-in' },
@@ -29,6 +31,24 @@ export default function SuperAdminEvents() {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [editingMode, setEditingMode] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories()
+  }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const { data } = await API.get('/categories/all')
+      if (data && data.length > 0) {
+        const categoryNames = data.map(cat => cat.name).filter(name => name !== 'Other')
+        setCategories([...categoryNames, 'Other'])
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+    }
+  }
 
   // Prevent background scroll when modal is open
   useEffect(() => {
@@ -306,7 +326,7 @@ export default function SuperAdminEvents() {
                         onClick={() => navigate(`/super-admin/event-requests/${selectedEvent.event._id}/features`)}
                         className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                       >
-                        Manage Features
+                        Configure Features
                       </button>
                       <button
                         onClick={() => setEditingMode(true)}
@@ -340,6 +360,7 @@ export default function SuperAdminEvents() {
                       onSave={handleUpdateEvent}
                       onCancel={() => setEditingMode(false)}
                       busy={saving}
+                      categories={categories}
                     />
                   </>
                 )}

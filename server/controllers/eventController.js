@@ -79,6 +79,12 @@ export const getEvents = async (req, res) => {
       query._id = { $in: user.assignedEvents };
     }
 
+    // Hide past events from regular users (show only upcoming events)
+    // Admin, staff, event_admin, and staff_admin can see all events
+    if (!user || user.role === 'user') {
+      query.date = { $gte: new Date() }; // Only show events in the future
+    }
+
     const events = await Event.find(query).populate("organizer", "name email");
     res.json(events);
   } catch (error) {

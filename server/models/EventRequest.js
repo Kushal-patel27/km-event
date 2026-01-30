@@ -33,8 +33,8 @@ const eventRequestSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference', 'Other'],
-    required: true
+    required: true,
+    trim: true
   },
   date: {
     type: Date,

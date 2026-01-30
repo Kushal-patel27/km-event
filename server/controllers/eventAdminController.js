@@ -1,7 +1,9 @@
 import Event from "../models/Event.js";
 import Booking from "../models/Booking.js";
 import User from "../models/User.js";
+import EntryLog from "../models/EntryLog.js";
 import FeatureToggle from "../models/FeatureToggle.js";
+import SubscriptionPlan from "../models/SubscriptionPlan.js";
 import bcrypt from "bcryptjs";
 
 // Recalculate aggregate inventory for events with ticket types
@@ -349,6 +351,20 @@ export const downloadAttendeeList = async (req, res) => {
   try {
     const { eventId } = req.params;
 
+    // Check if reports feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.reports?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Reports feature is disabled for this event",
+          feature: "reports"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking reports feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
     const bookings = await Booking.find({ 
       event: eventId,
       status: { $ne: 'cancelled' }
@@ -544,6 +560,20 @@ export const removeStaff = async (req, res) => {
       return res.status(400).json({ message: 'Missing staff id' });
     }
 
+    // Check if subAdmins feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.subAdmins?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Sub-admin management is disabled for this event",
+          feature: "subAdmins"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking subAdmins feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
@@ -606,26 +636,45 @@ export const getEntryLogs = async (req, res) => {
     const { eventId } = req.params;
     const { page = 1, limit = 50 } = req.query;
 
-    // Check if scannerApp feature is enabled for this event
-    try {
-      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
-      if (featureToggle && featureToggle.features?.scannerApp?.enabled === false) {
-        return res.status(403).json({ 
-          message: "Scanner app and entry logs are disabled for this event",
-          feature: "scannerApp"
-        });
-      }
-    } catch (featureError) {
-      console.error('[EVENT ADMIN] Error checking scannerApp feature:', featureError.message);
-      // Continue if feature check fails
-    }
-
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
 
-    const bookings = await Booking.find({ 
+    // Fetch entries from the high-performance scanner system (EntryLog)
+    const entryLogs = await EntryLog.find({ 
       event: eventId,
-      lastScannedAt: { $exists: true, $ne: null }
+      isDuplicate: false // Only successful scans
+    })
+      .populate('booking', 'bookingId quantity ticketType user event')
+      .populate('staff', 'name email')
+      .sort({ scannedAt: -1 })
+      .select('booking staff gateId gateName scannedAt validationTime deviceId deviceName');
+
+    // Transform EntryLog entries
+    const allLogs = entryLogs.map((log, index) => ({
+      id: log._id.toString(),
+      logType: 'high_performance', // Flag to distinguish from old system
+      bookingId: log.booking?.bookingId || log.booking?._id?.toString().slice(-8),
+      ticketIndex: 1, // For high-performance scanner, single ticket entry
+      userName: log.booking?.user?.name || 'Unknown',
+      userEmail: log.booking?.user?.email,
+      numberOfTickets: log.booking?.quantity || 1,
+      ticketType: log.booking?.ticketType?.name || 'Standard',
+      scannedAt: log.scannedAt,
+      scannedBy: log.staff?.name || 'Unknown',
+      gateId: log.gateId,
+      gateName: log.gateName,
+      deviceId: log.deviceId,
+      deviceName: log.deviceName,
+      validationTime: log.validationTime,
+      scanMethod: log.scanMethod,
+      isOfflineSync: log.isOfflineSync
+    }));
+
+    // Also fetch entries from legacy booking system for backwards compatibility
+    const legacyBookings = await Booking.find({ 
+      event: eventId,
+      lastScannedAt: { $exists: true, $ne: null },
+      scans: { $exists: true, $ne: [] }
     })
       .populate('user', 'name email')
       .populate({
@@ -634,14 +683,16 @@ export const getEntryLogs = async (req, res) => {
       })
       .sort({ lastScannedAt: -1 });
 
-    // Transform to ticket-wise entries (one entry per ticket scan)
-    const allLogs = [];
-    bookings.forEach(booking => {
-      if (booking.scans && booking.scans.length > 0) {
+    // Add legacy logs that aren't already in allLogs
+    const entryLogIds = new Set(entryLogs.map(log => log.booking?._id?.toString()));
+    
+    legacyBookings.forEach(booking => {
+      if (!entryLogIds.has(booking._id.toString()) && booking.scans && booking.scans.length > 0) {
         booking.scans.forEach((scan, index) => {
           const scannedByStaff = scan.scannedBy;
           allLogs.push({
             id: `${booking._id}-scan-${index}`,
+            logType: 'legacy',
             bookingId: booking.bookingId || booking._id.toString().slice(-8),
             userName: booking.user?.name,
             userEmail: booking.user?.email,
@@ -672,8 +723,12 @@ export const getEntryLogs = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[EVENT ADMIN] Error fetching entry logs:', error);
-    res.status(500).json({ message: error.message });
+    console.error('[GET_ENTRY_LOGS] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch entry logs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -730,6 +785,195 @@ export const getDashboard = async (req, res) => {
     });
   } catch (error) {
     console.error('[EVENT ADMIN] Error fetching dashboard:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Get current subscription for an event
+ */
+export const getCurrentSubscription = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const event = await Event.findById(eventId).populate('subscriptionPlan');
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    if (!event.subscriptionPlan) {
+      return res.json({ 
+        success: true,
+        plan: null,
+        message: 'No subscription plan assigned' 
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      plan: event.subscriptionPlan 
+    });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Error fetching subscription:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Update subscription for an event
+ */
+export const updateSubscription = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { planId } = req.body;
+    
+    console.log('[EVENT ADMIN] Updating subscription for event:', eventId, 'with plan:', planId);
+    console.log('[EVENT ADMIN] User role:', req.user.role);
+    
+    if (!planId) {
+      return res.status(400).json({ message: 'Plan ID is required' });
+    }
+    
+    // Verify the plan exists
+    const plan = await SubscriptionPlan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({ message: 'Subscription plan not found' });
+    }
+    
+    console.log('[EVENT ADMIN] Found plan:', plan.name);
+    
+    // Update the event's subscription plan
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    console.log('[EVENT ADMIN] Found event:', event.title);
+    
+    event.subscriptionPlan = planId;
+    await event.save();
+    
+    console.log('[EVENT ADMIN] Event subscription updated');
+    
+    // Update features based on the plan
+    let featureToggle = await FeatureToggle.findOne({ eventId });
+    
+    if (!featureToggle) {
+      featureToggle = new FeatureToggle({ eventId, features: {} });
+    }
+    
+    // Apply plan features to the event
+    featureToggle.features = {
+      ticketing: plan.features.ticketing || { enabled: false },
+      qrCheckIn: plan.features.qrCheckIn || { enabled: false },
+      scannerApp: plan.features.scannerApp || { enabled: false },
+      analytics: plan.features.analytics || { enabled: false },
+      emailSms: plan.features.emailSms || { enabled: false },
+      payments: plan.features.payments || { enabled: false },
+      weatherAlerts: plan.features.weatherAlerts || { enabled: false },
+      subAdmins: plan.features.subAdmins || { enabled: false },
+      reports: plan.features.reports || { enabled: false }
+    };
+    
+    await featureToggle.save();
+    
+    console.log('[EVENT ADMIN] Features updated successfully');
+    
+    res.json({ 
+      success: true,
+      message: 'Subscription updated successfully',
+      plan: plan
+    });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Error updating subscription:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Generate comprehensive event report
+ */
+export const generateEventReport = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    // Check if reports feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId });
+      if (featureToggle && featureToggle.features?.reports?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Reports feature is disabled for this event",
+          feature: "reports"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking reports feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Get all bookings for the event
+    const bookings = await Booking.find({ event: eventId })
+      .populate('user', 'name email phone')
+      .populate('event', 'title date location capacity');
+
+    // Calculate statistics
+    const totalBookings = bookings.length;
+    const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
+    const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
+    const scannedBookings = bookings.filter(b => b.lastScannedAt).length;
+    
+    let totalRevenue = 0;
+    let totalTicketsSold = 0;
+    bookings.forEach(booking => {
+      if (booking.status !== 'cancelled') {
+        totalRevenue += booking.finalTotal || 0;
+        totalTicketsSold += booking.quantity || 0;
+      }
+    });
+
+    const report = {
+      eventId: event._id,
+      eventTitle: event.title,
+      eventDate: event.date,
+      eventLocation: event.location,
+      capacity: event.capacity,
+      generatedAt: new Date(),
+      statistics: {
+        totalBookings,
+        confirmedBookings,
+        cancelledBookings,
+        scannedBookings,
+        totalRevenue,
+        totalTicketsSold,
+        occupancyRate: event.capacity ? ((totalTicketsSold / event.capacity) * 100).toFixed(2) : 0,
+        conversionRate: totalBookings > 0 ? ((confirmedBookings / totalBookings) * 100).toFixed(2) : 0
+      },
+      bookingDetails: bookings.map(b => ({
+        bookingId: b.bookingId,
+        customerName: b.user?.name || 'N/A',
+        customerEmail: b.user?.email || 'N/A',
+        customerPhone: b.user?.phone || 'N/A',
+        quantity: b.quantity || 1,
+        totalAmount: b.finalTotal || 0,
+        status: b.status,
+        bookingDate: b.createdAt,
+        scannedAt: b.lastScannedAt || null,
+        ticketType: b.ticketType || 'General'
+      }))
+    };
+
+    res.json({
+      success: true,
+      report
+    });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Error generating report:', error);
     res.status(500).json({ message: error.message });
   }
 };

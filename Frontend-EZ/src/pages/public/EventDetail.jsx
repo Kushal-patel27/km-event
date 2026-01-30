@@ -59,6 +59,32 @@ export default function EventDetail() {
   if (fetching) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-900 dark:text-white">Loading event...</div>;
   if (!event) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center text-gray-900 dark:text-white">Event not found</div>;
 
+  // Check if event has passed
+  const eventDate = event.date ? new Date(event.date) : null;
+  const hasEventPassed = eventDate && eventDate < new Date();
+
+  if (hasEventPassed) {
+    return (
+      <div className={`min-h-screen py-12 ${isDarkMode ? 'bg-[#0B0F19] text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className="max-w-4xl mx-auto px-6">
+          <div className={`rounded-2xl shadow-lg overflow-hidden border p-12 text-center ${isDarkMode ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200'}`}>
+            <div className="text-6xl mb-4">📅</div>
+            <h2 className="text-3xl font-bold mb-4">Event Has Ended</h2>
+            <p className={`text-lg mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              This event took place on {eventDate.toLocaleDateString()}
+            </p>
+            <Link
+              to="/events"
+              className="inline-block px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition"
+            >
+              Browse Upcoming Events
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const eventId = event._id || event.id;
   const available = seatsAvailable(event);
 

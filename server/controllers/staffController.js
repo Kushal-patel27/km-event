@@ -149,6 +149,20 @@ export const getTicketStatus = async (req, res) => {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
+    // Check if scanner app feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: booking.event });
+      if (featureToggle && featureToggle.features?.scannerApp?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Scanner app is disabled for this event",
+          feature: "scannerApp"
+        });
+      }
+    } catch (featureError) {
+      console.error('[TICKET STATUS] Error checking feature toggle:', featureError.message);
+      // Continue if feature check fails
+    }
+
     const entryLog = await EntryLog.findOne({ booking: booking._id });
 
     res.json({
@@ -181,6 +195,20 @@ export const getGateStats = async (req, res) => {
   try {
     const staffId = req.user._id;
     const { eventId } = req.params;
+
+    // Check if scanner app feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId });
+      if (featureToggle && featureToggle.features?.scannerApp?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Scanner app is disabled for this event",
+          feature: "scannerApp"
+        });
+      }
+    } catch (featureError) {
+      console.error('[SCANNER STATS] Error checking feature toggle:', featureError.message);
+      // Continue if feature check fails to avoid blocking legitimate requests
+    }
 
     const staff = await User.findById(staffId);
     if (!staff) {
@@ -230,6 +258,10 @@ export const getGateStats = async (req, res) => {
 // Get assigned events and gates for scanner
 export const getAssignedInfo = async (req, res) => {
   try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
     const staffId = req.user._id;
 
     const staff = await User.findById(staffId)
@@ -240,17 +272,24 @@ export const getAssignedInfo = async (req, res) => {
       return res.status(404).json({ message: "Staff not found" });
     }
 
+    // Ensure assignedGates and assignedEvents are arrays
+    const assignedGates = staff.assignedGates || [];
+    const assignedEvents = staff.assignedEvents || [];
+
     res.json({
       staff: {
-        name: staff.name,
-        email: staff.email,
-        assignedGates: staff.assignedGates,
-        assignedEvents: staff.assignedEvents,
+        name: staff.name || "",
+        email: staff.email || "",
+        assignedGates: assignedGates,
+        assignedEvents: assignedEvents,
       },
     });
   } catch (err) {
     console.error("Get assigned info error:", err);
-    res.status(500).json({ message: err.message || "Failed to get info" });
+    res.status(500).json({ 
+      message: "Failed to get info",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -263,6 +302,20 @@ export const requestManualEntry = async (req, res) => {
     const booking = await Booking.findOne({ bookingId });
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Check if scanner app feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: booking.event });
+      if (featureToggle && featureToggle.features?.scannerApp?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Scanner app is disabled for this event",
+          feature: "scannerApp"
+        });
+      }
+    } catch (featureError) {
+      console.error('[MANUAL ENTRY] Error checking feature toggle:', featureError.message);
+      // Continue if feature check fails
     }
 
     // Create entry log with manual status - requires approval

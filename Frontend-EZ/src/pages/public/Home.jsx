@@ -161,18 +161,24 @@ export default function Home() {
     async function loadEvents() {
       try {
         const res = await API.get('/events')
-        const mapped = (res.data || []).map(e => ({
-          id: e._id || e.id,
-          title: e.title,
-          date: e.date ? new Date(e.date).toLocaleString() : '',
-          location: e.location || '',
-          price: e.price ?? 0,
-          image:
-            e.image ||
-            'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1600&q=80',
-          capacity: e.totalTickets ?? e.capacity ?? 0,
-          availableTickets: e.availableTickets,
-        }))
+        const mapped = (res.data || [])
+          .filter(e => {
+            // Filter out past events
+            const eventDate = e.date ? new Date(e.date) : null
+            return !eventDate || eventDate >= new Date()
+          })
+          .map(e => ({
+            id: e._id || e.id,
+            title: e.title,
+            date: e.date ? new Date(e.date).toLocaleString() : '',
+            location: e.location || '',
+            price: e.price ?? 0,
+            image:
+              e.image ||
+              'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1600&q=80',
+            capacity: e.totalTickets ?? e.capacity ?? 0,
+            availableTickets: e.availableTickets,
+          }))
         if (mounted) setEvents(mapped)
       } catch (err) {
         if (mounted) setError('Unable to load events')

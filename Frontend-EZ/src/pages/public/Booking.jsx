@@ -44,16 +44,35 @@ export default function Booking(){
     const fetchFeatures = async () => {
       try {
         setLoadingFeatures(true);
-        const res = await API.get(`/event-requests/${id}/features`);
-        setFeatures(res.data.features || {});
+        // Try to fetch enabled features (requires auth but works for authorized users)
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         
-        // If ticketing is disabled, redirect back to event detail page
-        if (res.data.features?.ticketing?.enabled === false) {
+        const res = await API.get(`/event-requests/${id}/enabled-features`, { headers });
+        const enabledFeatures = res.data.enabledFeatures || {};
+        
+        // Build features object with all features set to disabled except enabled ones
+        const allFeatures = {
+          ticketing: enabledFeatures.ticketing ? { ...enabledFeatures.ticketing } : { enabled: false },
+          qrCheckIn: enabledFeatures.qrCheckIn ? { ...enabledFeatures.qrCheckIn } : { enabled: false },
+          scannerApp: enabledFeatures.scannerApp ? { ...enabledFeatures.scannerApp } : { enabled: false },
+          analytics: enabledFeatures.analytics ? { ...enabledFeatures.analytics } : { enabled: false },
+          emailSms: enabledFeatures.emailSms ? { ...enabledFeatures.emailSms } : { enabled: false },
+          payments: enabledFeatures.payments ? { ...enabledFeatures.payments } : { enabled: false },
+          weatherAlerts: enabledFeatures.weatherAlerts ? { ...enabledFeatures.weatherAlerts } : { enabled: false },
+          subAdmins: enabledFeatures.subAdmins ? { ...enabledFeatures.subAdmins } : { enabled: false },
+          reports: enabledFeatures.reports ? { ...enabledFeatures.reports } : { enabled: false }
+        };
+        
+        setFeatures(allFeatures);
+        
+        // If ticketing is disabled, show error message
+        if (allFeatures?.ticketing?.enabled === false) {
           setError('Ticketing is not available for this event');
-          setTimeout(() => navigate(`/event/${id}`), 2000);
         }
       } catch (err) {
         console.error('Failed to fetch features:', err);
+        // If fetch fails (no auth/401), check at submission time
         // Default to enabled if fetch fails (graceful degradation)
         setFeatures({ ticketing: { enabled: true } });
       } finally {
@@ -140,6 +159,30 @@ export default function Booking(){
 
   if(loading) return <div className="text-center p-10">Loading...</div>
   if(!event) return <div className="text-center p-10">{error || 'Event not found'}</div>
+
+  // Check if ticketing feature is disabled
+  if (features?.ticketing?.enabled === false) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center px-4 py-12 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className={`max-w-xl w-full rounded-2xl shadow-lg border transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`flex items-center gap-3 px-6 py-5 rounded-t-2xl ${isDarkMode ? 'bg-gradient-to-r from-yellow-700 to-yellow-600' : 'bg-gradient-to-r from-yellow-600 to-yellow-500'}`}>
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="text-white font-semibold">Ticketing Not Available</div>
+          </div>
+          <div className="px-6 py-5 text-sm">
+            <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Ticket sales are currently disabled for this event. Please contact the organizer for more information.</p>
+            <div className="mt-4 flex justify-center">
+              <Link to={`/event/${id}`} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200'}`}>
+                Back to Event
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Check sold out - all ticket types are sold out (but not if array is empty)
   const isSoldOut = event.ticketTypes && event.ticketTypes.length > 0 && event.ticketTypes.every(t => (t.available ?? 0) === 0)

@@ -6,7 +6,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useDarkMode } from '../../context/DarkModeContext'
 import formatINR from '../../utils/currency'
 
-const CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference', 'Other']
+// Fallback categories in case API fails
+const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference', 'Other']
 
 // Fallback plans in case API fails
 const FALLBACK_PLANS = {
@@ -29,10 +30,13 @@ export default function CreateEventRequest() {
   const [ticketForm, setTicketForm] = useState({ name: '', price: '', quantity: '', description: '' })
   const [plans, setPlans] = useState(FALLBACK_PLANS)
   const [plansLoading, setPlansLoading] = useState(true)
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
 
-  // Fetch plans from backend
+  // Fetch plans and categories from backend
   useEffect(() => {
     fetchPlans()
+    fetchCategories()
   }, [])
 
   const fetchPlans = async () => {
@@ -66,6 +70,25 @@ export default function CreateEventRequest() {
       setPlans(FALLBACK_PLANS)
     } finally {
       setPlansLoading(false)
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true)
+      const { data } = await API.get('/categories/all')
+      if (data && data.length > 0) {
+        // Extract category names and ensure "Other" is at the end
+        const categoryNames = data.map(cat => cat.name).filter(name => name !== 'Other')
+        setCategories([...categoryNames, 'Other'])
+      } else {
+        setCategories(FALLBACK_CATEGORIES)
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+      setCategories(FALLBACK_CATEGORIES)
+    } finally {
+      setCategoriesLoading(false)
     }
   }
 
@@ -376,9 +399,10 @@ export default function CreateEventRequest() {
                     value={formData.category}
                     onChange={handleInputChange}
                     required
+                    disabled={categoriesLoading}
                     className={`w-full px-4 py-2.5 border-2 rounded-lg transition ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-400' : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'} focus:outline-none`}
                   >
-                    {CATEGORIES.map(category => (
+                    {categories.map(category => (
                       <option key={category} value={category}>{category}</option>
                     ))}
                   </select>

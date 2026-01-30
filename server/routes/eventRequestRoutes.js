@@ -21,6 +21,7 @@ router.get('/:eventId/features', authMiddleware, requireSuperAdmin, eventRequest
 router.put('/:eventId/features', authMiddleware, requireSuperAdmin, eventRequestController.updateFeatureToggles)
 
 // Event Admin and Organizer - can only view enabled features
-router.get('/:eventId/enabled-features', authMiddleware, eventRequestController.getEnabledFeatures)
+// Public endpoint - no auth required for checking if ticketing is enabled
+router.get('/:eventId/enabled-features', eventRequestController.getEnabledFeatures)
 
 export default router
