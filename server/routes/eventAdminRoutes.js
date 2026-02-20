@@ -19,6 +19,8 @@ import {
   getCurrentSubscription,
   updateSubscription,
   generateEventReport,
+  exportEvents,
+  exportBookings,
 } from "../controllers/eventAdminController.js";
 
 const router = express.Router();
@@ -35,6 +37,10 @@ router.get("/events", getAssignedEvents);
 router.get("/events/:eventId", requireEventAccess, getEventDetails);
 router.put("/events/:eventId", requireEventAccess, updateEvent);
 router.get("/events/:eventId/stats", requireEventAccess, getEventStats);
+
+// Export
+router.get("/export/events", exportEvents);
+router.get("/export/bookings", exportBookings);
 
 // Ticket Types
 router.post("/events/:eventId/ticket-types", requireEventAccess, createTicketType);

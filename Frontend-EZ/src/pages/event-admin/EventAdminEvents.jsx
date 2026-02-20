@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import EventAdminLayout from '../../components/layout/EventAdminLayout'
+import ExportDataModal from '../../components/admin/ExportDataModal'
 import API from '../../services/api'
 import formatINR from '../../utils/currency'
 import { EventForm } from '../admin/AdminEvents'
@@ -10,6 +11,7 @@ export default function EventAdminEvents() {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showExportModal, setShowExportModal] = useState(false)
 
   useEffect(() => {
     fetchEvents()
@@ -28,15 +30,73 @@ export default function EventAdminEvents() {
     }
   }
 
-  if (loading) {
-    return (
-      <EventAdminLayout title="My Events">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
-      </EventAdminLayout>
-    )
+  const handleExport = async (format, filters) => {
+    try {
+      setError('')
+      
+      // Build query params - export event admin's events
+      const params = new URLSearchParams({ format })
+      
+      if (filters.startDate) params.append('startDate', filters.startDate)
+      if (filters.endDate) params.append('endDate', filters.endDate)
+      if (filters.ticketType) params.append('ticketType', filters.ticketType)
+      if (filters.status) params.append('status', filters.status)
+      
+      // Call export API - use event-admin specific endpoint
+      const response = await API.get(`/event-admin/export/events?${params.toString()}`, {
+        responseType: 'blob'
+      })
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Determine file extension
+      const ext = format === 'csv' ? 'csv' : format === 'xlsx' ? 'xlsx' : 'pdf'
+      link.setAttribute('download', `my-events-export-${Date.now()}.${ext}`)
+      
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Export error:', err)
+      setError(err.response?.data?.message || 'Failed to export data')
+    }
   }
+
+  // Filter configuration for export modal
+  const exportFilters = [
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      type: 'date',
+    },
+    {
+      key: 'endDate',
+      label: 'End Date',
+      type: 'date',
+    },
+    {
+      key: 'ticketType',
+      label: 'Ticket Type',
+      type: 'text',
+    },
+    {
+      key: 'status',
+      label: 'Event Status',
+      type: 'select',
+      options: [
+        { value: 'upcoming', label: 'Upcoming' },
+        { value: 'ongoing', label: 'Ongoing' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' },
+      ],
+    },
+  ]
+
+  const isInitialLoad = loading && events.length === 0
 
   return (
     <EventAdminLayout title="My Events">
@@ -46,7 +106,13 @@ export default function EventAdminEvents() {
         </div>
       )}
 
-      {selectedEvent ? (
+      {isInitialLoad && (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      )}
+
+      {!isInitialLoad && selectedEvent ? (
         <EventDetails 
           event={selectedEvent} 
           onBack={() => setSelectedEvent(null)}
@@ -59,8 +125,18 @@ export default function EventAdminEvents() {
             setSelectedEvent(updatedEvent)
           }}
         />
-      ) : (
+      ) : !isInitialLoad ? (
         <div className="space-y-4">
+          {events.length > 0 && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setShowExportModal(true)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                📥 Export Events
+              </button>
+            </div>
+          )}
           {events.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
               <p className="text-gray-500">No events assigned to you yet.</p>
@@ -75,7 +151,15 @@ export default function EventAdminEvents() {
             ))
           )}
         </div>
-      )}
+      ) : null}
+
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+        title="Export My Events"
+        filters={exportFilters}
+      />
     </EventAdminLayout>
   )
 }
@@ -98,7 +182,7 @@ function EventCard({ event, onSelect }) {
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
               isPast ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'
             }`}>
-              {event.status || (isPast ? 'Completed' : 'Upcoming')}
+              {isPast ? 'Completed' : 'Scheduled'}
             </span>
           </div>
           <div className="flex items-center gap-6 mt-4 text-sm">
@@ -220,26 +304,33 @@ function EventDetails({ event, onBack, onUpdate }) {
       const res = await API.get(`/event-admin/events/${event._id}/subscription`)
       if (res.data && res.data.plan) {
         setCurrentPlan(res.data.plan)
-        setPlanPrice(res.data.plan.price)
+        setPlanPrice(res.data.plan.monthlyFee)
       }
     } catch (err) {
-      console.log('No subscription plan found, using event price')
+      console.log('No subscription plan found')
       setPlanPrice(null)
     } finally {
       setLoadingPlanPrice(false)
     }
   }
 
+  const normalizePlan = (plan) => {
+    return {
+      ...plan,
+      displayName: plan.displayName || plan.name
+    }
+  }
+
   // Fetch subscription plans when modal opens
   const fetchPlans = async () => {
     try {
-      console.log('Fetching plans from /subscriptions/plans')
       const res = await API.get('/subscriptions/plans')
-      console.log('Plans response:', res.data)
-      const plansData = res.data.plans || res.data
+      const plansData = res.data?.data || res.data?.plans || res.data
       const plansArray = Array.isArray(plansData) ? plansData : (Array.isArray(res.data) ? res.data : [])
-      console.log('Plans array:', plansArray)
-      setPlans(plansArray)
+      const normalized = plansArray
+        .map(normalizePlan)
+        .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+      setPlans(normalized)
       
       // Fetch current subscription
       try {
@@ -279,9 +370,13 @@ function EventDetails({ event, onBack, onUpdate }) {
         setShowConfirmModal(false)
         setShowPlansModal(false)
         // Refresh features after plan update
-        const featuresRes = await API.get(`/event-requests/${event._id}/features`)
-        if (featuresRes.data.features) {
-          setFeatures(featuresRes.data.features)
+        try {
+          const featuresRes = await API.get(`/event-requests/${event._id}/features`)
+          if (featuresRes.data.features) {
+            setFeatures(featuresRes.data.features)
+          }
+        } catch (featuresError) {
+          console.warn('Skipping feature refresh after upgrade:', featuresError)
         }
         alert('Subscription plan updated successfully!')
         // Refresh the page to apply new features
@@ -372,7 +467,7 @@ function EventDetails({ event, onBack, onUpdate }) {
           }}
           className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl p-6 hover:shadow-lg hover:scale-105 transition-all cursor-pointer text-left"
         >
-          <p className="text-sm text-gray-600 mb-2">{planPrice ? 'Plan Price' : 'Base Price'}</p>
+          <p className="text-sm text-gray-600 mb-2">Monthly Fee</p>
           <p className="text-3xl font-bold text-indigo-600">
             {loadingPlanPrice ? '...' : formatINR(planPrice || eventData.price)}
           </p>
@@ -563,12 +658,14 @@ function EventDetails({ event, onBack, onUpdate }) {
                   <span className="text-gray-600">Plan:</span>
                   <span className="font-semibold">{selectedPlan.displayName || selectedPlan.name}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Price:</span>
-                  <span className="font-semibold text-indigo-600">
-                    {selectedPlan.price > 0 ? `₹${selectedPlan.price.toLocaleString('en-IN')}` : 'Custom Pricing'}
-                  </span>
-                </div>
+                {selectedPlan.monthlyFee !== undefined && selectedPlan.monthlyFee !== null && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Monthly Fee:</span>
+                    <span className="font-semibold text-indigo-600">
+                      {formatINR(selectedPlan.monthlyFee)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -605,6 +702,47 @@ function PlanCard({ plan, currentPlan, onSelect }) {
   if (!plan) return null
   
   const isCurrentPlan = currentPlan && (currentPlan._id === plan._id || currentPlan.name === plan.name)
+  const featureEntries = plan.features ? Object.entries(plan.features) : []
+
+  const detailItems = []
+  if (plan.monthlyFee !== undefined && plan.monthlyFee !== null) {
+    detailItems.push({ label: 'Monthly Fee', value: formatINR(plan.monthlyFee) })
+  }
+  if (plan.commissionPercentage !== undefined && plan.commissionPercentage !== null) {
+    detailItems.push({ label: 'Commission', value: `${plan.commissionPercentage}%` })
+  }
+  if (plan.eventLimit !== undefined && plan.eventLimit !== null) {
+    detailItems.push({ label: 'Event Limit', value: plan.eventLimit })
+  }
+  if (plan.ticketLimit !== undefined && plan.ticketLimit !== null) {
+    detailItems.push({ label: 'Ticket Limit', value: plan.ticketLimit })
+  }
+  if (plan.payoutFrequency) {
+    detailItems.push({ label: 'Payout Frequency', value: plan.payoutFrequency })
+  }
+  if (plan.minPayoutAmount !== undefined && plan.minPayoutAmount !== null) {
+    detailItems.push({ label: 'Min Payout', value: formatINR(plan.minPayoutAmount) })
+  }
+
+  const formatFeatureValue = (feature, key) => {
+    if (feature === null || feature === undefined) return null
+    if (typeof feature !== 'object') return String(feature)
+
+    const parts = []
+    if (feature.description) parts.push(feature.description)
+    if (feature.enabled !== undefined) parts.push(`Enabled: ${feature.enabled ? 'Yes' : 'No'}`)
+    if (feature.limit !== undefined && feature.limit !== null) parts.push(`Limit: ${feature.limit}`)
+    if (feature.emailLimit !== undefined && feature.emailLimit !== null) parts.push(`Email Limit: ${feature.emailLimit}`)
+    if (feature.smsLimit !== undefined && feature.smsLimit !== null) parts.push(`SMS Limit: ${feature.smsLimit}`)
+    if (feature.transactionFee !== undefined && feature.transactionFee !== null) {
+      parts.push(`Transaction Fee: ${feature.transactionFee}%`)
+    }
+    if (Array.isArray(feature.types) && feature.types.length > 0) {
+      parts.push(`Types: ${feature.types.join(', ')}`)
+    }
+
+    return parts.length > 0 ? parts.join(' • ') : key
+  }
   
   return (
     <button
@@ -625,94 +763,36 @@ function PlanCard({ plan, currentPlan, onSelect }) {
         </div>
       )}
       <h4 className="text-lg font-bold text-gray-900 mb-2">{plan.displayName || plan.name || 'Unknown Plan'}</h4>
-      <div className="mb-4">
-        {plan.price && plan.price > 0 ? (
-          <p className="text-2xl font-bold text-indigo-600">₹{plan.price.toLocaleString('en-IN')}</p>
-        ) : (
-          <p className="text-2xl font-bold text-gray-600">Custom Pricing</p>
-        )}
-        {plan.description && (
-          <p className="text-xs text-gray-600 mt-1">{plan.description}</p>
-        )}
-      </div>
-      
-      <div className="space-y-2 text-xs border-t border-gray-200 pt-3">
-        {plan.features ? (
-          <>
-            {plan.features.ticketing?.enabled && (
-              <div className="flex items-center gap-2 text-green-700">
-                <span>✓</span>
-                <span>Ticketing {plan.features.ticketing.limit ? `(${plan.features.ticketing.limit})` : ''}</span>
-              </div>
-            )}
-            {plan.features.qrCheckIn?.enabled && (
-              <div className="flex items-center gap-2 text-green-700">
-                <span>✓</span>
-                <span>QR Check-in</span>
-              </div>
-            )}
-            {plan.features.scannerApp?.enabled && (
-              <div className="flex items-center gap-2 text-green-700">
-                <span>✓</span>
-                <span>Scanner App</span>
-              </div>
-            )}
-            {plan.features.analytics?.enabled && (
-              <div className="flex items-center gap-2 text-green-700">
-                <span>✓</span>
-                <span>Analytics</span>
-              </div>
-            )}
-            {plan.features.emailSms?.enabled && (
-              <div className="flex items-center gap-2 text-green-700">
-                <span>✓</span>
-                <span>Email/SMS</span>
-              </div>
-            )}
-            {plan.features.payments?.enabled && (
-              <div className="flex items-center gap-2 text-green-700">
-                <span>✓</span>
-                <span>Payments {plan.features.payments.transactionFee ? `(${plan.features.payments.transactionFee}%)` : ''}</span>
-              </div>
-            )}
-            {plan.features.weatherAlerts?.enabled && (
-              <div className="flex items-center gap-2 text-green-700">
-                <span>✓</span>
-                <span>Weather Alerts</span>
-              </div>
-            )}
-            {plan.features.subAdmins?.enabled && (
-              <div className="flex items-center gap-2 text-green-700">
-                <span>✓</span>
-                <span>Sub-Admins</span>
-              </div>
-            )}
-            {plan.features.reports?.enabled && (
-              <div className="flex items-center gap-2 text-green-700">
-                <span>✓</span>
-                <span>Reports</span>
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-gray-600">No features data available</p>
-        )}
-      </div>
-      
-      {plan.limits && (
-        <div className="mt-3 pt-3 border-t border-gray-200 space-y-1 text-xs text-gray-600">
-          {plan.limits.attendeesPerEvent && (
-            <div>Attendees: {plan.limits.attendeesPerEvent.toLocaleString()}</div>
+      {(detailItems.length > 0 || plan.description) && (
+        <div className="mb-4">
+          {detailItems.length > 0 && (
+            <div className="space-y-1 text-sm text-gray-700">
+              {detailItems.map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-2">
+                  <span className="text-gray-600">{item.label}:</span>
+                  <span className="font-semibold text-gray-900">{item.value}</span>
+                </div>
+              ))}
+            </div>
           )}
-          {plan.limits.eventsPerMonth && (
-            <div>Events/month: {plan.limits.eventsPerMonth}</div>
+          {plan.description && (
+            <p className="text-xs text-gray-600 mt-2">{plan.description}</p>
           )}
         </div>
       )}
       
-      {!isCurrentPlan && (
-        <div className="mt-4 pt-3 border-t border-gray-200">
-          <div className="text-xs font-medium text-indigo-600">Click to select this plan</div>
+      {featureEntries.length > 0 && (
+        <div className="space-y-2 text-xs border-t border-gray-200 pt-3">
+          {featureEntries.map(([key, feature]) => {
+            const featureValue = formatFeatureValue(feature, key)
+            if (!featureValue) return null
+            return (
+              <div key={key} className="flex items-start gap-2 text-green-700">
+                <span>✓</span>
+                <span>{featureValue}</span>
+              </div>
+            )
+          })}
         </div>
       )}
     </button>
@@ -794,6 +874,19 @@ function OverviewTab({ event, onShowPlans }) {
           if (err.response?.status === 403 && err.response?.data?.feature === 'analytics') {
             // This is expected - analytics feature is disabled
             setError({ type: 'disabled', message: err.response.data.message })
+          } else if (err.response?.status === 403) {
+            // Access denied or feature error - set default stats
+            console.warn('Access denied or feature disabled for stats:', err.response?.data)
+            setError(null)
+            // Set default empty stats
+            setStats({
+              totalBookings: 0,
+              confirmedBookings: 0,
+              cancelledBookings: 0,
+              totalRevenue: 0,
+              ticketsSold: 0,
+              ticketsAvailable: event.availableTickets || 0
+            })
           } else {
             // Log actual errors
             console.error('Failed to load stats:', err)
@@ -811,7 +904,7 @@ function OverviewTab({ event, onShowPlans }) {
       cancelled = true
       clearInterval(intervalId)
     }
-  }, [event._id])
+  }, [event._id, event.availableTickets])
 
   if (loading) return <div className="text-center py-8">Loading stats...</div>
 
@@ -1309,7 +1402,20 @@ function BookingsTab({ eventId }) {
       link.click()
       link.remove()
     } catch (err) {
-      alert('Failed to download attendee list')
+      // Handle different error types
+      if (err.response?.status === 403) {
+        // Check if it's a feature disabled error
+        if (err.response?.data?.feature === 'reports') {
+          alert('The reports feature is not enabled for this event. Please enable it in event settings.')
+        } else {
+          alert('You do not have permission to download attendee list for this event.')
+        }
+      } else if (err.response?.status === 401) {
+        alert('Your session has expired. Please log in again.')
+      } else {
+        console.error('Failed to download attendee list:', err)
+        alert('Failed to download attendee list: ' + (err.response?.data?.message || 'Unknown error'))
+      }
     }
   }
 

@@ -109,7 +109,6 @@ const eventRequestSchema = new mongoose.Schema({
   },
   planSelected: {
     type: String,
-    enum: ['Basic', 'Standard', 'Professional', 'Enterprise'],
     required: true
   },
   billingCycle: {

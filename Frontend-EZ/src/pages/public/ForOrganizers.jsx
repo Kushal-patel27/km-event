@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useDarkMode } from '../../context/DarkModeContext'
 import API from '../../services/api'
+import formatCurrency from '../../utils/currency'
 
 export default function ForOrganizers() {
   const { isDarkMode } = useDarkMode()
@@ -12,94 +13,16 @@ export default function ForOrganizers() {
   const [error, setError] = useState(null)
   const [selectedPlanId, setSelectedPlanId] = useState(null)
 
-  // Fallback plans (in case API fails)
-  const fallbackPlans = [
-    {
-      name: 'Basic',
-      displayName: 'Basic Plan',
-      price: 999,
-      description: 'Perfect for small gatherings and meetups',
-      isActive: true,
-      features: {
-        ticketing: { enabled: true, limit: 100 },
-        qrCheckIn: { enabled: true },
-        analytics: { enabled: true },
-        payments: { enabled: true, transactionFee: 5 }
-      },
-      limits: {
-        attendeesPerEvent: 100,
-        eventsPerMonth: 1
-      }
-    },
-    {
-      name: 'Standard',
-      displayName: 'Standard Plan',
-      price: 2499,
-      description: 'Ideal for medium-sized events',
-      isActive: true,
-      features: {
-        ticketing: { enabled: true, limit: 500 },
-        qrCheckIn: { enabled: true },
-        emailSms: { enabled: true },
-        analytics: { enabled: true },
-        payments: { enabled: true, transactionFee: 4 }
-      },
-      limits: {
-        attendeesPerEvent: 500,
-        eventsPerMonth: 5,
-        customBranding: true
-      }
-    },
-    {
-      name: 'Professional',
-      displayName: 'Professional Plan',
-      price: 4999,
-      description: 'For large-scale professional events',
-      isActive: true,
-      features: {
-        ticketing: { enabled: true, limit: 2000 },
-        qrCheckIn: { enabled: true },
-        scannerApp: { enabled: true },
-        emailSms: { enabled: true },
-        analytics: { enabled: true },
-        payments: { enabled: true, transactionFee: 3 }
-      },
-      limits: {
-        attendeesPerEvent: 5000,
-        eventsPerMonth: 20,
-        customBranding: true,
-        prioritySupport: true
-      }
-    },
-    {
-      name: 'Enterprise',
-      displayName: 'Enterprise Plan',
-      price: 0,
-      description: 'Tailored solution for major events',
-      isActive: true,
-      features: {
-        ticketing: { enabled: true },
-        qrCheckIn: { enabled: true },
-        scannerApp: { enabled: true },
-        emailSms: { enabled: true },
-        analytics: { enabled: true },
-        payments: { enabled: true, transactionFee: 2.5 },
-        weatherAlerts: { enabled: true },
-        subAdmins: { enabled: true },
-        reports: { enabled: true }
-      },
-      limits: {
-        attendeesPerEvent: 999999,
-        eventsPerMonth: 999,
-        customBranding: true,
-        prioritySupport: true
-      }
-    }
-  ]
 
   useEffect(() => {
     fetchPageContent()
     fetchPlans()
+
+    const intervalId = setInterval(() => {
+      fetchPlans({ silent: true })
+    }, 15000)
+
+    return () => clearInterval(intervalId)
   }, [])
 
   const fetchPageContent = async () => {
@@ -111,22 +34,97 @@ export default function ForOrganizers() {
     }
   }
 
-  const fetchPlans = async () => {
+  const buildCommissionFeatures = (plan) => {
+    const features = {}
+    if (plan.commissionPercentage !== undefined) {
+      features.commission = {
+        enabled: true,
+        description: `Commission ${plan.commissionPercentage}%`
+      }
+    }
+    if (plan.eventLimit !== undefined && plan.eventLimit !== null) {
+      features.eventLimit = {
+        enabled: true,
+        description: `Up to ${plan.eventLimit} events`
+      }
+    }
+    if (plan.ticketLimit !== undefined && plan.ticketLimit !== null) {
+      features.ticketLimit = {
+        enabled: true,
+        description: `Up to ${plan.ticketLimit} tickets`
+      }
+    }
+    if (plan.payoutFrequency) {
+      features.payout = {
+        enabled: true,
+        description: `Payouts ${plan.payoutFrequency}`
+      }
+    }
+    if (plan.minPayoutAmount !== undefined) {
+      features.minPayout = {
+        enabled: true,
+        description: `Min payout ₹${plan.minPayoutAmount}`
+      }
+    }
+    return features
+  }
+
+  const normalizePlan = (plan) => {
+    const monthlyFee = plan.monthlyFee ?? 0
+    const normalizedFeatures =
+      plan.features && Object.keys(plan.features).length > 0
+        ? plan.features
+        : buildCommissionFeatures(plan)
+
+    return {
+      ...plan,
+      displayName: plan.displayName || plan.name,
+      monthlyFee: monthlyFee,
+      features: normalizedFeatures,
+      limits: plan.limits || {
+        eventsPerMonth: plan.eventLimit ?? null
+      }
+    }
+  }
+
+  const getCommissionLabel = (plan) => {
+    if (plan.commissionPercentage !== undefined && plan.commissionPercentage !== null) {
+      return `Commission ${plan.commissionPercentage}%`
+    }
+    if (plan.features?.commission?.description) {
+      return plan.features.commission.description
+    }
+    return null
+  }
+
+  const fetchPlans = async ({ silent = false } = {}) => {
     try {
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      }
       const { data } = await API.get('/subscriptions/plans')
-      if (data.plans && data.plans.length > 0) {
-        setPlans(data.plans.sort((a, b) => a.displayOrder - b.displayOrder))
+      const plansData = data?.data || data?.plans || data
+      const plansArray = Array.isArray(plansData) ? plansData : []
+      if (plansArray.length > 0) {
+        const sortedPlans = plansArray
+          .map(normalizePlan)
+          .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+        setPlans(sortedPlans)
       } else {
-        setPlans(fallbackPlans)
+        setPlans([])
+        setError('No subscription plans found')
       }
       setError(null)
     } catch (err) {
       console.error('Error fetching plans:', err)
-      setPlans(fallbackPlans)
-      setError('Failed to load plans, showing defaults')
+      setPlans([])
+      if (!silent) {
+        setError('Failed to load plans')
+      }
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }
 
@@ -261,10 +259,7 @@ export default function ForOrganizers() {
             transition={{ duration: 0.8, delay: 0.1 }}
             className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
           >
-            Host Your Next Event with{' '}
-            <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-              K&M Events
-            </span>
+            {content.hero?.title || 'Host Your Next Event with K&M Events'}
           </motion.h1>
 
           <motion.p
@@ -273,7 +268,7 @@ export default function ForOrganizers() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className={`text-lg md:text-xl mb-12 max-w-3xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
           >
-            Launch your event on K&M Events and reach thousands of enthusiasts. We handle ticketing, QR codes, payments, and support—so you can focus on creating amazing experiences.
+            {content.hero?.subtitle || 'Launch your event on K&M Events and reach thousands of enthusiasts. We handle ticketing, QR codes, payments, and support—so you can focus on creating amazing experiences.'}
           </motion.p>
 
           <motion.div
@@ -286,7 +281,7 @@ export default function ForOrganizers() {
               to="/create-event"
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl text-lg font-bold text-white shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-300"
             >
-              Submit Your Event
+              {content.hero?.buttonText1 || 'Submit Your Event'}
             </Link>
             <Link
               to="/contact"
@@ -296,7 +291,7 @@ export default function ForOrganizers() {
                   : 'border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700'
               }`}
             >
-              Contact Sales
+              {content.hero?.buttonText2 || 'Contact Sales'}
             </Link>
           </motion.div>
         </div>
@@ -313,10 +308,10 @@ export default function ForOrganizers() {
             className="text-center mb-16"
           >
             <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Why Choose K&M Events?
+              {content.benefits?.title || 'Why Choose K&M Events?'}
             </h2>
             <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-2xl mx-auto`}>
-              Everything you need to host successful events and sell tickets effortlessly
+              {content.benefits?.subtitle || 'Everything you need to host successful events and sell tickets effortlessly'}
             </p>
           </motion.div>
 
@@ -358,10 +353,10 @@ export default function ForOrganizers() {
             className="text-center mb-16"
           >
             <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              How It Works
+              {content.steps?.title || 'How It Works'}
             </h2>
             <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-2xl mx-auto`}>
-              Get your event live in 4 simple steps
+              {content.steps?.subtitle || 'Get your event live in 4 simple steps'}
             </p>
           </motion.div>
 
@@ -453,6 +448,9 @@ export default function ForOrganizers() {
                 'Enterprise': 'from-emerald-500 to-teal-500'
               }
               const color = colorMap[plan.name] || 'from-gray-500 to-gray-600'
+              const displayPrice = plan.monthlyFee || 0
+              const displayUnit = plan.monthlyFee ? '/month' : '/event'
+              const commissionLabel = getCommissionLabel(plan)
 
               return (
                 <motion.div
@@ -503,7 +501,7 @@ export default function ForOrganizers() {
                       {/* Pricing Section */}
                       <div className={`mb-3 pb-3 border-b ${isDarkMode ? 'border-white/10' : 'border-purple-100'}`}>
                         <div className="flex items-baseline gap-1">
-                        {plan.price === 0 ? (
+                        {displayPrice === 0 ? (
                           <div>
                             <span className={`text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                               Custom
@@ -514,10 +512,10 @@ export default function ForOrganizers() {
                           <div>
                             <div className="flex items-baseline gap-1">
                               <span className={`text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                ₹{plan.price.toLocaleString()}
+                                {formatCurrency(displayPrice)}
                               </span>
                               <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                / event
+                                {displayUnit}
                               </span>
                             </div>
                             {isPopular && (
@@ -529,6 +527,16 @@ export default function ForOrganizers() {
                         )}
                       </div>
                     </div>
+
+                      {commissionLabel && (
+                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3 ${
+                          isDarkMode
+                            ? 'bg-white/10 text-blue-200 border border-white/10'
+                            : 'bg-blue-50 text-blue-700 border border-blue-100'
+                        }`}>
+                          {commissionLabel}
+                        </div>
+                      )}
 
                       {/* Description */}
                       <p className={`text-xs mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -572,22 +580,10 @@ export default function ForOrganizers() {
                     {/* Limits */}
                     {plan.limits && Object.keys(plan.limits).length > 0 && (
                       <div className={`mb-4 pb-3 border-t text-xs space-y-1 ${isDarkMode ? 'border-white/10 text-gray-400' : 'border-purple-100 text-gray-600'}`}>
-                        {plan.limits.attendeesPerEvent && (
-                          <li className="flex items-center justify-between list-none">
-                            <span>Max Attendees:</span>
-                            <span className="font-semibold">{plan.limits.attendeesPerEvent === 999999 ? '∞' : plan.limits.attendeesPerEvent}</span>
-                          </li>
-                        )}
                         {plan.limits.eventsPerMonth && (
                           <li className="flex items-center justify-between list-none">
                             <span>Events/mo:</span>
                             <span className="font-semibold">{plan.limits.eventsPerMonth === 999 ? '∞' : plan.limits.eventsPerMonth}</span>
-                          </li>
-                        )}
-                        {plan.limits.storageGB && (
-                          <li className="flex items-center justify-between list-none">
-                            <span>Storage:</span>
-                            <span className="font-semibold">{plan.limits.storageGB}GB</span>
                           </li>
                         )}
                       </div>
@@ -639,7 +635,7 @@ export default function ForOrganizers() {
             className="text-center mb-16"
           >
             <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Frequently Asked Questions
+              {content.faqs?.title || 'Frequently Asked Questions'}
             </h2>
           </motion.div>
 
@@ -684,7 +680,7 @@ export default function ForOrganizers() {
             transition={{ duration: 0.8 }}
             className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 text-white drop-shadow-lg"
           >
-            Ready to Get Started?
+            {content.cta?.title || 'Ready to Get Started?'}
           </motion.h2>
 
           <motion.p
@@ -694,7 +690,7 @@ export default function ForOrganizers() {
             transition={{ duration: 0.8, delay: 0.1 }}
             className="text-lg md:text-xl mb-10 text-white/90"
           >
-            Join thousands of organizers who trust K&M Events to power their events
+            {content.cta?.subtitle || 'Join thousands of organizers who trust K&M Events to power their events'}
           </motion.p>
 
           <motion.div
@@ -708,13 +704,13 @@ export default function ForOrganizers() {
               to="/create-event"
               className="px-10 py-5 bg-white hover:bg-gray-100 text-blue-600 rounded-xl text-lg font-bold shadow-2xl hover:scale-105 transition-all duration-300"
             >
-              Submit Your Event Now
+              {content.cta?.buttonText1 || 'Submit Your Event Now'}
             </Link>
             <Link
               to="/contact"
               className="px-10 py-5 border-2 border-white rounded-xl text-lg font-semibold text-white hover:bg-white/10 backdrop-blur-sm transition-all duration-300"
             >
-              Talk to Sales
+              {content.cta?.buttonText2 || 'Talk to Sales'}
             </Link>
           </motion.div>
         </div>
@@ -755,20 +751,30 @@ export default function ForOrganizers() {
                 <thead>
                   <tr className={`border-b-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                     <th className={`text-left py-3 px-4 font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Features</th>
-                    {plans.map((plan, idx) => (
-                      <th key={idx} className={`py-3 px-4 text-center font-bold min-w-32 ${
-                        selectedPlanId === 'comparison' || (plan._id || idx) === selectedPlanId
-                          ? isDarkMode 
-                            ? 'bg-purple-900/40 text-purple-300' 
-                            : 'bg-purple-50 text-purple-600'
-                          : isDarkMode ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        <div className="font-bold text-base">{plan.displayName || plan.name}</div>
-                        <div className={`text-lg font-extrabold mt-1 ${
-                          isDarkMode ? 'text-purple-300' : 'text-purple-600'
-                        }`}>₹{plan.price.toLocaleString()}</div>
-                      </th>
-                    ))}
+                    {plans.map((plan, idx) => {
+                      const commissionLabel = getCommissionLabel(plan)
+                      return (
+                        <th key={idx} className={`py-3 px-4 text-center font-bold min-w-32 ${
+                          selectedPlanId === 'comparison' || (plan._id || idx) === selectedPlanId
+                            ? isDarkMode 
+                              ? 'bg-purple-900/40 text-purple-300' 
+                              : 'bg-purple-50 text-purple-600'
+                            : isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          <div className="font-bold text-base">{plan.displayName || plan.name}</div>
+                          <div className={`text-lg font-extrabold mt-1 ${
+                            isDarkMode ? 'text-purple-300' : 'text-purple-600'
+                          }`}>{formatCurrency(plan.monthlyFee || 0)}<span className="text-sm">/month</span></div>
+                          {commissionLabel && (
+                            <div className={`text-xs mt-1 font-semibold ${
+                              isDarkMode ? 'text-purple-200' : 'text-purple-700'
+                            }`}>
+                              {commissionLabel}
+                            </div>
+                          )}
+                        </th>
+                      )
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -814,22 +820,6 @@ export default function ForOrganizers() {
                     </td>
                   </tr>
 
-                  {/* Attendees Per Event */}
-                  <tr className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-gray-100'}`}>
-                    <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Max Attendees</td>
-                    {plans.map((plan, idx) => (
-                      <td key={idx} className={`py-3 px-4 text-center font-semibold ${
-                        selectedPlanId === 'comparison' || (plan._id || idx) === selectedPlanId
-                          ? isDarkMode 
-                            ? 'bg-purple-900/20' 
-                            : 'bg-purple-50'
-                          : ''
-                      }`}>
-                        {plan.limits?.attendeesPerEvent === 999999 ? '∞' : plan.limits?.attendeesPerEvent || '−'}
-                      </td>
-                    ))}
-                  </tr>
-
                   {/* Events Per Month */}
                   <tr className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-gray-100'}`}>
                     <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Events/Month</td>
@@ -846,21 +836,6 @@ export default function ForOrganizers() {
                     ))}
                   </tr>
 
-                  {/* Storage */}
-                  <tr className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-gray-100'}`}>
-                    <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Storage</td>
-                    {plans.map((plan, idx) => (
-                      <td key={idx} className={`py-3 px-4 text-center font-semibold ${
-                        selectedPlanId === 'comparison' || (plan._id || idx) === selectedPlanId
-                          ? isDarkMode 
-                            ? 'bg-purple-900/20' 
-                            : 'bg-purple-50'
-                          : ''
-                      }`}>
-                        {plan.limits?.storageGB ? `${plan.limits.storageGB}GB` : '−'}
-                      </td>
-                    ))}
-                  </tr>
                 </tbody>
               </table>
             </div>

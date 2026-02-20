@@ -158,11 +158,10 @@ export const seedNotificationTemplates = async () => {
   try {
     const existingCount = await NotificationTemplate.countDocuments();
     if (existingCount > 0) {
-      console.log(`✓ ${existingCount} notification templates already exist. Skipping seed.`);
       return;
     }
 
-    const createdTemplates = await NotificationTemplate.insertMany(
+    await NotificationTemplate.insertMany(
       defaultTemplates.map((tpl) => ({
         ...tpl,
         createdBy: {
@@ -171,8 +170,6 @@ export const seedNotificationTemplates = async () => {
         },
       }))
     );
-
-    console.log(`✓ Seeded ${createdTemplates.length} notification templates successfully!`);
   } catch (error) {
     console.error("✗ Error seeding notification templates:", error);
   }

@@ -2,19 +2,7 @@ import React, { useEffect, useState } from 'react'
 import API from '../../services/api'
 import formatINR from '../../utils/currency'
 import AdminLayout from '../../components/layout/AdminLayout'
-
-function exportCSV(rows, filename = 'bookings.csv') {
-  if (!rows || rows.length === 0) return
-  const headers = Object.keys(rows[0])
-  const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(','))).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
+import ExportDataModal from '../../components/admin/ExportDataModal'
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState([])
@@ -28,6 +16,7 @@ export default function AdminBookings() {
   const [events, setEvents] = useState([])
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
 
   useEffect(() => {
     fetchBookings()
@@ -83,6 +72,84 @@ export default function AdminBookings() {
     }
   }
 
+  const handleExport = async (format, filters) => {
+    try {
+      setError('')
+      
+      // Build query params
+      const params = new URLSearchParams({ format })
+      
+      if (filters.startDate) params.append('startDate', filters.startDate)
+      if (filters.endDate) params.append('endDate', filters.endDate)
+      if (filters.status) params.append('status', filters.status)
+      if (filters.eventId) params.append('eventId', filters.eventId)
+      if (filters.paymentStatus) params.append('paymentStatus', filters.paymentStatus)
+      
+      // Call export API
+      const response = await API.get(`/admin/export/bookings?${params.toString()}`, {
+        responseType: 'blob'
+      })
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Determine file extension
+      const ext = format === 'csv' ? 'csv' : format === 'xlsx' ? 'xlsx' : 'pdf'
+      link.setAttribute('download', `bookings-export-${Date.now()}.${ext}`)
+      
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Export error:', err)
+      setError(err.response?.data?.message || 'Failed to export data')
+    }
+  }
+
+  // Filter configuration for export modal
+  const exportFilters = [
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      type: 'date',
+    },
+    {
+      key: 'endDate',
+      label: 'End Date',
+      type: 'date',
+    },
+    {
+      key: 'status',
+      label: 'Booking Status',
+      type: 'select',
+      options: [
+        { value: 'pending', label: 'Pending' },
+        { value: 'confirmed', label: 'Confirmed' },
+        { value: 'cancelled', label: 'Cancelled' },
+        { value: 'refunded', label: 'Refunded' },
+      ]
+    },
+    {
+      key: 'eventId',
+      label: 'Event',
+      type: 'select',
+      options: events.map(e => ({ value: e._id, label: e.title }))
+    },
+    {
+      key: 'paymentStatus',
+      label: 'Payment Status',
+      type: 'select',
+      options: [
+        { value: 'pending', label: 'Pending' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'failed', label: 'Failed' },
+      ]
+    }
+  ]
+
   return (
     <AdminLayout title="Bookings">
       {error && (
@@ -94,10 +161,13 @@ export default function AdminBookings() {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Booking Management</h2>
         <button
-          onClick={() => exportCSV(bookings)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+          onClick={() => setShowExportModal(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
         >
-          ↓ Export CSV
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Export Data
         </button>
       </div>
 
@@ -359,6 +429,15 @@ export default function AdminBookings() {
           </div>
         </div>
       )}
+
+      {/* Export Modal */}
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+        title="Export Bookings Data"
+        filters={exportFilters}
+      />
     </AdminLayout>
   )
 }

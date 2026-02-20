@@ -6,6 +6,7 @@ import Ticket from '../../components/booking/Ticket'
 import { useAuth } from '../../context/AuthContext'
 import { useDarkMode } from '../../context/DarkModeContext'
 import formatINR from '../../utils/currency'
+import LoadingSpinner from '../../components/common/LoadingSpinner'
 
 export default function MyBookings() {
   const [bookings, setBookings] = useState([])
@@ -118,19 +119,12 @@ export default function MyBookings() {
   }, {})
 
   if (loading) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-[#0B0F19] text-white' : 'bg-gray-50 text-gray-800'}`}>
-        <div className="text-center">
-          <div className={`animate-spin rounded-full h-12 w-12 md:h-16 md:w-16 border-4 border-gray-700 mx-auto mb-4 ${isDarkMode ? 'border-red-400' : 'border-b-red-600'}`}></div>
-          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-400'} text-base md:text-lg font-medium`}>Loading your bookings...</p>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner message="Loading your bookings..." />
   }
 
   if (error) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-[#0B0F19] text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
         <div className="text-center max-w-md">
           <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${isDarkMode ? 'bg-red-500/10 text-red-300' : 'bg-red-100 text-red-600'}`}>
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -149,7 +143,7 @@ export default function MyBookings() {
 
   if (bookings.length === 0) {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 ${isDarkMode ? 'bg-[#0B0F19] text-white' : 'bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900'}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 ${isDarkMode ? 'bg-black text-white' : 'bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900'}`}>
         <div className="text-center max-w-md">
           <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full mb-6 ${isDarkMode ? 'bg-white/5 text-red-400' : 'bg-indigo-100 text-indigo-600'}`}>
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -173,7 +167,7 @@ export default function MyBookings() {
   }
 
   return (
-    <div className={`min-h-screen py-6 px-4 ${isDarkMode ? 'bg-[#0B0F19] text-white' : 'bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900'}`}>
+    <div className={`min-h-screen py-6 px-4 ${isDarkMode ? 'bg-black text-white' : 'bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900'}`}>
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -185,7 +179,7 @@ export default function MyBookings() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-          <div className={`rounded-lg shadow p-3 ${isDarkMode ? 'bg-[#131826] border border-white/10' : 'bg-white border border-indigo-100'}`}>
+          <div className={`rounded-lg shadow p-3 ${isDarkMode ? 'bg-black border border-white/10' : 'bg-white border border-indigo-100'}`}>
             <div className="flex items-center gap-3">
               <div className={`${isDarkMode ? 'bg-white/10' : 'bg-red-600 bg-opacity-10'} rounded-lg p-2`}>
                 <svg className={`w-5 h-5 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -199,7 +193,7 @@ export default function MyBookings() {
             </div>
           </div>
           
-          <div className={`rounded-lg shadow p-3 ${isDarkMode ? 'bg-[#131826] border border-white/10' : 'bg-white border border-purple-100'}`}>
+          <div className={`rounded-lg shadow p-3 ${isDarkMode ? 'bg-black border border-white/10' : 'bg-white border border-purple-100'}`}>
             <div className="flex items-center gap-3">
               <div className={`${isDarkMode ? 'bg-white/10' : 'bg-purple-100'} rounded-lg p-2`}>
                 <svg className={`w-5 h-5 ${isDarkMode ? 'text-pink-400' : 'text-purple-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -215,7 +209,7 @@ export default function MyBookings() {
             </div>
           </div>
 
-          <div className={`rounded-lg shadow p-3 ${isDarkMode ? 'bg-[#131826] border border-white/10' : 'bg-white border border-blue-100'}`}>
+          <div className={`rounded-lg shadow p-3 ${isDarkMode ? 'bg-black border border-white/10' : 'bg-white border border-blue-100'}`}>
             <div className="flex items-center gap-3">
               <div className={`${isDarkMode ? 'bg-white/10' : 'bg-red-600 bg-opacity-10'} rounded-lg p-2`}>
                 <svg className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -242,7 +236,7 @@ export default function MyBookings() {
             return (
               <div
                 key={event._id}
-                className={`rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow duration-300 ${isDarkMode ? 'bg-[#111522] border border-white/10' : 'bg-white border border-gray-100'}`}
+                className={`rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow duration-300 ${isDarkMode ? 'bg-black border border-white/10' : 'bg-white border border-gray-100'}`}
               >
                 {/* EVENT SUMMARY */}
                 <div

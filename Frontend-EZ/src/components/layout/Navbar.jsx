@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useDarkMode } from '../../context/DarkModeContext'
 import Logo from '../common/Logo'
+import API from '../../services/api'
 
 export default function Navbar(){
   const { user, logout } = useAuth()
@@ -11,6 +12,8 @@ export default function Navbar(){
   const location = useLocation()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [waitlistCount, setWaitlistCount] = useState(0)
 
   // Sync search query with URL params
   useEffect(() => {
@@ -22,6 +25,23 @@ export default function Navbar(){
       setSearchQuery('')
     }
   }, [location.search])
+
+  // Fetch waitlist count
+  useEffect(() => {
+    if (!user) {
+      setWaitlistCount(0)
+      return
+    }
+    const fetchWaitlistCount = async () => {
+      try {
+        const res = await API.get('/waitlist/my-waitlist', { params: { status: 'waiting' } })
+        setWaitlistCount(res.data.waitlist?.length || 0)
+      } catch (err) {
+        console.error('Failed to fetch waitlist count:', err)
+      }
+    }
+    fetchWaitlistCount()
+  }, [user, location.pathname])
 
   const adminHome = useMemo(() => {
     if(!user?.isAdmin) return null
@@ -52,88 +72,110 @@ export default function Navbar(){
   const isHomePage = location.pathname === '/'
 
   return (
-    <header className={`sticky top-0 z-50 ${isHomePage ? 'bg-[#0B0F19] shadow-lg' : 'bg-white dark:bg-gray-900 shadow-sm'}`}>
+    <header
+      className={`sticky top-0 z-50 transition-colors duration-300 ${
+        isHomePage
+          ? 'bg-black/95 shadow-lg border-b border-white/10'
+          : 'bg-white/90 dark:bg-black/90 backdrop-blur border-b border-gray-200/70 dark:border-gray-900 shadow-sm'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 ">
-          {/* Logo */}
-          <div className="flex-shrink-0">
-            <Link to="/" className="h-full flex items-center hover:opacity-90 transition-opacity">
-              <Logo dark={isDarkMode} key={`navbar-logo-${isDarkMode}`} size="4xl" />
-            </Link>
-          </div>
+        <div className="flex items-center justify-between h-16 gap-2 md:gap-4">
+          {/* Left Section - Logo and Back Button */}
+          <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-shrink-0">
+            {/* Back Button - Mobile only, before logo */}
+            {!isHomePage && (
+              <button
+                onClick={() => navigate(-1)}
+                className={`md:hidden p-2 rounded-lg transition flex-shrink-0 ${isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
+                aria-label="Go back"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/" className={`text-base font-semibold tracking-wide transition ${
-              location.pathname === '/'
-                ? 'text-red-500'
-                : (isHomePage || isDarkMode)
-                ? 'text-gray-300 hover:text-red-500'
-                : 'text-gray-700 hover:text-red-600'
-            }`}>
-              Home
-            </Link>
-            <Link to="/events" className={`text-base font-semibold tracking-wide transition ${
-              location.pathname === '/events'
-                ? 'text-red-500'
-                : (isHomePage || isDarkMode)
-                ? 'text-gray-300 hover:text-red-500'
-                : 'text-gray-700 hover:text-red-600'
-            }`}>
-              Events
-            </Link>
-            {user && (
-              <Link to="/my-bookings" className={`text-base font-semibold tracking-wide transition whitespace-nowrap ${
-                location.pathname === '/my-bookings'
+            {/* Logo */}
+            <div className="flex-shrink-0">
+              <Link to="/" className="h-full flex items-center hover:opacity-90 transition-opacity">
+                <Logo dark={isDarkMode} key={`navbar-logo-${isDarkMode}`} size="4xl" />
+              </Link>
+            </div>
+
+            {/* Desktop Navigation */}
+            <nav
+              className="hidden md:flex items-center gap-2 flex-nowrap whitespace-nowrap flex-1 md:ml-4 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              <Link to="/" className={`shrink-0 text-sm font-semibold tracking-wide px-2 py-1 rounded-md transition ${
+                location.pathname === '/'
                   ? 'text-red-500'
                   : (isHomePage || isDarkMode)
                   ? 'text-gray-300 hover:text-red-500'
                   : 'text-gray-700 hover:text-red-600'
               }`}>
-                My Bookings
+                Home
               </Link>
-            )}
-            {/* Hide My Event Requests entry for normal users */}
-            {user && user.role === 'event_admin' && (
-              <Link to="/my-event-requests" className={`text-base font-semibold tracking-wide transition whitespace-nowrap ${
-                location.pathname === '/my-event-requests'
+              <Link to="/events" className={`shrink-0 text-sm font-semibold tracking-wide px-2 py-1 rounded-md transition ${
+                location.pathname === '/events'
                   ? 'text-red-500'
                   : (isHomePage || isDarkMode)
                   ? 'text-gray-300 hover:text-red-500'
                   : 'text-gray-700 hover:text-red-600'
               }`}>
-                My Event Requests
+                Events
               </Link>
-            )}
-            {user && user.isAdmin && adminHome && (
-              <Link
-                to={adminHome}
-                className={`text-base font-semibold tracking-wide transition ${
-                  isAdminArea
+              {user && (
+                <Link to="/my-bookings" className={`shrink-0 text-sm font-semibold tracking-wide px-2 py-1 rounded-md transition whitespace-nowrap ${
+                  location.pathname === '/my-bookings'
                     ? 'text-red-500'
                     : (isHomePage || isDarkMode)
                     ? 'text-gray-300 hover:text-red-500'
                     : 'text-gray-700 hover:text-red-600'
-                }`}
-              >
-                Admin
-              </Link>
-            )}
-          </nav>
+                }`}>
+                  My Bookings
+                </Link>
+              )}
+              {user && waitlistCount > 0 && (
+                <Link to="/waitlist" className={`shrink-0 text-sm font-semibold tracking-wide px-2 py-1 rounded-md transition whitespace-nowrap ${
+                  location.pathname === '/waitlist'
+                    ? 'text-red-500'
+                    : (isHomePage || isDarkMode)
+                    ? 'text-gray-300 hover:text-red-500'
+                    : 'text-gray-700 hover:text-red-600'
+                }`}>
+                  Waitlist {waitlistCount > 0 && `(${waitlistCount})`}
+                </Link>
+              )}
+              {/* Hide My Event Requests entry for normal users */}
+              {user && user.role === 'event_admin' && (
+                <Link to="/my-event-requests" className={`shrink-0 text-sm font-semibold tracking-wide px-2 py-1 rounded-md transition whitespace-nowrap ${
+                  location.pathname === '/my-event-requests'
+                    ? 'text-red-500'
+                    : (isHomePage || isDarkMode)
+                    ? 'text-gray-300 hover:text-red-500'
+                    : 'text-gray-700 hover:text-red-600'
+                }`}>
+                  Event Request
+                </Link>
+              )}
+            </nav>
+          </div>
 
-          {/* Desktop Search Bar */}
-          <div className="hidden lg:flex items-center flex-1 max-w-md mx-8">
+          {/* Desktop Search Bar - Hidden on mobile */}
+          <div className="hidden lg:flex items-center justify-center flex-1 max-w-md mx-4">
             <form onSubmit={handleSearch} className="w-full group">
               <div className="relative">
                 {/* Search input container */}
                 <div className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl backdrop-blur-lg border transition-all duration-300 ${
                   isHomePage
                     ? 'bg-white/5 border-white/20 group-hover:border-red-500/50 group-focus-within:border-red-500'
-                    : 'bg-white/70 dark:bg-gray-800/70 border-gray-200/50 dark:border-gray-700/50 group-hover:border-red-500/70 group-focus-within:border-red-600'
+                    : 'bg-white/70 dark:bg-black/70 border-gray-200/50 dark:border-gray-900/60 group-hover:border-red-500/70 group-focus-within:border-red-600'
                 }`}>
                   {/* Search Icon */}
                   <svg
-                    className={`w-5 h-5 transition-colors ${
+                    className={`w-5 h-5 flex-shrink-0 transition-colors ${
                       isHomePage ? 'text-red-500 group-focus-within:text-red-400' : 'text-red-600 dark:text-red-500 group-focus-within:text-red-700 dark:group-focus-within:text-red-400'
                     }`}
                     fill="none"
@@ -149,7 +191,7 @@ export default function Navbar(){
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search events, cities..."
-                    className={`flex-1 bg-transparent outline-none text-sm font-medium transition-colors ${
+                    className={`flex-1 min-w-0 bg-transparent outline-none text-sm font-medium transition-colors ${
                       isHomePage
                         ? 'text-white placeholder-gray-400'
                         : 'text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400'
@@ -172,7 +214,7 @@ export default function Navbar(){
                       className={`p-1.5 rounded-lg transition-all ${
                         isHomePage
                           ? 'hover:bg-white/10 text-gray-400 hover:text-red-300'
-                          : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500'
+                          : 'hover:bg-gray-200 dark:hover:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500'
                       }`}
                       aria-label="Clear search"
                     >
@@ -187,11 +229,11 @@ export default function Navbar(){
           </div>
 
           {/* Desktop Right Section */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 md:gap-3 flex-shrink-0">
             {!isHomePage && location.pathname !== '/' && (
               <button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
                 aria-label="Toggle dark mode"
               >
                 {isDarkMode ? (
@@ -207,9 +249,23 @@ export default function Navbar(){
             )}
             {user ? (
               <>
-                <span className={`text-base font-semibold whitespace-nowrap ${(isHomePage || isDarkMode) ? 'text-gray-300' : 'text-gray-700'}`}>
+                <span className={`hidden lg:inline-flex text-sm font-semibold whitespace-nowrap max-w-[140px] truncate ${(isHomePage || isDarkMode) ? 'text-gray-300' : 'text-gray-700'}`}>
                   Hi, {user.name}
                 </span>
+                {user.isAdmin && adminHome && (
+                  <Link
+                    to={adminHome}
+                    className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition border ${
+                      isAdminArea
+                        ? 'text-red-500 border-red-500/30'
+                        : (isHomePage || isDarkMode)
+                        ? 'text-gray-300 border-gray-600 hover:text-red-400'
+                        : 'text-gray-700 border-gray-300 hover:text-red-600'
+                    } ${(isHomePage || isDarkMode) ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`}
+                  >
+                    Admin
+                  </Link>
+                )}
                 {/* Staff Scanner Link */}
                 {user.role === 'staff' && (
                   <Link
@@ -250,7 +306,7 @@ export default function Navbar(){
                   onClick={handleLogout}
                   className={`px-4 py-2 text-base font-semibold rounded-lg transition ${
                     (isHomePage || isDarkMode)
-                      ? 'text-gray-300 border border-gray-600 hover:bg-gray-800'
+                      ? 'text-gray-200 border border-gray-600 hover:bg-gray-800'
                       : 'text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
@@ -261,13 +317,13 @@ export default function Navbar(){
               <>
                 <Link
                   to="/login"
-                  className={`px-4 py-2 text-base font-semibold rounded-lg transition ${isHomePage ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                  className={`px-4 py-2 text-base font-semibold rounded-lg transition ${isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-black'}`}
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-4 py-2 text-base font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition"
+                  className="px-4 py-2 text-base font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition shadow-sm"
                 >
                   Sign Up
                 </Link>
@@ -275,28 +331,23 @@ export default function Navbar(){
             )}
           </div>
 
-          {/* Mobile Auth Buttons */}
-          <div className="md:hidden flex items-center gap-2">
-            {user && user.role === 'event_admin' && (
-              <Link
-                to="/my-event-requests"
-                className={`block px-3 py-2 text-base font-medium rounded-lg transition ${
-                  location.pathname === '/my-event-requests'
-                    ? 'bg-red-600 text-white'
-                    : isDarkMode
-                      ? 'text-gray-200 hover:bg-gray-800'
-                      : 'text-gray-700 hover:bg-gray-100'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                My Event Requests
-              </Link>
-            )}
+          {/* Mobile Actions - Right corner (Search, User, Menu) */}
+          <div className="md:hidden flex items-center gap-1 md:gap-2 flex-shrink-0">
+            {/* Search Icon Button */}
+            <button
+              onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+              className={`p-2 rounded-lg transition flex-shrink-0 ${isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
+              aria-label="Search"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
             
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - Always on the right */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`p-2 rounded-lg transition ${isHomePage ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+              className={`p-2 rounded-lg transition flex-shrink-0 ${isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -312,18 +363,16 @@ export default function Navbar(){
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className={`md:hidden pb-4 border-t mt-2 ${isHomePage ? 'border-gray-600 bg-[#0B0F19]' : 'border-gray-200 dark:border-gray-700'}`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Mobile Search */}
-            <form onSubmit={handleSearch} className="mt-4 mb-4 group">
+        {/* Mobile Search Overlay - Expands when search icon clicked */}
+        {mobileSearchOpen && (
+          <div className="md:hidden px-4 py-3 border-t border-gray-200 dark:border-gray-800">
+            <form onSubmit={(e) => { handleSearch(e); setMobileSearchOpen(false); }} className="group">
               <div className="relative">
                 {/* Search input container */}
-                <div className={`relative flex items-center gap-2 px-4 py-3 rounded-xl backdrop-blur-lg border transition-all duration-300 ${
+                <div className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl backdrop-blur-lg border transition-all duration-300 ${
                   isHomePage
                     ? 'bg-white/5 border-white/20 group-hover:border-red-500/50 group-focus-within:border-red-500'
-                    : 'bg-white/70 dark:bg-gray-800/70 border-gray-200/50 dark:border-gray-700/50 group-hover:border-red-500/70 group-focus-within:border-red-600'
+                    : 'bg-white/70 dark:bg-black/70 border-gray-200/50 dark:border-gray-900/60 group-hover:border-red-500/70 group-focus-within:border-red-600'
                 }`}>
                   {/* Search Icon */}
                   <svg
@@ -343,6 +392,7 @@ export default function Navbar(){
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search events..."
+                    autoFocus
                     className={`flex-1 bg-transparent outline-none text-sm font-medium transition-colors ${
                       isHomePage
                         ? 'text-white placeholder-gray-400'
@@ -366,7 +416,7 @@ export default function Navbar(){
                       className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
                         isHomePage
                           ? 'hover:bg-white/10 text-gray-400 hover:text-red-300'
-                          : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500'
+                          : 'hover:bg-gray-200 dark:hover:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500'
                       }`}
                       aria-label="Clear search"
                     >
@@ -375,23 +425,46 @@ export default function Navbar(){
                       </svg>
                     </button>
                   )}
+
+                  {/* Close button */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileSearchOpen(false)}
+                    className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
+                      isHomePage
+                        ? 'hover:bg-white/10 text-gray-400 hover:text-red-300'
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500'
+                    }`}
+                    aria-label="Close search"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className={`md:hidden pb-4 border-t mt-2 max-h-[calc(100vh-80px)] overflow-y-auto ${isHomePage ? 'border-gray-600 bg-[#0B0F19]' : 'border-gray-200 dark:border-gray-900 bg-white/95 dark:bg-black/95 backdrop-blur'}`}>
+            <div className="px-4 sm:px-6 lg:px-8">
 
             {/* Mobile Navigation Links */}
-            <nav className="flex flex-col space-y-2">
+            <nav className="flex flex-col space-y-1 mt-2">
               <Link
                 to="/"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`px-4 py-2 rounded-lg transition ${location.pathname === '/' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${location.pathname === '/' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
               >
                 Home
               </Link>
               <Link
                 to="/events"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`px-4 py-2 rounded-lg transition ${location.pathname === '/events' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${location.pathname === '/events' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
               >
                 Events
               </Link>
@@ -399,46 +472,55 @@ export default function Navbar(){
                 <Link
                   to="/my-bookings"
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`px-4 py-2 rounded-lg transition ${location.pathname === '/my-bookings' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${location.pathname === '/my-bookings' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
                 >
                   My Bookings
                 </Link>
               )}
-              {user && (
+              {user && waitlistCount > 0 && (
+                <Link
+                  to="/waitlist"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${location.pathname === '/waitlist' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
+                >
+                  Waitlist {waitlistCount > 0 && `(${waitlistCount})`}
+                </Link>
+              )}
+              {user && user.role === 'event_admin' && (
                 <Link
                   to="/my-event-requests"
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`px-4 py-2 rounded-lg transition ${location.pathname === '/my-event-requests' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${location.pathname === '/my-event-requests' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
                 >
-                  My Event Requests
-                </Link>
-              )}
-              {user && (
-                <Link
-                  to="/settings"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`px-4 py-2 rounded-lg transition ${location.pathname === '/settings' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                >
-                  Settings
+                  Event Request
                 </Link>
               )}
               {user && user.isAdmin && adminHome && (
                 <Link
                   to={adminHome}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`px-4 py-2 rounded-lg transition ${isAdminArea ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${isAdminArea ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
                 >
                   Admin
+                </Link>
+              )}
+              {user && (
+                <Link
+                  to="/settings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${location.pathname === '/settings' ? isHomePage ? 'bg-red-900/30 text-red-500 font-semibold' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-500 font-semibold' : isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
+                >
+                  Settings
                 </Link>
               )}
             </nav>
 
             {/* Mobile Settings Section */}
-            <div className={`mt-4 pt-4 border-t space-y-2 ${isHomePage ? 'border-gray-600' : 'border-gray-200 dark:border-gray-700'}`}>
+            <div className={`mt-3 pt-3 border-t space-y-1 ${isHomePage ? 'border-gray-600' : 'border-gray-200 dark:border-gray-900'}`}>
               {!isHomePage && (
                 <button
                   onClick={toggleDarkMode}
-                  className={`w-full flex items-center justify-between px-4 py-2 rounded-lg transition ${isHomePage ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                  className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm font-medium transition ${isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
                 >
                   <span>Dark Mode</span>
                   {isDarkMode ? (
@@ -455,12 +537,14 @@ export default function Navbar(){
 
               {user && (
                 <>
+                  {/* Show user greeting in menu */}
                   <div className={`px-4 py-2 text-sm font-medium ${isHomePage ? 'text-gray-200' : 'text-gray-700 dark:text-gray-300'}`}>
                     Hi, {user.name}
                   </div>
+                  {/* Show logout in menu */}
                   <button
                     onClick={handleLogout}
-                    className={`w-full px-4 py-2 text-left rounded-lg transition ${isHomePage ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                    className={`w-full px-4 py-2 text-left text-sm font-medium rounded-lg transition ${isHomePage ? 'text-gray-200 hover:bg-black' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'}`}
                   >
                     Logout
                   </button>

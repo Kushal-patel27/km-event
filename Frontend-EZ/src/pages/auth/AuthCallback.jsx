@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from '../../context/AuthContext';
+import API from '../../services/api';
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
@@ -17,20 +18,40 @@ export default function AuthCallback() {
     const email = searchParams.get("email");
     const role = searchParams.get("role");
 
-    if (token && name && email && role) {
-      // Save user data to auth context
-      login({ name, email, token, role });
-      setProcessed(true);
-      
-      // Redirect to home page
-      navigate("/");
-    } else {
-      setError("Authentication failed. Please try again.");
-      setProcessed(true);
-      setTimeout(() => {
-        navigate("/login");
-      }, 3000);
-    }
+    const finish = async () => {
+      if (token && name && email && role) {
+        // Save user data to auth context
+        login({ name, email, token, role });
+        setProcessed(true);
+
+        try {
+          const { data } = await API.get('/auth/me', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (data && data.hasPassword === false) {
+            login({ name, email, token, role, hasPassword: false });
+            navigate("/set-password");
+            return;
+          }
+          if (data && data.hasPassword !== undefined) {
+            login({ name, email, token, role, hasPassword: data.hasPassword });
+          }
+        } catch {
+          // Ignore; fallback to home
+        }
+
+        // Redirect to home page
+        navigate("/");
+      } else {
+        setError("Authentication failed. Please try again.");
+        setProcessed(true);
+        setTimeout(() => {
+          navigate("/login");
+        }, 3000);
+      }
+    };
+
+    finish();
   }, []); // Empty dependency array since we use processed flag
 
   return (

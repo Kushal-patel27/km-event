@@ -415,21 +415,21 @@ export default function HelpCenter() {
       title: 'Email Support',
       description: 'Get detailed help via email',
       value: 'support@kmevents.com',
-      color: isDarkMode ? 'from-blue-900/30 to-cyan-900/30 border-blue-500/50' : 'from-blue-50 to-cyan-50 border-blue-200'
+      color: isDarkMode ? 'from-black to-neutral-900 border-neutral-800' : 'from-blue-50 to-cyan-50 border-blue-200'
     },
     {
       icon: '📞',
       title: 'Phone Support',
       description: 'Speak with our team',
       value: '+1 (555) 123-4567',
-      color: isDarkMode ? 'from-purple-900/30 to-pink-900/30 border-purple-500/50' : 'from-purple-50 to-pink-50 border-purple-200'
+      color: isDarkMode ? 'from-black to-neutral-900 border-neutral-800' : 'from-purple-50 to-pink-50 border-purple-200'
     },
     {
       icon: '💬',
       title: 'Live Chat',
       description: 'Quick answers from our team',
       value: 'Available Mon-Fri 9AM-6PM',
-      color: isDarkMode ? 'from-orange-900/30 to-red-900/30 border-orange-500/50' : 'from-orange-50 to-red-50 border-orange-200'
+      color: isDarkMode ? 'from-black to-neutral-900 border-neutral-800' : 'from-orange-50 to-red-50 border-orange-200'
     },
     {
       icon: '❓',
@@ -437,7 +437,7 @@ export default function HelpCenter() {
       description: 'Browse common questions',
       value: 'Visit our FAQ page',
       link: '/faq',
-      color: isDarkMode ? 'from-green-900/30 to-emerald-900/30 border-green-500/50' : 'from-green-50 to-emerald-50 border-green-200'
+      color: isDarkMode ? 'from-black to-neutral-900 border-neutral-800' : 'from-green-50 to-emerald-50 border-green-200'
     }
   ]
 
@@ -447,7 +447,7 @@ export default function HelpCenter() {
   return (
     <div className={`min-h-screen py-12 transition-colors ${
       isDarkMode
-        ? 'bg-gradient-to-b from-slate-900 to-slate-950'
+        ? 'bg-black'
         : 'bg-gradient-to-b from-gray-50 to-white'
     }`}>
       <div className="max-w-6xl mx-auto px-6">
@@ -515,7 +515,7 @@ export default function HelpCenter() {
               placeholder="Search help articles (title, description, category)"
               className={`flex-1 px-4 py-3 rounded-lg border ${
                 isDarkMode
-                  ? 'bg-slate-900 border-slate-700 text-white placeholder:text-slate-500'
+                  ? 'bg-black border-neutral-800 text-white placeholder:text-neutral-500'
                   : 'bg-white border-gray-200 text-gray-900 placeholder:text-gray-500'
               } focus:outline-none focus:border-red-500`}
             />
@@ -524,7 +524,7 @@ export default function HelpCenter() {
               onClick={() => setSearch('')}
               className={`px-4 py-3 rounded-lg font-semibold border transition ${
                 isDarkMode
-                  ? 'border-slate-700 text-gray-200 hover:bg-slate-800'
+                  ? 'border-neutral-800 text-gray-200 hover:bg-neutral-900'
                   : 'border-gray-200 text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -561,7 +561,7 @@ export default function HelpCenter() {
               className="mb-8"
             >
               <div className={`flex flex-wrap gap-2 p-2 rounded-xl ${
-                isDarkMode ? 'bg-slate-800/50' : 'bg-gray-100'
+                isDarkMode ? 'bg-neutral-900/70' : 'bg-gray-100'
               }`}>
                 {sections.map(section => (
                   <button
@@ -573,7 +573,7 @@ export default function HelpCenter() {
                           ? 'bg-red-600 text-white'
                           : 'bg-indigo-600 text-white'
                         : isDarkMode
-                        ? 'text-gray-400 hover:text-white hover:bg-slate-700/50'
+                        ? 'text-gray-400 hover:text-white hover:bg-neutral-800'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
                     }`}
                   >
@@ -608,11 +608,11 @@ export default function HelpCenter() {
                     transition={{ delay: index * 0.05 }}
                     className={`rounded-xl overflow-hidden border-2 transition ${
                       isDarkMode
-                        ? 'bg-slate-800/30 border-slate-700 hover:border-red-500/50'
+                        ? 'bg-neutral-900/70 border-neutral-800 hover:border-red-500/60'
                         : 'bg-white border-gray-200 hover:border-indigo-300'
                     }`}
                   >
-                    <div className={`p-6 ${isDarkMode ? 'bg-slate-700/20' : 'bg-gray-50'}`}>
+                    <div className={`p-6 ${isDarkMode ? 'bg-neutral-900/60' : 'bg-gray-50'}`}>
                       <h3 className={`text-xl font-black mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         {item.title}
                       </h3>
@@ -622,7 +622,7 @@ export default function HelpCenter() {
                     </div>
 
                     {item.steps?.length > 0 && (
-                      <div className={`p-6 border-t ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+                      <div className={`p-6 border-t ${isDarkMode ? 'border-neutral-800' : 'border-gray-200'}`}>
                         <ul className="space-y-3">
                           {item.steps.map((step, stepIndex) => (
                             <li key={`${step}-${stepIndex}`} className="flex gap-3">
@@ -664,12 +664,12 @@ export default function HelpCenter() {
                 key={index}
                 className={`rounded-xl overflow-hidden border-2 ${
                   isDarkMode
-                    ? 'bg-slate-800/30 border-slate-700'
+                    ? 'bg-neutral-900/70 border-neutral-800'
                     : 'bg-gray-50 border-gray-200'
                 }`}
               >
                 <div className={`aspect-video flex items-center justify-center ${
-                  isDarkMode ? 'bg-slate-900' : 'bg-gray-200'
+                  isDarkMode ? 'bg-black' : 'bg-gray-200'
                 }`}>
                   <svg className="w-16 h-16 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM4 8a1 1 0 011-1h1a1 1 0 010 2H5a1 1 0 01-1-1z" />
@@ -695,7 +695,7 @@ export default function HelpCenter() {
           transition={{ delay: 0.5 }}
           className={`mt-16 p-8 rounded-2xl border-2 text-center ${
             isDarkMode
-              ? 'bg-gradient-to-r from-red-900/30 to-orange-900/30 border-red-500/50'
+              ? 'bg-black border-neutral-800'
               : 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200'
           }`}
         >

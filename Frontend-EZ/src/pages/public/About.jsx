@@ -67,12 +67,12 @@ export default function About() {
   return (
     <div className={`min-h-screen transition-colors ${
       isDarkMode 
-        ? 'bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19] text-white' 
+        ? 'bg-black text-white' 
         : 'bg-white text-gray-900'
     }`}>
       {/* ================= HERO SECTION ================= */}
       <section className={`relative py-24 md:py-32 px-4 sm:px-6 lg:px-12 transition-colors ${
-        isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] to-[#0d1221]' : 'bg-gradient-to-b from-gray-50 to-white'
+        isDarkMode ? 'bg-black' : 'bg-gradient-to-b from-gray-50 to-white'
       }`}>
         <div className="max-w-4xl mx-auto">
           <motion.div
@@ -103,7 +103,7 @@ export default function About() {
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
         className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
-          isDarkMode ? 'bg-gradient-to-b from-[#0d1221] to-[#0B0F19]' : 'bg-gray-50'
+          isDarkMode ? 'bg-black' : 'bg-gray-50'
         }`}
       >
         <div className="max-w-4xl mx-auto">
@@ -130,7 +130,7 @@ export default function About() {
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
         className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
-          isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] to-[#0d1221]' : 'bg-white'
+          isDarkMode ? 'bg-black' : 'bg-white'
         }`}
       >
         <div className="max-w-6xl mx-auto">
@@ -209,7 +209,7 @@ export default function About() {
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
         className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
-          isDarkMode ? 'bg-gradient-to-b from-[#0d1221] to-[#0B0F19]' : 'bg-gray-50'
+          isDarkMode ? 'bg-black' : 'bg-gray-50'
         }`}
       >
         <div className="max-w-5xl mx-auto">
@@ -259,7 +259,7 @@ export default function About() {
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
         className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
-          isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] to-[#0d1221]' : 'bg-white'
+          isDarkMode ? 'bg-black' : 'bg-white'
         }`}
       >
         <div className="max-w-6xl mx-auto">

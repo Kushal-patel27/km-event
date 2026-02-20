@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import Logo from '../common/Logo'
+import NavigationButtons from '../common/NavigationButtons'
 
 export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'System Owner', children }) {
   const { user, logout } = useAuth()
@@ -13,11 +14,11 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
   const nav = [
     { to: '/super-admin', label: 'Overview', icon: '📊' },
     { to: '/super-admin/users', label: 'Users & Roles', icon: '👥' },
-    { to: '/super-admin/staff', label: 'Staff (Scanner)', icon: '🎫📱' },
+    { to: '/super-admin/staff', label: 'Staff (Scanner)', icon: '🎫' },
     { to: '/super-admin/events', label: 'Events', icon: '📅' },
     { to: '/super-admin/event-requests', label: 'Event Requests', icon: '✉️', matchPrefix: '/super-admin/event-requests' },
     { to: '/super-admin/bookings', label: 'Bookings', icon: '🎫' },
-    { to: '/super-admin/scanner-analytics', label: '⚡ QR Analytics', icon: '📊🎫' },
+    { to: '/super-admin/scanner-analytics', label: 'QR Analytics', icon: '📊' },
     { to: '/super-admin/subscriptions', label: 'Subscriptions', icon: '💳' },
     { to: '/super-admin/config', label: 'System Config', icon: '⚙️' },
     { to: '/super-admin/logs', label: 'Logs', icon: '🗒️' },
@@ -42,9 +43,9 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <button
-                className="md:hidden p-2 rounded-lg transition hover:bg-slate-100"
+                className="md:hidden p-2 rounded-lg transition hover:bg-slate-100 flex-shrink-0"
                 aria-label="Toggle sidebar"
                 onClick={() => setOpen(!open)}
               >
@@ -58,25 +59,32 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
                   </svg>
                 )}
               </button>
-              <Link to="/" className="hidden md:flex items-center gap-2">
+              <Link to="/" className="hidden md:flex items-center gap-2 flex-shrink-0">
                 <Logo dark={false} key="super-admin-logo" />
               </Link>
               <div className="hidden md:block border-l border-slate-200 h-6" />
               <div>
-                <p className="text-sm font-semibold text-slate-700">Super Admin</p>
-                <p className="text-xs text-slate-500">Platform Control</p>
+                <p className="text-sm font-semibold text-slate-700 truncate">Super Admin</p>
+                <p className="text-xs text-slate-500 hidden sm:block">Platform Control</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex flex-col items-end">
+            <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
+              <NavigationButtons
+                homeTo="/super-admin"
+                homeLabel="Overview"
+                showLabels={false}
+                size="sm"
+              />
+              <div className="hidden sm:flex flex-col items-end text-right">
                 <p className="text-sm font-semibold">{user?.name || 'System Owner'}</p>
                 <p className="text-xs text-slate-500">{user?.email}</p>
               </div>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition"
+                className="px-2 md:px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition flex-shrink-0"
               >
-                Logout
+                <span className="hidden sm:inline">Logout</span>
+                <span className="sm:hidden">Exit</span>
               </button>
             </div>
           </div>
@@ -116,7 +124,7 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
             )}
           </AnimatePresence>
 
-          <aside className="hidden md:block bg-white border border-slate-200 rounded-xl p-3 h-fit shadow-sm">
+          <aside className="hidden md:block bg-white border border-slate-200 rounded-xl p-3 h-fit shadow-sm self-start md:sticky md:top-20 max-h-[calc(100vh-6rem)] overflow-auto">
             <nav className="flex flex-col gap-1">
               {nav.map((item) => (
                 <Link

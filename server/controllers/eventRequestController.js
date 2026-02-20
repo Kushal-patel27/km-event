@@ -4,6 +4,7 @@ import FeatureToggle from '../models/FeatureToggle.js'
 import Event from '../models/Event.js'
 import User from '../models/User.js'
 import Category from '../models/Category.js'
+import OrganizerSubscription from '../models/OrganizerSubscription.js'
 import { ensureEmailConfigured, sendEventApprovalEmail, sendEventRejectionEmail } from '../utils/emailService.js'
 
 // Organizer: Create event request
@@ -96,16 +97,74 @@ export const createEventRequest = async (req, res) => {
       }
     }
 
-    // Validate subscription plan
-    const subscriptionPlan = await SubscriptionPlan.findOne({ 
-      name: planSelected, 
-      isActive: true 
-    })
+    const organizerId = user._id || user.id
+    let subscriptionPlan = null
+    let resolvedPlanName = null
 
-    if (!subscriptionPlan) {
-      return res.status(400).json({ 
-        message: `Invalid subscription plan: ${planSelected}` 
+    const organizerSubscription = await OrganizerSubscription.findOne({ organizer: organizerId })
+      .populate('plan')
+
+    if (organizerSubscription?.status && organizerSubscription.status !== 'active') {
+      return res.status(403).json({
+        message: 'Your subscription is not active. Please contact support to create events.',
+        code: 'SUBSCRIPTION_INACTIVE'
       })
+    }
+
+    if (organizerSubscription?.plan) {
+      subscriptionPlan = organizerSubscription.plan
+      resolvedPlanName = organizerSubscription.plan.name
+    } else {
+      const requestedPlanName = planSelected?.trim()
+      if (!requestedPlanName) {
+        return res.status(400).json({ message: 'Subscription plan is required' })
+      }
+
+      subscriptionPlan = await SubscriptionPlan.findOne({
+        name: requestedPlanName,
+        isActive: true
+      })
+
+      if (!subscriptionPlan) {
+        return res.status(400).json({
+          message: `Invalid subscription plan: ${requestedPlanName}`
+        })
+      }
+
+      resolvedPlanName = subscriptionPlan.name
+    }
+
+    const eventsPerMonthLimit = subscriptionPlan.limits?.eventsPerMonth
+    if (eventsPerMonthLimit !== null && eventsPerMonthLimit !== undefined) {
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+
+      const requestsThisMonth = await EventRequest.countDocuments({
+        organizerId,
+        createdAt: { $gte: monthStart, $lt: monthEnd },
+        status: { $ne: 'REJECTED' }
+      })
+
+      if (requestsThisMonth >= eventsPerMonthLimit) {
+        return res.status(403).json({
+          message: `Monthly event limit reached (${eventsPerMonthLimit}). Please upgrade your plan to create more events.`,
+          code: 'EVENTS_PER_MONTH_LIMIT',
+          limit: eventsPerMonthLimit,
+          current: requestsThisMonth,
+          upgradeUrl: '/for-organizers'
+        })
+      }
+    }
+
+    if (!organizerSubscription) {
+      const newSubscription = new OrganizerSubscription({
+        organizer: organizerId,
+        plan: subscriptionPlan._id,
+        currentCommissionPercentage: subscriptionPlan.commissionPercentage || 30,
+        status: 'active'
+      })
+      await newSubscription.save()
     }
 
     // Check if organizer already has a pending request for this event
@@ -136,7 +195,7 @@ export const createEventRequest = async (req, res) => {
     }
 
     const eventRequest = new EventRequest({
-      organizerId: user._id || user.id,
+      organizerId,
       organizerName: user.name,
       organizerEmail: user.email,
       organizerPhone: organizerPhone || '',
@@ -152,7 +211,7 @@ export const createEventRequest = async (req, res) => {
       price: Number(price) || 0,
       ticketTypes: normalizedTicketTypes,
       subscriptionPlan: subscriptionPlan._id,
-      planSelected,
+      planSelected: resolvedPlanName,
       billingCycle: billingCycle || 'monthly',
       requestedFeatures,
       image: image || '',
@@ -211,7 +270,8 @@ export const getAllEventRequests = async (req, res) => {
 
     const [requests, total, pendingCount, approvedCount, rejectedCount] = await Promise.all([
       EventRequest.find(filter)
-        .select('title description category date location totalTickets price planSelected status rejectReason organizerName organizerEmail requestedFeatures createdAt updatedAt')
+        .select('title description category date location totalTickets price planSelected subscriptionPlan status rejectReason organizerName organizerEmail requestedFeatures createdAt updatedAt')
+        .populate('subscriptionPlan', 'name displayName monthlyFee price commissionPercentage payoutFrequency minPayoutAmount')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -318,6 +378,43 @@ export const approveEventRequest = async (req, res) => {
       }
       
       await organizer.save()
+    }
+
+    // Auto-assign subscription plan if organizer doesn't have one
+    let subscription = await OrganizerSubscription.findOne({ organizer: eventRequest.organizerId })
+    if (!subscription && eventRequest.subscriptionPlan) {
+      // Create new subscription based on selected plan
+      subscription = new OrganizerSubscription({
+        organizer: eventRequest.organizerId,
+        plan: eventRequest.subscriptionPlan,
+        currentCommissionPercentage: eventRequest.subscriptionPlan.commissionPercentage || 30,
+        status: 'active'
+      })
+      await subscription.save()
+      console.log('Auto-assigned subscription plan:', subscription)
+    } else if (!subscription) {
+      // If no plan was explicitly selected, try to find a plan by name from planSelected
+      // or assign a default plan
+      let planToAssign = null
+      if (eventRequest.planSelected) {
+        planToAssign = await SubscriptionPlan.findOne({ name: eventRequest.planSelected, isActive: true })
+      }
+      
+      // If still no plan, assign the first active plan or create with default
+      if (!planToAssign) {
+        planToAssign = await SubscriptionPlan.findOne({ isActive: true }).sort({ displayOrder: 1 })
+      }
+      
+      if (planToAssign) {
+        subscription = new OrganizerSubscription({
+          organizer: eventRequest.organizerId,
+          plan: planToAssign._id,
+          currentCommissionPercentage: planToAssign.commissionPercentage || 30,
+          status: 'active'
+        })
+        await subscription.save()
+        console.log('Auto-assigned default subscription plan:', subscription)
+      }
     }
 
     // Create feature toggles based on approved features

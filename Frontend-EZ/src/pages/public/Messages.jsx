@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import API from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import LoadingSpinner from '../../components/common/LoadingSpinner'
 
 export default function Messages() {
   const { user } = useAuth()
@@ -42,12 +43,12 @@ export default function Messages() {
       case 'read':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
       default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
+        return 'bg-black border border-white/10 text-gray-400 dark:bg-black dark:text-gray-400'
     }
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 min-h-screen py-16 px-4 sm:px-6 lg:px-12">
+    <div className="bg-black dark:bg-black min-h-screen py-16 px-4 sm:px-6 lg:px-12">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
@@ -65,17 +66,7 @@ export default function Messages() {
         </motion.div>
 
         {/* Loading */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <svg className="w-12 h-12 mx-auto mb-4 text-red-600 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <p className="text-gray-600 dark:text-gray-400">Loading your messages...</p>
-            </div>
-          </div>
-        )}
+        {loading && <LoadingSpinner message="Loading your messages..." />}
 
         {/* Error */}
         {error && (
@@ -115,7 +106,7 @@ export default function Messages() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-xl transition"
+                className="bg-black dark:bg-black border border-white/10 dark:border-white/10 rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-xl transition"
               >
                 {/* Message Header */}
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -144,7 +135,7 @@ export default function Messages() {
                 <div className="p-6">
                   <div className="mb-6">
                     <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">Your Message:</p>
-                    <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+                    <div className="bg-black dark:bg-black border border-white/10 p-4 rounded-lg text-gray-300 dark:text-gray-300 whitespace-pre-wrap break-words">
                       {msg.message}
                     </div>
                   </div>

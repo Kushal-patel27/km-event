@@ -46,6 +46,17 @@ const bookingSchema = new mongoose.Schema(
       }
     ],
     lastScannedAt: { type: Date },
+    // Commission and Payout Fields
+    commission: {
+      commissionPercentage: { type: Number, default: 0 },
+      commissionAmount: { type: Number, default: 0 },
+      organizerAmount: { type: Number, default: 0 },
+      platformAmount: { type: Number, default: 0 }
+    },
+    commissionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Commission"
+    },
   },
   { timestamps: true }
 );

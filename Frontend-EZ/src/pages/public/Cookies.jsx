@@ -121,12 +121,12 @@ export default function Cookies() {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
-      isDarkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-slate-50 via-white to-indigo-50'
+      isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-slate-50 via-white to-indigo-50'
     }`}>
       {/* Hero Section */}
       <div className={`py-16 px-6 ${
         isDarkMode 
-          ? 'bg-gradient-to-r from-gray-800 to-gray-900' 
+          ? 'bg-black' 
           : 'bg-gradient-to-r from-indigo-600 to-purple-600'
       }`}>
         <div className="max-w-4xl mx-auto text-center">
@@ -146,7 +146,7 @@ export default function Cookies() {
             <p className="text-lg md:text-xl text-indigo-100 max-w-2xl mx-auto">
               Understanding how we use cookies to enhance your experience on K&M Events
             </p>
-            <p className="text-sm text-indigo-200 mt-4">
+            <p className="text-sm text-gray-400 mt-4">
               Last Updated: January 4, 2026
             </p>
           </motion.div>
@@ -161,7 +161,7 @@ export default function Cookies() {
           transition={{ delay: 0.2, duration: 0.6 }}
           className={`mb-8 p-6 rounded-lg ${
             isDarkMode 
-              ? 'bg-gray-800 border border-gray-700' 
+              ? 'bg-neutral-900/70 border border-neutral-800' 
               : 'bg-white border border-indigo-100 shadow-md'
           }`}
         >
@@ -180,7 +180,7 @@ export default function Cookies() {
               transition={{ delay: 0.1 * index, duration: 0.4 }}
               className={`rounded-lg overflow-hidden ${
                 isDarkMode 
-                  ? 'bg-gray-800 border border-gray-700' 
+                  ? 'bg-neutral-900/70 border border-neutral-800' 
                   : 'bg-white border border-gray-200 shadow-sm'
               }`}
             >
@@ -188,7 +188,7 @@ export default function Cookies() {
                 onClick={() => toggleSection(section.id)}
                 className={`w-full px-6 py-4 text-left flex items-center justify-between transition-colors ${
                   isDarkMode 
-                    ? 'hover:bg-gray-750' 
+                    ? 'hover:bg-neutral-900' 
                     : 'hover:bg-gray-50'
                 }`}
               >
@@ -229,7 +229,7 @@ export default function Cookies() {
                     {section.subsections && section.subsections.map((subsection, idx) => (
                       <div key={idx} className="mt-4">
                         <h3 className={`font-semibold mb-2 ${
-                          isDarkMode ? 'text-indigo-400' : 'text-indigo-700'
+                          isDarkMode ? 'text-gray-300' : 'text-indigo-700'
                         }`}>
                           {subsection.subtitle}
                         </h3>
@@ -277,7 +277,7 @@ export default function Cookies() {
           transition={{ delay: 0.6, duration: 0.6 }}
           className={`mt-12 p-6 rounded-lg ${
             isDarkMode 
-              ? 'bg-gradient-to-br from-indigo-900/50 to-purple-900/50 border border-indigo-700/50' 
+              ? 'bg-neutral-900/70 border border-neutral-800' 
               : 'bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200'
           }`}
         >

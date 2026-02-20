@@ -5,8 +5,20 @@
 @tailwind utilities;
 
 @keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
   100% {
     transform: translateX(100%);
+  }
+}
+
+@keyframes wave {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
@@ -21,8 +33,64 @@
   }
 }
 
+/* Skeleton Loading Effects */
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #f0f0f0 0%, #e0e0e0 50%, #f0f0f0 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+html.dark .shimmer-effect {
+  background: linear-gradient(90deg, #374151 0%, #4b5563 50%, #374151 100%);
+  background-size: 200% 100%;
+}
+
+.shimmer-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer 2s infinite;
+}
+
+html.dark .shimmer-effect::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.wave-effect {
+  animation: wave 1.5s ease-in-out infinite;
+}
+
 html, body, #root {
   height: 100%;
+}
+
+html.dark input[type="date"],
+html.dark input[type="datetime-local"],
+html.dark .dark-date-input {
+  color-scheme: dark;
+  -webkit-appearance: auto;
+  appearance: auto;
+}
+
+html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+html.dark .dark-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.05);
+  opacity: 1;
+  background-color: transparent;
+  cursor: pointer;
+  display: block;
+}
+
+.hide-native-picker::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  display: none;
 }
 
 @layer base {
@@ -31,9 +99,14 @@ html, body, #root {
   }
 
   body {
-    @apply bg-gradient-to-br from-sky-50 via-white to-indigo-50 text-gray-800 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 dark:text-gray-200;
+    @apply bg-gradient-to-br from-sky-50 via-white to-indigo-50 text-gray-800 dark:bg-black dark:text-gray-200;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  html.dark, html.dark body, html.dark #root {
+    background-color: #000000;
+    color-scheme: dark;
   }
 }
 

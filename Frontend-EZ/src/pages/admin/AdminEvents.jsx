@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import formatINR from '../../utils/currency'
 import API from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import AdminLayout from '../../components/layout/AdminLayout'
+import ExportDataModal from '../../components/admin/ExportDataModal'
 import { AnimatePresence, motion } from 'framer-motion'
 
 const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference']
@@ -211,6 +213,7 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false, categories = 
 export { EventForm }
 
 export default function AdminEvents() {
+  const navigate = useNavigate()
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -226,6 +229,8 @@ export default function AdminEvents() {
   const [editingMode, setEditingMode] = useState(false)
   const [savingDetail, setSavingDetail] = useState(false)
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
+  const [statusFilter, setStatusFilter] = useState('all') // 'all', 'scheduled', 'completed'
+  const [showExportModal, setShowExportModal] = useState(false)
 
   // Fetch categories on mount
   useEffect(() => {
@@ -302,7 +307,7 @@ export default function AdminEvents() {
         date: new Date(data.date).toISOString(),
         totalTickets: totalCapacity,
         availableTickets: totalCapacity,
-        status: 'active',
+        status: 'scheduled',
         ticketTypes: data.ticketTypes || []
       }
       const res = await API.post('/admin/events', payload)
@@ -312,6 +317,9 @@ export default function AdminEvents() {
       setEvents((prev) => [newEvent, ...prev])
       setTotal((prev) => prev + 1)
       setCreating(false)
+      
+      // Redirect to feature toggle page for the newly created event
+      navigate(`/admin/events/${newEvent._id}/features`)
     } catch (err) {
       console.error('Create event failed', err)
       const errorMsg = err.response?.data?.message || err.message || 'Failed to create event'
@@ -340,7 +348,7 @@ export default function AdminEvents() {
         price: basePrice,
         date: new Date(data.date).toISOString(),
         totalTickets: totalCapacity,
-        status: 'active',
+        status: 'scheduled',
         ticketTypes: data.ticketTypes || []
       }
       const res = await API.put(`/admin/events/${id}`, payload)
@@ -436,6 +444,79 @@ export default function AdminEvents() {
     }
   }
 
+  const handleExport = async (format, filters) => {
+    try {
+      setFormError('')
+      
+      // Build query params
+      const params = new URLSearchParams({ format })
+      
+      if (filters.startDate) params.append('startDate', filters.startDate)
+      if (filters.endDate) params.append('endDate', filters.endDate)
+      if (filters.category) params.append('category', filters.category)
+      if (filters.location) params.append('location', filters.location)
+      if (filters.status) params.append('status', filters.status)
+      
+      // Call export API
+      const response = await API.get(`/admin/export/events?${params.toString()}`, {
+        responseType: 'blob'
+      })
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Determine file extension
+      const ext = format === 'csv' ? 'csv' : format === 'xlsx' ? 'xlsx' : 'pdf'
+      link.setAttribute('download', `events-export-${Date.now()}.${ext}`)
+      
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Export error:', err)
+      setFormError(err.response?.data?.message || 'Failed to export data')
+    }
+  }
+
+  // Filter configuration for export modal
+  const exportFilters = [
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      type: 'date',
+    },
+    {
+      key: 'endDate',
+      label: 'End Date',
+      type: 'date',
+    },
+    {
+      key: 'category',
+      label: 'Category',
+      type: 'select',
+      options: categories.map(c => ({ value: c, label: c }))
+    },
+    {
+      key: 'location',
+      label: 'Location (text search)',
+      type: 'text',
+      placeholder: 'e.g. Mumbai'
+    },
+    {
+      key: 'status',
+      label: 'Event Status',
+      type: 'select',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' },
+      ]
+    }
+  ]
+
   return (
     <AdminLayout title="Events">
       {formError && (
@@ -446,45 +527,110 @@ export default function AdminEvents() {
 
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Event Management</h2>
-        {!creating && !editingEvent && (
-          <button onClick={() => setCreating(true)} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
-            + Create Event
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setShowExportModal(true)} 
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
           </button>
-        )}
+          {!creating && !editingEvent && (
+            <button onClick={() => setCreating(true)} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
+              + Create Event
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Search and filters */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
-        <div className="flex flex-col md:flex-row gap-4 md:items-end">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search events by title or location..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row gap-4 md:items-end">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search events by title or location..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <button
+              onClick={() => {
+                setSearch('')
                 setPage(1)
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+              className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition border border-gray-200 whitespace-nowrap"
+            >
+              Clear
+            </button>
           </div>
-          <button
-            onClick={() => {
-              setSearch('')
-              setPage(1)
-            }}
-            className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition border border-gray-200 whitespace-nowrap"
-          >
-            Clear
-          </button>
+          
+          {/* Status Filter Buttons */}
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                statusFilter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All Events
+            </button>
+            <button
+              onClick={() => setStatusFilter('scheduled')}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                statusFilter === 'scheduled'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Scheduled
+            </button>
+            <button
+              onClick={() => setStatusFilter('completed')}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                statusFilter === 'completed'
+                  ? 'bg-gray-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Completed
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Total Events</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">{total}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Scheduled</p>
+          <p className="text-3xl font-bold text-green-600 mt-2">
+            {events.filter(e => {
+              const eventDate = e.date ? new Date(e.date) : null
+              return eventDate && eventDate >= new Date()
+            }).length}
+          </p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Completed</p>
+          <p className="text-3xl font-bold text-gray-600 mt-2">
+            {events.filter(e => {
+              const eventDate = e.date ? new Date(e.date) : null
+              return eventDate && eventDate < new Date()
+            }).length}
+          </p>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Page</p>
@@ -500,29 +646,63 @@ export default function AdminEvents() {
         <>
           {/* Events grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            {events.length === 0 ? (
-              <div className="col-span-full text-center text-gray-500 py-12">
-                {search ? 'No events found matching your search.' : 'No events created yet.'}
-              </div>
-            ) : (
-              events.map((event) => (
-                <div key={event._id || event.id} className="bg-white rounded-lg shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-200">
+            {(() => {
+              // Filter events based on status
+              const now = new Date()
+              const filteredEvents = events.filter(event => {
+                if (statusFilter === 'all') return true
+                const eventDate = event.date ? new Date(event.date) : null
+                const isCompleted = eventDate && eventDate < now
+                if (statusFilter === 'scheduled') return !isCompleted
+                if (statusFilter === 'completed') return isCompleted
+                return true
+              })
+
+              if (filteredEvents.length === 0) {
+                return (
+                  <div className="col-span-full text-center text-gray-500 py-12">
+                    {search ? 'No events found matching your search.' : `No ${statusFilter === 'all' ? '' : statusFilter} events.`}
+                  </div>
+                )
+              }
+
+              return filteredEvents.map((event) => {
+                const eventDate = event.date ? new Date(event.date) : null
+                const isCompleted = eventDate && eventDate < new Date()
+                const statusColor = isCompleted ? 'bg-gray-100 border-gray-300' : 'bg-white border-gray-200'
+                const statusBadge = isCompleted ? 'bg-gray-500 text-white' : 'bg-green-500 text-white'
+                const statusText = isCompleted ? 'Completed' : 'Scheduled'
+                
+                return (
+                <div key={event._id || event.id} className={`rounded-lg shadow-sm hover:shadow-lg transition overflow-hidden border ${statusColor}`}>
                   {event.image && (
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      className="w-full h-40 object-cover"
-                    />
+                    <div className="relative">
+                      <img
+                        src={event.image}
+                        alt={event.title}
+                        className={`w-full h-40 object-cover ${isCompleted ? 'opacity-60' : ''}`}
+                      />
+                      <span className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-semibold ${statusBadge}`}>
+                        {statusText}
+                      </span>
+                    </div>
                   )}
                   <div className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">{event.title}</h3>
-                        <p className="text-xs text-gray-500">{event.category || '—'}</p>
+                        <h3 className={`font-bold mb-1 line-clamp-2 ${isCompleted ? 'text-gray-600' : 'text-gray-900'}`}>{event.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-500">{event.category || '—'}</p>
+                          {!event.image && (
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusBadge}`}>
+                              {statusText}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{formatINR(event.price || 0)}</span>
+                      <span className={`text-sm font-semibold whitespace-nowrap ${isCompleted ? 'text-gray-500' : 'text-gray-900'}`}>{formatINR(event.price || 0)}</span>
                     </div>
-                    <div className="text-sm text-gray-600 space-y-1">
+                    <div className={`text-sm space-y-1 ${isCompleted ? 'text-gray-500' : 'text-gray-600'}`}>
                       <p>📅 {event.date ? new Date(event.date).toLocaleDateString() : '—'}</p>
                       <p className="line-clamp-2">📍 {event.location || '—'}</p>
                       <p>🎟️ {event.availableTickets}/{event.totalTickets || event.capacity || 0} tickets</p>
@@ -543,8 +723,8 @@ export default function AdminEvents() {
                     </div>
                   </div>
                 </div>
-              ))
-            )}
+              )})
+            })()}
           </div>
 
           {/* Pagination */}
@@ -754,6 +934,15 @@ export default function AdminEvents() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Export Modal */}
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+        title="Export Events Data"
+        filters={exportFilters}
+      />
     </AdminLayout>
   )
 }

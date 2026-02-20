@@ -18,7 +18,12 @@ export default function Subscriptions() {
     name: '',
     displayName: '',
     description: '',
-    price: 0,
+    commissionPercentage: 30,
+    monthlyFee: 0,
+    eventLimit: null,
+    ticketLimit: null,
+    payoutFrequency: 'monthly',
+    minPayoutAmount: 100,
     features: {
       ticketing: { enabled: true, limit: null, description: 'Sell and manage event tickets' },
       qrCheckIn: { enabled: false, description: 'QR code-based attendee check-in' },
@@ -32,8 +37,6 @@ export default function Subscriptions() {
     },
     limits: {
       eventsPerMonth: 1,
-      attendeesPerEvent: 100,
-      storageGB: 1,
       customBranding: false,
       prioritySupport: false
     },
@@ -44,10 +47,10 @@ export default function Subscriptions() {
 
   // Standard pricing tiers
   const standardPlans = {
-    'Basic': { displayName: 'Basic Plan', price: 999, description: 'Perfect for small gatherings and meetups' },
-    'Standard': { displayName: 'Standard Plan', price: 2499, description: 'Ideal for medium-sized events' },
-    'Professional': { displayName: 'Professional Plan', price: 4999, description: 'For large-scale professional events' },
-    'Enterprise': { displayName: 'Enterprise Plan', price: 0, description: 'Tailored solution for major events' }
+    'Basic': { displayName: 'Basic Plan', description: 'Perfect for small gatherings and meetups' },
+    'Standard': { displayName: 'Standard Plan', description: 'Ideal for medium-sized events' },
+    'Professional': { displayName: 'Professional Plan', description: 'For large-scale professional events' },
+    'Enterprise': { displayName: 'Enterprise Plan', description: 'Tailored solution for major events' }
   }
 
   useEffect(() => {
@@ -72,7 +75,12 @@ export default function Subscriptions() {
       name: '',
       displayName: '',
       description: '',
-      price: 0,
+      commissionPercentage: 30,
+      monthlyFee: 0,
+      eventLimit: null,
+      ticketLimit: null,
+      payoutFrequency: 'monthly',
+      minPayoutAmount: 100,
       features: {
         ticketing: { enabled: true, limit: null, description: 'Sell and manage event tickets' },
         qrCheckIn: { enabled: false, description: 'QR code-based attendee check-in' },
@@ -86,8 +94,6 @@ export default function Subscriptions() {
       },
       limits: {
         eventsPerMonth: 1,
-        attendeesPerEvent: 100,
-        storageGB: 1,
         customBranding: false,
         prioritySupport: false
       },
@@ -104,7 +110,12 @@ export default function Subscriptions() {
       name: plan.name,
       displayName: plan.displayName,
       description: plan.description,
-      price: plan.price,
+      commissionPercentage: plan.commissionPercentage ?? 30,
+      monthlyFee: plan.monthlyFee ?? 0,
+      eventLimit: plan.eventLimit ?? null,
+      ticketLimit: plan.ticketLimit ?? null,
+      payoutFrequency: plan.payoutFrequency || 'monthly',
+      minPayoutAmount: plan.minPayoutAmount ?? 100,
       features: plan.features,
       limits: plan.limits,
       isActive: plan.isActive,
@@ -160,7 +171,12 @@ export default function Subscriptions() {
         name: '',
         displayName: '',
         description: '',
-        price: 0,
+        commissionPercentage: 30,
+        monthlyFee: 0,
+        eventLimit: null,
+        ticketLimit: null,
+        payoutFrequency: 'monthly',
+        minPayoutAmount: 100,
         features: {
           ticketing: { enabled: true, limit: null, description: 'Sell and manage event tickets' },
           qrCheckIn: { enabled: false, description: 'QR code-based attendee check-in' },
@@ -174,8 +190,6 @@ export default function Subscriptions() {
         },
         limits: {
           eventsPerMonth: 1,
-          attendeesPerEvent: 100,
-          storageGB: 1,
           customBranding: false,
           prioritySupport: false
         },
@@ -296,17 +310,13 @@ export default function Subscriptions() {
                     </div>
                   </div>
 
-                  {/* Pricing */}
+                  {/* Commission & Payout */}
                   <div className={`mb-4 pb-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <div className="flex items-baseline gap-1">
-                      {plan.price === 0 ? (
-                        <span className={`text-2xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>Custom</span>
-                      ) : (
-                        <>
-                          <span className={`text-3xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>₹{plan.price.toLocaleString()}</span>
-                          <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>/event</span>
-                        </>
-                      )}
+                    <div className={`space-y-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <div>Commission: {plan.commissionPercentage ?? 0}%</div>
+                      <div>Monthly Fee: {formatCurrency(plan.monthlyFee ?? 0)}</div>
+                      <div>Payouts: {plan.payoutFrequency || 'monthly'}</div>
+                      <div>Min Payout: {formatCurrency(plan.minPayoutAmount ?? 0)}</div>
                     </div>
                   </div>
 
@@ -334,9 +344,7 @@ export default function Subscriptions() {
                     <div className={`mb-4 pb-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                       <p className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Limits</p>
                       <div className={`space-y-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        <div>Tickets: {plan.limits.attendeesPerEvent === null ? '∞' : plan.limits.attendeesPerEvent}</div>
                         <div>Events/mo: {plan.limits.eventsPerMonth === null ? '∞' : plan.limits.eventsPerMonth}</div>
-                        <div>Storage: {plan.limits.storageGB}GB</div>
                       </div>
                     </div>
                   )}
@@ -398,7 +406,7 @@ export default function Subscriptions() {
                     <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
                       <p className="text-sm font-semibold mb-3 text-blue-700">Quick Setup - Standard Plans:</p>
                       <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(standardPlans).map(([planName, { displayName, price, description }]) => (
+                        {Object.entries(standardPlans).map(([planName, { displayName, description }]) => (
                           <button
                             key={planName}
                           type="button"
@@ -416,8 +424,6 @@ export default function Subscriptions() {
                             }
                             const baseLimits = {
                               eventsPerMonth: planName === 'Basic' ? 1 : planName === 'Standard' ? 5 : planName === 'Professional' ? 20 : 999,
-                              attendeesPerEvent: planName === 'Basic' ? 100 : planName === 'Standard' ? 500 : planName === 'Professional' ? 5000 : 999999,
-                              storageGB: planName === 'Basic' ? 1 : planName === 'Standard' ? 10 : planName === 'Professional' ? 100 : 1000,
                               customBranding: ['Professional', 'Enterprise'].includes(planName),
                               prioritySupport: ['Enterprise'].includes(planName)
                             }
@@ -425,7 +431,12 @@ export default function Subscriptions() {
                               name: planName,
                               displayName,
                               description,
-                              price,
+                              commissionPercentage: 30,
+                              monthlyFee: 0,
+                              eventLimit: null,
+                              ticketLimit: null,
+                              payoutFrequency: 'monthly',
+                              minPayoutAmount: 100,
                               features: baseFeatures,
                               limits: baseLimits,
                               isActive: true,
@@ -434,7 +445,7 @@ export default function Subscriptions() {
                           }}
                           className="text-sm px-3 py-2 rounded font-medium transition bg-blue-100 hover:bg-blue-200 text-blue-700"
                         >
-                          {planName} (₹{price})
+                          {planName}
                         </button>
                       ))}
                     </div>
@@ -496,20 +507,7 @@ export default function Subscriptions() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Price (₹)</label>
-                          <input
-                            type="number"
-                            placeholder="0"
-                            value={formData.price}
-                            onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            step="0.01"
-                            min="0"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">One-time listing fee per event</p>
-                        </div>
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Display Order</label>
                           <input
@@ -548,6 +546,79 @@ export default function Subscriptions() {
                             <p className="text-xs text-gray-600">Highlight this plan with a "Most Popular" badge on the pricing page</p>
                           </div>
                         </label>
+                      </div>
+                    </div>
+
+                    {/* Revenue & Payout */}
+                    <div className="border-b pb-6">
+                      <h3 className="text-lg font-semibold mb-4 text-gray-900">Revenue & Payout</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Commission Percentage (%)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={formData.commissionPercentage}
+                            onChange={(e) => setFormData({...formData, commissionPercentage: parseFloat(e.target.value) || 0})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Monthly Fee (₹)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formData.monthlyFee}
+                            onChange={(e) => setFormData({...formData, monthlyFee: parseFloat(e.target.value) || 0})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Event Limit</label>
+                          <input
+                            type="number"
+                            placeholder="Unlimited"
+                            value={formData.eventLimit === null ? '' : formData.eventLimit}
+                            onChange={(e) => setFormData({...formData, eventLimit: e.target.value === '' ? null : parseInt(e.target.value)})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Ticket Limit</label>
+                          <input
+                            type="number"
+                            placeholder="Unlimited"
+                            value={formData.ticketLimit === null ? '' : formData.ticketLimit}
+                            onChange={(e) => setFormData({...formData, ticketLimit: e.target.value === '' ? null : parseInt(e.target.value)})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Payout Frequency</label>
+                          <select
+                            value={formData.payoutFrequency}
+                            onChange={(e) => setFormData({...formData, payoutFrequency: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          >
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="custom">Custom</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Min Payout Amount (₹)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.minPayoutAmount}
+                            onChange={(e) => setFormData({...formData, minPayoutAmount: parseInt(e.target.value) || 0})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -789,34 +860,6 @@ export default function Subscriptions() {
                             min="1"
                           />
                           <p className="text-xs text-gray-500 mt-1">Maximum events organizer can create</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Attendees per Event</label>
-                          <input
-                            type="number"
-                            value={formData.limits.attendeesPerEvent}
-                            onChange={(e) => setFormData({
-                              ...formData,
-                              limits: {...formData.limits, attendeesPerEvent: parseInt(e.target.value) || 100}
-                            })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            min="1"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">Maximum attendees allowed per event</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Storage (GB)</label>
-                          <input
-                            type="number"
-                            value={formData.limits.storageGB}
-                            onChange={(e) => setFormData({
-                              ...formData,
-                              limits: {...formData.limits, storageGB: parseInt(e.target.value) || 1}
-                            })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            min="1"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">Cloud storage allocation</p>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Custom Branding</label>

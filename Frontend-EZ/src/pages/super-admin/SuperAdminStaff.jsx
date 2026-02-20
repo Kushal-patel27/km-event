@@ -174,12 +174,12 @@ export default function SuperAdminStaff() {
     <SuperAdminLayout title="Staff Management" subtitle="Global Scanner Staff Control">
       {/* Messages */}
       {error && (
-        <div className="mb-4 p-4 bg-red-900/50 border border-red-500 rounded-lg text-red-200">
+        <div className="mb-4 p-4 bg-red-50 border border-red-300 rounded-lg text-red-700">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-4 p-4 bg-green-900/50 border border-green-500 rounded-lg text-green-200">
+        <div className="mb-4 p-4 bg-green-50 border border-green-300 rounded-lg text-green-700">
           {success}
         </div>
       )}
@@ -194,7 +194,7 @@ export default function SuperAdminStaff() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
           <select
@@ -203,7 +203,7 @@ export default function SuperAdminStaff() {
               setFilter((prev) => ({ ...prev, eventId: e.target.value }));
               setPage(1);
             }}
-            className="px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-blue-500"
+            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Events</option>
             {events.map((event) => (
@@ -221,7 +221,7 @@ export default function SuperAdminStaff() {
               setFilter((prev) => ({ ...prev, gate: e.target.value }));
               setPage(1);
             }}
-            className="px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
           <button
@@ -234,8 +234,8 @@ export default function SuperAdminStaff() {
 
         {/* Add/Edit Form */}
         {showForm && (
-          <div className="mb-6 p-6 bg-slate-800 border border-slate-700 rounded-lg">
-            <h2 className="text-xl font-bold text-white mb-4">
+          <div className="mb-6 p-6 bg-white border border-gray-200 rounded-lg">
+            <h2 className="text-xl font-bold mb-4">
               {editingId ? "Edit Staff Member" : "Create Staff Member"}
             </h2>
 
@@ -248,7 +248,7 @@ export default function SuperAdminStaff() {
                   value={formData.name}
                   onChange={handleInputChange}
                   required
-                  className="px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                  className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="email"
@@ -257,25 +257,25 @@ export default function SuperAdminStaff() {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                  className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Role Selection */}
               <div>
-                <label className="block text-white text-sm font-semibold mb-2">
+                <label className="block text-sm font-semibold mb-2">
                   Staff Type
                 </label>
                 <select
                   name="role"
                   value={formData.role}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="staff">Staff (Scanner Only) 🎫📱 - Entry execution only</option>
                   <option value="staff_admin">Staff Admin (Gate/Team Manager) 🎯 - Manage staff & approve entries</option>
                 </select>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   {formData.role === "staff" 
                     ? "Scanner staff can only scan tickets and check status"
                     : "Staff Admin can create scanner staff, assign gates, and approve manual entries"}
@@ -283,12 +283,12 @@ export default function SuperAdminStaff() {
               </div>
 
               <div>
-                <label className="block text-white text-sm font-semibold mb-2">
+                <label className="block text-sm font-semibold mb-2">
                   Assign to Events
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                   {events.map((event) => (
-                    <label key={event._id} className="flex items-center text-white">
+                    <label key={event._id} className="flex items-center">
                       <input
                         type="checkbox"
                         checked={formData.eventIds.includes(event._id)}
@@ -304,7 +304,7 @@ export default function SuperAdminStaff() {
               {/* Only show gates for staff (scanner) role */}
               {formData.role === "staff" && (
                 <div>
-                  <label className="block text-white text-sm font-semibold mb-2">
+                  <label className="block text-sm font-semibold mb-2">
                     Gates/Zones (comma-separated)
                   </label>
                   <input
@@ -312,9 +312,9 @@ export default function SuperAdminStaff() {
                     placeholder="Gate A, Gate B, Gate C"
                     value={formData.gates.join(", ")}
                     onChange={handleGateChange}
-                    className="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Assign specific entry gates for scanner staff
                   </p>
                 </div>
@@ -324,14 +324,14 @@ export default function SuperAdminStaff() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50"
                 >
                   {loading ? "Saving..." : editingId ? "Update" : "Create"}
                 </button>
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition"
+                  className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-semibold transition"
                 >
                   Cancel
                 </button>
@@ -341,84 +341,84 @@ export default function SuperAdminStaff() {
         )}
 
         {/* Staff Table */}
-        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1000px]">
               <thead>
-                <tr className="bg-slate-700 border-b border-slate-600">
-                  <th className="px-6 py-3 text-left text-white font-semibold">Name</th>
-                  <th className="px-6 py-3 text-left text-white font-semibold">Email</th>
-                  <th className="px-6 py-3 text-left text-white font-semibold">Type</th>
-                  <th className="px-6 py-3 text-left text-white font-semibold">Events</th>
-                  <th className="px-6 py-3 text-left text-white font-semibold">Gates</th>
-                  <th className="px-6 py-3 text-left text-white font-semibold">Status</th>
-                  <th className="px-6 py-3 text-left text-white font-semibold">Actions</th>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-6 py-3 text-left font-semibold">Name</th>
+                  <th className="px-6 py-3 text-left font-semibold">Email</th>
+                  <th className="px-6 py-3 text-left font-semibold">Type</th>
+                  <th className="px-6 py-3 text-left font-semibold">Events</th>
+                  <th className="px-6 py-3 text-left font-semibold">Gates</th>
+                  <th className="px-6 py-3 text-left font-semibold">Status</th>
+                  <th className="px-6 py-3 text-left font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && staff.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-8 text-center text-slate-400">
+                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
                       Loading staff...
                     </td>
                   </tr>
                 ) : staff.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-8 text-center text-slate-400">
+                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
                       No staff members found
                     </td>
                   </tr>
                 ) : (
                   staff.map((member) => (
-                    <tr key={member._id} className="border-b border-slate-700 hover:bg-slate-700/30">
-                      <td className="px-6 py-4 text-white font-medium">{member.name}</td>
-                      <td className="px-6 py-4 text-slate-300 text-sm">{member.email}</td>
-                      <td className="px-6 py-4 text-white">
+                    <tr key={member._id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-6 py-4 font-medium">{member.name}</td>
+                      <td className="px-6 py-4 text-gray-600 text-sm">{member.email}</td>
+                      <td className="px-6 py-4">
                         <span
                           className={`px-3 py-1 rounded text-xs font-semibold ${
                             member.role === "staff_admin"
-                              ? "bg-purple-600/30 text-purple-200"
-                              : "bg-blue-600/30 text-blue-200"
+                              ? "bg-purple-100 text-purple-700"
+                              : "bg-blue-100 text-blue-700"
                           }`}
                         >
                           {member.role === "staff_admin" ? "🎯 Staff Admin" : "🎫📱 Scanner"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-slate-300 text-sm">
+                      <td className="px-6 py-4 text-gray-600 text-sm">
                         {member.assignedEvents?.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {member.assignedEvents.map((event) => (
                               <span
                                 key={event._id || event}
-                                className="px-2 py-1 bg-blue-600/30 text-blue-200 text-xs rounded"
+                                className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
                               >
                                 {event.title || event}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-slate-500">No events</span>
+                          <span className="text-gray-400">No events</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-slate-300 text-sm">
+                      <td className="px-6 py-4 text-gray-600 text-sm">
                         {member.assignedGates?.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {member.assignedGates.map((gate, idx) => (
-                              <span key={idx} className="px-2 py-1 bg-purple-600/30 text-purple-200 text-xs rounded">
+                              <span key={idx} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
                                 {gate}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-slate-500">No gates</span>
+                          <span className="text-gray-400">No gates</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-white">
+                      <td className="px-6 py-4">
                         <span
                           className={`px-2 py-1 rounded text-xs font-semibold ${
                             member.active
-                              ? "bg-green-600/30 text-green-200"
-                              : "bg-red-600/30 text-red-200"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
                           }`}
                         >
                           {member.active ? "Active" : "Inactive"}

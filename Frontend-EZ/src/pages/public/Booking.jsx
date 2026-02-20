@@ -6,6 +6,7 @@ import { useDarkMode } from '../../context/DarkModeContext'
 import { seatsAvailable, generateSeatLayout } from '../../utils/bookings'
 import SeatPicker from '../../components/booking/SeatPicker'
 import formatINR from '../../utils/currency'
+import LoadingSpinner from '../../components/common/LoadingSpinner'
 
 export default function Booking(){
   const { id } = useParams()
@@ -28,6 +29,7 @@ export default function Booking(){
   const [selectedTicketType, setSelectedTicketType] = useState(null)
   const [features, setFeatures] = useState(null)
   const [loadingFeatures, setLoadingFeatures] = useState(true)
+  const [maxPerUser, setMaxPerUser] = useState(null)
 
   const location = useLocation()
 
@@ -98,6 +100,15 @@ export default function Booking(){
       })
       .finally(() => setLoading(false))
 
+    API.get('/config/public')
+      .then(res => {
+        const limit = Number(res.data?.ticketLimits?.maxPerUser)
+        setMaxPerUser(Number.isFinite(limit) ? limit : null)
+      })
+      .catch(() => {
+        setMaxPerUser(null)
+      })
+
     // Fetch booked seats from backend
     API.get(`/bookings/event/${id}/seats`)
       .then(res => {
@@ -157,14 +168,14 @@ export default function Booking(){
 
   const finalTotal = subTotal - discountAmount
 
-  if(loading) return <div className="text-center p-10">Loading...</div>
+  if(loading) return <LoadingSpinner message="Loading booking details..." />
   if(!event) return <div className="text-center p-10">{error || 'Event not found'}</div>
 
   // Check if ticketing feature is disabled
   if (features?.ticketing?.enabled === false) {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 py-12 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className={`max-w-xl w-full rounded-2xl shadow-lg border transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 py-12 ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
+        <div className={`max-w-xl w-full rounded-2xl shadow-lg border transition-colors ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'}`}>
           <div className={`flex items-center gap-3 px-6 py-5 rounded-t-2xl ${isDarkMode ? 'bg-gradient-to-r from-yellow-700 to-yellow-600' : 'bg-gradient-to-r from-yellow-600 to-yellow-500'}`}>
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -189,8 +200,8 @@ export default function Booking(){
 
   if(isSoldOut) {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 py-12 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className={`max-w-xl w-full rounded-2xl shadow-lg border transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <div className={`min-h-screen flex items-center justify-center px-4 py-12 ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
+        <div className={`max-w-xl w-full rounded-2xl shadow-lg border transition-colors ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'}`}>
           <div className={`flex items-center gap-3 px-6 py-5 rounded-t-2xl ${isDarkMode ? 'bg-gradient-to-r from-red-700 to-red-600' : 'bg-gradient-to-r from-red-600 to-red-500'}`}>
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
@@ -230,6 +241,10 @@ export default function Booking(){
     if(quantity < 1) {
       setBookingLoading(false)
       return setError('Quantity must be at least 1')
+    }
+    if(maxPerUser && quantity > maxPerUser) {
+      setBookingLoading(false)
+      return setError(`Maximum ${maxPerUser} tickets per user for this event`)
     }
     if(quantity > available) {
       setBookingLoading(false)
@@ -272,12 +287,33 @@ export default function Booking(){
     const token = (authUser && authUser.token) || storedToken
     if (token) {
       try {
+        // Validate required fields before sending
+        if (!event.id) {
+          console.error('[BOOKING] Invalid event ID:', event.id)
+          setError('Error: Invalid event ID. Please reload the page.')
+          setBookingLoading(false)
+          return
+        }
+        
+        if (typeof quantity !== 'number' || quantity < 1) {
+          console.error('[BOOKING] Invalid quantity:', quantity, typeof quantity)
+          setError('Error: Invalid quantity. Please check your selection.')
+          setBookingLoading(false)
+          return
+        }
+        
         const payload = { 
           eventId: event.id, 
-          quantity,
+          quantity: Number(quantity),
           ...(selectedTicketType && { ticketTypeId: selectedTicketType._id })
         }
         if (hasSeatLayout && selectedSeats.length > 0) payload.seats = selectedSeats.map(Number)
+        
+        // Log payload for debugging
+        console.log('[BOOKING] Sending payload:', payload)
+        console.log('[BOOKING] Event has ticket types:', hasTicketTypes)
+        console.log('[BOOKING] Selected ticket type:', selectedTicketType)
+        
         const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
         const res = await API.post('/bookings', payload, config)
         // backend returns booking in res.data with _id and qrCode; augment with event and user info
@@ -295,6 +331,9 @@ export default function Booking(){
         return
       } catch (err) {
         console.error('Backend booking failed', err)
+        console.error('Response status:', err.response?.status)
+        console.error('Response data:', err.response?.data)
+        
         const errorMsg = err.response?.data?.message || err.message
         const feature = err.response?.data?.feature
         setBookingLoading(false)
@@ -314,7 +353,13 @@ export default function Booking(){
           return
         }
         
-        // For other errors, show message and don't fallback
+        // For 400 errors, provide helpful feedback
+        if (err.response?.status === 400) {
+          setError(`${errorMsg || 'Invalid booking data. Please check that you have selected all required fields.'}`)
+          return
+        }
+        
+        // For other errors, show message
         setError(`Booking failed: ${errorMsg}`)
         return
       }
@@ -342,9 +387,9 @@ export default function Booking(){
   }
 
   return (
-    <div className={`min-h-screen py-4 md:py-8 transition-colors ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen py-4 md:py-8 transition-colors ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
-        <div className={`rounded-2xl shadow-xl overflow-hidden transition-colors ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className={`rounded-2xl shadow-xl overflow-hidden transition-colors ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
           {/* Event Header */}
           <div className={`text-white p-4 md:p-6 transition-colors ${
             isDarkMode 
@@ -375,7 +420,7 @@ export default function Booking(){
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className={`p-4 md:p-6 space-y-4 transition-colors ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <form onSubmit={handleSubmit} className={`p-4 md:p-6 space-y-4 transition-colors ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
             {/* Personal Info */}
             <div className="space-y-3">
               <h3 className={`text-base font-semibold flex items-center gap-2 transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
@@ -425,10 +470,10 @@ export default function Booking(){
                       className={`flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all ${
                         selectedTicketType?.name === ticketType.name
                           ? isDarkMode 
-                            ? 'bg-gray-700/80 border-blue-400 ring-2 ring-blue-300'
+                            ? 'bg-black/80 border-blue-400 ring-2 ring-blue-300'
                             : 'bg-gray-50 border-blue-400 ring-2 ring-blue-200'
                           : isDarkMode 
-                            ? 'bg-gray-800 border-gray-700 hover:border-gray-500'
+                            ? 'bg-black border-white/10 hover:border-white/20'
                             : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
@@ -474,13 +519,29 @@ export default function Booking(){
                     required 
                     type="number" 
                     min="1" 
-                    max={available === Infinity ? undefined : available} 
+                    max={(() => {
+                      const maxLimit = Number.isFinite(maxPerUser) && maxPerUser > 0 ? maxPerUser : null
+                      if (available === Infinity) return maxLimit || undefined
+                      return maxLimit ? Math.min(available, maxLimit) : available
+                    })()} 
                     value={quantity} 
-                    onChange={e=>setQuantity(Number(e.target.value))} 
+                    onChange={e => {
+                      const next = Number(e.target.value)
+                      const maxLimit = Number.isFinite(maxPerUser) && maxPerUser > 0 ? maxPerUser : null
+                      const maxSelectable = available === Infinity
+                        ? (maxLimit || Infinity)
+                        : (maxLimit ? Math.min(available, maxLimit) : available)
+                      setQuantity(Number.isFinite(maxSelectable) ? Math.min(next, maxSelectable) : next)
+                    }} 
                     className={`w-full px-3 py-2 border-2 rounded-lg text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none transition ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-400 focus:border-red-400' : 'border-gray-300 bg-white text-gray-900 focus:ring-red-400 focus:border-red-500'}`}
                   />
+                  {Number.isFinite(maxPerUser) && maxPerUser > 0 && (
+                    <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Max per user: {maxPerUser}
+                    </p>
+                  )}
                 </div>
-                <div className={`flex items-center justify-center px-3 py-2 rounded-lg text-xs font-semibold min-w-[110px] h-full transition-colors ${isDarkMode ? 'bg-gray-800 text-gray-200 border border-gray-600' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+                <div className={`flex items-center justify-center px-3 py-2 rounded-lg text-xs font-semibold min-w-[110px] h-full transition-colors ${isDarkMode ? 'bg-black border border-white/10 text-gray-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
                   {available === Infinity ? '∞ Available' : `${available} Left`}
                 </div>
               </div>
@@ -519,7 +580,7 @@ export default function Booking(){
                   Choose Your Seats
                 </h3>
                 
-                <div className={`p-8 rounded-lg border-4 transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'}`}>
+                <div className={`p-8 rounded-lg border-4 transition-colors ${isDarkMode ? 'bg-black border-white/10' : 'bg-gray-100 border-gray-200'}`}>
                   <div className="mb-6">
                     <div className={`text-center font-bold text-lg mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>🎬 SCREEN 🎬</div>
                     <div className="h-1 bg-gradient-to-r from-yellow-300 via-white to-yellow-300 rounded-full"></div>
@@ -531,7 +592,7 @@ export default function Booking(){
                     </div>
 
                     {/* Seat Legend */}
-                    <div className={`mb-6 p-4 rounded-lg border transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className={`mb-6 p-4 rounded-lg border transition-colors ${isDarkMode ? 'bg-black border-white/10' : 'bg-gray-50 border-gray-200'}`}>
                       <div className="flex flex-wrap justify-center gap-6 text-xs">
                         <div className="flex items-center gap-2">
                           <div className={`w-6 h-6 rounded border-2 ${isDarkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'}`}></div>

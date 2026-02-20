@@ -5,6 +5,7 @@ import EntryLog from "../models/EntryLog.js";
 import FeatureToggle from "../models/FeatureToggle.js";
 import SubscriptionPlan from "../models/SubscriptionPlan.js";
 import bcrypt from "bcryptjs";
+import { generateCSV, generateExcel, generatePDF, formatDate, formatCurrency, formatStatus } from "../utils/exportUtils.js";
 
 // Recalculate aggregate inventory for events with ticket types
 function recomputeTicketInventory(event) {
@@ -234,14 +235,16 @@ export const getEventBookings = async (req, res) => {
     try {
       const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
       if (featureToggle && featureToggle.features?.ticketing?.enabled === false) {
+        console.log('[EVENT ADMIN] Ticketing disabled for event:', eventId);
         return res.status(403).json({ 
           message: "Ticketing is disabled for this event",
-          feature: "ticketing"
+          feature: "ticketing",
+          details: "To view bookings, enable the Ticketing feature in Feature Management."
         });
       }
     } catch (featureError) {
       console.error('[EVENT ADMIN] Error checking ticketing feature:', featureError.message);
-      // Continue if feature check fails
+      // Continue if feature check fails - don't block access
     }
 
     const pageNum = Math.max(1, parseInt(page));
@@ -261,6 +264,13 @@ export const getEventBookings = async (req, res) => {
       .limit(limitNum);
 
     const total = await Booking.countDocuments(query);
+
+    console.log('[EVENT ADMIN] Fetched bookings:', {
+      eventId,
+      user: req.user.email,
+      total,
+      returned: bookings.length
+    });
 
     res.json({
       bookings,
@@ -974,6 +984,185 @@ export const generateEventReport = async (req, res) => {
     });
   } catch (error) {
     console.error('[EVENT ADMIN] Error generating report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Export events assigned to this event admin
+ */
+export const exportEvents = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { format = 'csv', startDate, endDate, status } = req.query;
+
+    // Build filter for events assigned to this event admin
+    const filter = {
+      _id: { $in: req.user.assignedEvents }
+    };
+    
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = new Date(startDate);
+      if (endDate) filter.date.$lte = new Date(endDate);
+    }
+    
+    if (status) filter.status = status;
+
+    // Fetch events
+    const events = await Event.find(filter)
+      .populate('organizer', 'name email')
+      .sort({ date: -1 })
+      .lean();
+
+    // Define columns for export
+    const columns = [
+      { key: 'title', header: 'Event Title', width: 30 },
+      { key: 'date', header: 'Event Date', width: 20, format: formatDate },
+      { key: 'location', header: 'Location', width: 25 },
+      { key: 'category', header: 'Category', width: 15 },
+      { key: 'price', header: 'Price (INR)', width: 15, format: formatCurrency },
+      { key: 'totalTickets', header: 'Total Tickets', width: 15 },
+      { key: 'availableTickets', header: 'Available Tickets', width: 18 },
+      { key: 'status', header: 'Status', width: 15, format: formatStatus },
+      { key: 'createdAt', header: 'Created At', width: 20, format: formatDate }
+    ];
+
+    // Format data for export
+    const exportData = events.map(event => ({
+      ...event,
+      totalTickets: event.totalTickets || event.capacity || 0,
+      availableTickets: event.availableTickets || 0
+    }));
+
+    // Generate export based on format
+    if (format === 'csv') {
+      const csv = generateCSV(exportData, columns);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=my-events-export-${Date.now()}.csv`);
+      return res.send(csv);
+    }
+
+    if (format === 'xlsx') {
+      const buffer = await generateExcel(exportData, columns, 'My Events');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=my-events-export-${Date.now()}.xlsx`);
+      return res.send(buffer);
+    }
+
+    if (format === 'pdf') {
+      const buffer = await generatePDF(exportData, columns, {
+        title: 'My Events Report',
+        subtitle: `Generated on ${formatDate(new Date())}`
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=my-events-export-${Date.now()}.pdf`);
+      return res.send(buffer);
+    }
+
+    return res.status(400).json({ message: 'Invalid format. Use csv, xlsx, or pdf' });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Export events error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Export bookings for events assigned to this event admin
+ */
+export const exportBookings = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { format = 'csv', startDate, endDate, status, eventId, paymentStatus } = req.query;
+
+    // Filter: only bookings for events assigned to this event admin
+    const filter = {
+      event: { $in: req.user.assignedEvents }
+    };
+    
+    // Additional event-specific filter if provided
+    if (eventId && req.user.assignedEvents.includes(eventId)) {
+      filter.event = eventId;
+    }
+    
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+    
+    if (status) filter.status = status;
+    if (paymentStatus) filter.paymentStatus = paymentStatus;
+
+    // Fetch bookings
+    const bookings = await Booking.find(filter)
+      .populate('user', 'name email phone')
+      .populate('event', 'title date location')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Define columns for export
+    const columns = [
+      { key: 'bookingId', header: 'Booking ID', width: 25 },
+      { key: 'customerName', header: 'Customer Name', width: 25 },
+      { key: 'customerEmail', header: 'Customer Email', width: 30 },
+      { key: 'customerPhone', header: 'Phone', width: 18 },
+      { key: 'eventTitle', header: 'Event', width: 30 },
+      { key: 'eventDate', header: 'Event Date', width: 20, format: formatDate },
+      { key: 'ticketType', header: 'Ticket Type', width: 20 },
+      { key: 'quantity', header: 'Quantity', width: 12 },
+      { key: 'totalAmount', header: 'Amount (INR)', width: 15, format: formatCurrency },
+      { key: 'status', header: 'Booking Status', width: 15, format: formatStatus },
+      { key: 'paymentStatus', header: 'Payment Status', width: 15, format: formatStatus },
+      { key: 'bookingDate', header: 'Booking Date', width: 20, format: formatDate },
+      { key: 'scanned', header: 'Scanned', width: 12 }
+    ];
+
+    // Format data for export
+    const exportData = bookings.map(booking => ({
+      bookingId: booking._id.toString(),
+      customerName: booking.user?.name || 'N/A',
+      customerEmail: booking.user?.email || 'N/A',
+      customerPhone: booking.user?.phone || 'N/A',
+      eventTitle: booking.event?.title || 'N/A',
+      eventDate: booking.event?.date,
+      ticketType: booking.ticketType?.name || 'General',
+      quantity: booking.quantity || 1,
+      totalAmount: booking.totalAmount || booking.totalPrice || 0,
+      status: booking.status || 'pending',
+      paymentStatus: booking.paymentStatus || 'completed',
+      bookingDate: booking.createdAt,
+      scanned: booking.lastScannedAt ? 'Yes' : 'No'
+    }));
+
+    // Generate export based on format
+    if (format === 'csv') {
+      const csv = generateCSV(exportData, columns);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=my-bookings-export-${Date.now()}.csv`);
+      return res.send(csv);
+    }
+
+    if (format === 'xlsx') {
+      const buffer = await generateExcel(exportData, columns, 'My Bookings');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=my-bookings-export-${Date.now()}.xlsx`);
+      return res.send(buffer);
+    }
+
+    if (format === 'pdf') {
+      const buffer = await generatePDF(exportData, columns, {
+        title: 'My Bookings Report',
+        subtitle: `Generated on ${formatDate(new Date())}`
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=my-bookings-export-${Date.now()}.pdf`);
+      return res.send(buffer);
+    }
+
+    return res.status(400).json({ message: 'Invalid format. Use csv, xlsx, or pdf' });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Export bookings error:', error);
     res.status(500).json({ message: error.message });
   }
 };

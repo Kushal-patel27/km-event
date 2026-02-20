@@ -10,7 +10,6 @@ const subscriptionPlans = [
     name: 'Basic',
     displayName: 'Basic Plan',
     description: 'Perfect for small gatherings and meetups',
-    price: 999,
     features: {
       ticketing: {
         enabled: true,
@@ -58,7 +57,6 @@ const subscriptionPlans = [
     limits: {
       eventsPerMonth: 1,
       attendeesPerEvent: 100,
-      storageGB: 1,
       customBranding: false,
       prioritySupport: false
     },
@@ -69,7 +67,6 @@ const subscriptionPlans = [
     name: 'Standard',
     displayName: 'Standard Plan',
     description: 'Ideal for medium-sized events',
-    price: 2499,
     features: {
       ticketing: {
         enabled: true,
@@ -117,7 +114,6 @@ const subscriptionPlans = [
     limits: {
       eventsPerMonth: 3,
       attendeesPerEvent: 500,
-      storageGB: 5,
       customBranding: true,
       prioritySupport: false
     },
@@ -128,7 +124,6 @@ const subscriptionPlans = [
     name: 'Professional',
     displayName: 'Professional Plan',
     description: 'For large-scale professional events',
-    price: 4999,
     features: {
       ticketing: {
         enabled: true,
@@ -176,7 +171,6 @@ const subscriptionPlans = [
     limits: {
       eventsPerMonth: 10,
       attendeesPerEvent: 2000,
-      storageGB: 20,
       customBranding: true,
       prioritySupport: true
     },
@@ -187,7 +181,6 @@ const subscriptionPlans = [
     name: 'Enterprise',
     displayName: 'Enterprise Plan',
     description: 'Tailored solution for major events',
-    price: 0,
     features: {
       ticketing: {
         enabled: true,
@@ -235,7 +228,6 @@ const subscriptionPlans = [
     limits: {
       eventsPerMonth: null,
       attendeesPerEvent: null,
-      storageGB: 100,
       customBranding: true,
       prioritySupport: true
     },
@@ -249,16 +241,8 @@ const seedPlans = async () => {
     // Check if we need to seed (avoid clearing on every server restart)
     const count = await SubscriptionPlan.countDocuments()
     if (count >= 4) {
-      // Check if old pricing model exists (price is object)
-      const oldPlan = await SubscriptionPlan.findOne({ 'price.monthly': { $exists: true } })
-      if (!oldPlan) {
-        // Already using new model
-        console.log('Subscription plans already seeded, skipping...')
-        return
-      }
-      // Old model found, delete and reseed
-      console.log('Updating subscription plans to new pricing model...')
-      await SubscriptionPlan.deleteMany({})
+      // Plans already seeded, skipping...
+      return
     }
 
     // Insert new plans
@@ -267,7 +251,7 @@ const seedPlans = async () => {
 
     console.log('\nCreated Plans:')
     createdPlans.forEach(plan => {
-      console.log(`- ${plan.displayName} (${plan.name}): ₹${plan.price} one-time per event`)
+      console.log(`- ${plan.displayName} (${plan.name}): ₹${plan.monthlyFee}/month, Commission: ${plan.commissionPercentage}%`)
     })
   } catch (error) {
     console.error('Error seeding subscription plans:', error.message)

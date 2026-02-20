@@ -28,11 +28,18 @@ const REDIS_CONFIG = {
 };
 
 /**
- * Initialize Redis connection
+ * Initialize Redis connection (Disabled by default - using in-memory caching)
  */
 export const connectRedis = async () => {
   if (isConnected && redisClient) {
     return redisClient;
+  }
+
+  // Redis is disabled - return null silently
+  // To enable, set REDIS_ENABLED=true in .env
+  if (process.env.REDIS_ENABLED !== 'true') {
+    console.log('[STARTUP] Redis caching disabled - using in-memory cache');
+    return null;
   }
 
   try {
@@ -61,7 +68,7 @@ export const connectRedis = async () => {
   } catch (error) {
     console.error('[REDIS] Connection failed:', error);
     isConnected = false;
-    throw error;
+    return null;
   }
 };
 
@@ -70,7 +77,6 @@ export const connectRedis = async () => {
  */
 export const getRedisClient = () => {
   if (!isConnected || !redisClient) {
-    console.warn('[REDIS] Client not connected. Some features may be degraded.');
     return null;
   }
   return redisClient;
@@ -90,11 +96,9 @@ export const disconnectRedis = async () => {
   if (redisClient) {
     try {
       await redisClient.quit();
-      console.log('[REDIS] Disconnected gracefully');
       isConnected = false;
       redisClient = null;
     } catch (error) {
-      console.error('[REDIS] Error during disconnect:', error);
       await redisClient.disconnect();
     }
   }

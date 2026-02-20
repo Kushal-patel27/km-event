@@ -71,7 +71,7 @@ export const requireEventAccess = async (req, res, next) => {
     return res.status(401).json({ message: "Not authorized" });
   }
 
-  // Super admin has access to all events
+  // Super admin and admin have access to all events
   if (req.user.role === "super_admin" || req.user.role === "admin") {
     return next();
   }
@@ -84,13 +84,47 @@ export const requireEventAccess = async (req, res, next) => {
       return res.status(400).json({ message: "Event ID required" });
     }
 
+    // Check if assignedEvents exists and is an array
+    let assignedEvents = req.user.assignedEvents || [];
+    
+    // Ensure it's an array (handle case where it might be undefined or not an array)
+    if (!Array.isArray(assignedEvents)) {
+      console.warn('[AUTH] User assignedEvents is not an array, defaulting to empty:', {
+        userId: req.user._id,
+        assignedEvents: assignedEvents
+      });
+      assignedEvents = [];
+    }
+
+    // If no events assigned, allow access (will fail at data fetching level)
+    if (assignedEvents.length === 0) {
+      console.warn('[AUTH] User has no assigned events:', { userId: req.user._id });
+      // Continue but data fetches will be empty
+      return next();
+    }
+
     // Check if event is in user's assignedEvents array
-    const hasAccess = req.user.assignedEvents.some(
-      (assignedId) => assignedId.toString() === eventId.toString()
-    );
+    // Convert both to strings for comparison to handle ObjectId vs string cases
+    const eventIdStr = String(eventId);
+    const hasAccess = assignedEvents.some((assignedId) => {
+      try {
+        return String(assignedId) === eventIdStr;
+      } catch (e) {
+        return false;
+      }
+    });
 
     if (!hasAccess) {
-      return res.status(403).json({ message: "Access denied to this event" });
+      console.warn('[AUTH] Event access denied:', {
+        userId: req.user._id,
+        eventId: eventIdStr,
+        assignedEvents: assignedEvents.map(e => String(e))
+      });
+      // Log detailed info but return generic 403 for security
+      return res.status(403).json({ 
+        message: "Access denied to this event",
+        error: "EVENT_NOT_ASSIGNED"
+      });
     }
 
     return next();

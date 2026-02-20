@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import EventAdminLayout from '../../components/layout/EventAdminLayout'
+import ExportDataModal from '../../components/admin/ExportDataModal'
 import API from '../../services/api'
 import formatINR from '../../utils/currency'
 
@@ -9,6 +10,7 @@ export default function EventAdminBookings(){
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showExportModal, setShowExportModal] = useState(false)
 
   useEffect(()=>{
     const load = async () => {
@@ -40,21 +42,90 @@ export default function EventAdminBookings(){
     }
   }
 
-  if (loading) {
-    return (
-      <EventAdminLayout title="Bookings">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
-      </EventAdminLayout>
-    )
+  const handleExport = async (format, filters) => {
+    try {
+      setError('')
+      
+      // Build query params - export bookings for selected event
+      const params = new URLSearchParams({ format })
+      
+      if (selectedEvent) params.append('eventId', selectedEvent._id)
+      if (filters.startDate) params.append('startDate', filters.startDate)
+      if (filters.endDate) params.append('endDate', filters.endDate)
+      if (filters.status) params.append('status', filters.status)
+      if (filters.paymentStatus) params.append('paymentStatus', filters.paymentStatus)
+      
+      // Call export API - use event-admin specific endpoint
+      const response = await API.get(`/event-admin/export/bookings?${params.toString()}`, {
+        responseType: 'blob'
+      })
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Determine file extension
+      const ext = format === 'csv' ? 'csv' : format === 'xlsx' ? 'xlsx' : 'pdf'
+      link.setAttribute('download', `bookings-export-${Date.now()}.${ext}`)
+      
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Export error:', err)
+      setError(err.response?.data?.message || 'Failed to export data')
+    }
   }
+
+  // Filter configuration for export modal
+  const exportFilters = [
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      type: 'date',
+    },
+    {
+      key: 'endDate',
+      label: 'End Date',
+      type: 'date',
+    },
+    {
+      key: 'status',
+      label: 'Booking Status',
+      type: 'select',
+      options: [
+        { value: 'pending', label: 'Pending' },
+        { value: 'confirmed', label: 'Confirmed' },
+        { value: 'cancelled', label: 'Cancelled' },
+      ],
+    },
+    {
+      key: 'paymentStatus',
+      label: 'Payment Status',
+      type: 'select',
+      options: [
+        { value: 'pending', label: 'Pending' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'failed', label: 'Failed' },
+      ],
+    },
+  ]
+
+  const isInitialLoad = loading && events.length === 0
 
   return (
     <EventAdminLayout title="Bookings">
       {error && <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700 mb-4">{error}</div>}
 
-      {!selectedEvent ? (
+      {isInitialLoad && (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      )}
+
+      {!isInitialLoad && !selectedEvent ? (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Select an Event</h3>
           {events.length === 0 ? (
@@ -83,7 +154,7 @@ export default function EventAdminBookings(){
             ))
           )}
         </div>
-      ) : (
+      ) : !isInitialLoad ? (
         <div>
           <button 
             onClick={() => setSelectedEvent(null)}
@@ -93,9 +164,21 @@ export default function EventAdminBookings(){
           </button>
 
           <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-            <h2 className="text-2xl font-bold">{selectedEvent.title}</h2>
-            <div className="text-sm text-gray-600 mt-2">
-              {new Date(selectedEvent.date).toLocaleDateString()} • {selectedEvent.location}
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-2xl font-bold">{selectedEvent.title}</h2>
+                <div className="text-sm text-gray-600 mt-2">
+                  {new Date(selectedEvent.date).toLocaleDateString()} • {selectedEvent.location}
+                </div>
+              </div>
+              {bookings.length > 0 && (
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                >
+                  📥 Export Bookings
+                </button>
+              )}
             </div>
           </div>
 
@@ -146,7 +229,15 @@ export default function EventAdminBookings(){
             </div>
           )}
         </div>
-      )}
+      ) : null}
+
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+        title="Export Bookings"
+        filters={exportFilters}
+      />
     </EventAdminLayout>
   )
 }

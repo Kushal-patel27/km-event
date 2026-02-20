@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useDarkMode } from '../../context/DarkModeContext'
 import API from '../../services/api'
+import AdminLayout from '../../components/layout/AdminLayout'
 
 export default function ForOrganizersContentManager() {
   const { isDarkMode } = useDarkMode()
@@ -119,7 +120,7 @@ export default function ForOrganizersContentManager() {
     try {
       setSaving(true)
       setError(null)
-      await API.put(`/organizers-page/content/${section}`, formData[section])
+      await API.put(`/organizers-page/content/${section}`, { data: formData[section] })
       setSuccessMessage(`${section.charAt(0).toUpperCase() + section.slice(1)} updated successfully!`)
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
@@ -150,46 +151,39 @@ export default function ForOrganizersContentManager() {
 
   if (loading) {
     return (
-      <div
-        className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}
-      >
-        <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          <div
-            className={`animate-spin rounded-full h-12 w-12 border-4 border-gray-300 mx-auto mb-4 ${
-              isDarkMode ? 'border-t-blue-400' : 'border-t-blue-600'
-            }`}
-          ></div>
-          <p>Loading content...</p>
+      <AdminLayout title="Organizers Content">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading content...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     )
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">For Organizers - Content Manager</h1>
-          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Manage all content sections for the For Organizers marketing page
-          </p>
+    <AdminLayout title="Organizers Content Manager">
+      {/* Messages */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {error}
         </div>
+      )}
+      {successMessage && (
+        <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+          {successMessage}
+        </div>
+      )}
 
-        {/* Messages */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
-        {successMessage && (
-          <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
-            {successMessage}
-          </div>
-        )}
+      <div className="mb-6">
+        <p className="text-gray-600 dark:text-gray-400">
+          Manage all content sections for the For Organizers marketing page
+        </p>
+      </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8 border-b" style={{ borderColor: isDarkMode ? '#374151' : '#e5e7eb' }}>
+        <div className="flex flex-wrap gap-2 mb-8 border-b border-gray-200 dark:border-gray-700">
           {['hero', 'benefits', 'steps', 'faqs', 'cta'].map((tab) => (
             <button
               key={tab}
@@ -197,9 +191,7 @@ export default function ForOrganizersContentManager() {
               className={`px-6 py-3 font-semibold transition-colors ${
                 activeTab === tab
                   ? `text-blue-600 border-b-2 border-blue-600`
-                  : isDarkMode
-                  ? 'text-gray-400 hover:text-gray-300'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -209,7 +201,7 @@ export default function ForOrganizersContentManager() {
 
         {/* Hero Section */}
         {activeTab === 'hero' && (
-          <div className={`rounded-lg p-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className="rounded-lg p-8 bg-white dark:bg-gray-800">
             <h2 className="text-2xl font-bold mb-6">Hero Section</h2>
             <div className="space-y-6">
               <div>
@@ -218,11 +210,7 @@ export default function ForOrganizersContentManager() {
                   type="text"
                   value={formData.hero.title}
                   onChange={(e) => handleInputChange(e, 'hero', 'title')}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className="w-full px-4 py-2 rounded-lg border "
                 />
               </div>
               <div>
@@ -231,11 +219,7 @@ export default function ForOrganizersContentManager() {
                   value={formData.hero.subtitle}
                   onChange={(e) => handleInputChange(e, 'hero', 'subtitle')}
                   rows="3"
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className="w-full px-4 py-2 rounded-lg border "
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -245,11 +229,7 @@ export default function ForOrganizersContentManager() {
                     type="text"
                     value={formData.hero.buttonText1}
                     onChange={(e) => handleInputChange(e, 'hero', 'buttonText1')}
-                    className={`w-full px-4 py-2 rounded-lg border ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
+                    className="w-full px-4 py-2 rounded-lg border "
                   />
                 </div>
                 <div>
@@ -258,11 +238,7 @@ export default function ForOrganizersContentManager() {
                     type="text"
                     value={formData.hero.buttonText2}
                     onChange={(e) => handleInputChange(e, 'hero', 'buttonText2')}
-                    className={`w-full px-4 py-2 rounded-lg border ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
+                    className="w-full px-4 py-2 rounded-lg border "
                   />
                 </div>
               </div>
@@ -279,7 +255,7 @@ export default function ForOrganizersContentManager() {
 
         {/* Benefits Section */}
         {activeTab === 'benefits' && (
-          <div className={`rounded-lg p-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className={`rounded-lg p-8 bg-white dark:bg-gray-800`}>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">Benefits Section</h2>
               <button
@@ -297,11 +273,7 @@ export default function ForOrganizersContentManager() {
                   type="text"
                   value={formData.benefits.title}
                   onChange={(e) => handleInputChange(e, 'benefits', 'title')}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className="w-full px-4 py-2 rounded-lg border "
                 />
               </div>
               <div>
@@ -310,11 +282,7 @@ export default function ForOrganizersContentManager() {
                   type="text"
                   value={formData.benefits.subtitle}
                   onChange={(e) => handleInputChange(e, 'benefits', 'subtitle')}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className="w-full px-4 py-2 rounded-lg border "
                 />
               </div>
 
@@ -322,9 +290,7 @@ export default function ForOrganizersContentManager() {
                 {formData.benefits.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className={`p-6 rounded-lg border ${
-                      isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-                    }`}
+                      className="p-6 rounded-lg border-2 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <h3 className="font-semibold">Benefit {idx + 1}</h3>
@@ -343,11 +309,7 @@ export default function ForOrganizersContentManager() {
                           maxLength="2"
                           value={item.icon}
                           onChange={(e) => handleItemChange('benefits', idx, 'icon', e.target.value)}
-                          className={`w-full px-4 py-2 rounded-lg border ${
-                            isDarkMode
-                              ? 'bg-gray-600 border-gray-500 text-white'
-                              : 'bg-white border-gray-300 text-gray-900'
-                          }`}
+                          className="w-full px-4 py-2 rounded-lg border "
                         />
                       </div>
                       <div>
@@ -356,11 +318,7 @@ export default function ForOrganizersContentManager() {
                           type="text"
                           value={item.title}
                           onChange={(e) => handleItemChange('benefits', idx, 'title', e.target.value)}
-                          className={`w-full px-4 py-2 rounded-lg border ${
-                            isDarkMode
-                              ? 'bg-gray-600 border-gray-500 text-white'
-                              : 'bg-white border-gray-300 text-gray-900'
-                          }`}
+                          className="w-full px-4 py-2 rounded-lg border "
                         />
                       </div>
                     </div>
@@ -370,11 +328,7 @@ export default function ForOrganizersContentManager() {
                         value={item.description}
                         onChange={(e) => handleItemChange('benefits', idx, 'description', e.target.value)}
                         rows="2"
-                        className={`w-full px-4 py-2 rounded-lg border ${
-                          isDarkMode
-                            ? 'bg-gray-600 border-gray-500 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
+                        className="w-full px-4 py-2 rounded-lg border "
                       />
                     </div>
                   </div>
@@ -394,7 +348,7 @@ export default function ForOrganizersContentManager() {
 
         {/* Steps Section */}
         {activeTab === 'steps' && (
-          <div className={`rounded-lg p-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className={`rounded-lg p-8 bg-white dark:bg-gray-800`}>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">Steps Section</h2>
               <button
@@ -412,11 +366,7 @@ export default function ForOrganizersContentManager() {
                   type="text"
                   value={formData.steps.title}
                   onChange={(e) => handleInputChange(e, 'steps', 'title')}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className="w-full px-4 py-2 rounded-lg border "
                 />
               </div>
               <div>
@@ -425,11 +375,7 @@ export default function ForOrganizersContentManager() {
                   type="text"
                   value={formData.steps.subtitle}
                   onChange={(e) => handleInputChange(e, 'steps', 'subtitle')}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className="w-full px-4 py-2 rounded-lg border "
                 />
               </div>
 
@@ -438,7 +384,7 @@ export default function ForOrganizersContentManager() {
                   <div
                     key={idx}
                     className={`p-6 rounded-lg border ${
-                      isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                      'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-4">
@@ -457,11 +403,7 @@ export default function ForOrganizersContentManager() {
                           type="text"
                           value={item.number}
                           onChange={(e) => handleItemChange('steps', idx, 'number', e.target.value)}
-                          className={`w-full px-4 py-2 rounded-lg border ${
-                            isDarkMode
-                              ? 'bg-gray-600 border-gray-500 text-white'
-                              : 'bg-white border-gray-300 text-gray-900'
-                          }`}
+                          className="w-full px-4 py-2 rounded-lg border "
                         />
                       </div>
                       <div>
@@ -470,11 +412,7 @@ export default function ForOrganizersContentManager() {
                           type="text"
                           value={item.title}
                           onChange={(e) => handleItemChange('steps', idx, 'title', e.target.value)}
-                          className={`w-full px-4 py-2 rounded-lg border ${
-                            isDarkMode
-                              ? 'bg-gray-600 border-gray-500 text-white'
-                              : 'bg-white border-gray-300 text-gray-900'
-                          }`}
+                          className="w-full px-4 py-2 rounded-lg border "
                         />
                       </div>
                     </div>
@@ -484,11 +422,7 @@ export default function ForOrganizersContentManager() {
                         value={item.description}
                         onChange={(e) => handleItemChange('steps', idx, 'description', e.target.value)}
                         rows="2"
-                        className={`w-full px-4 py-2 rounded-lg border ${
-                          isDarkMode
-                            ? 'bg-gray-600 border-gray-500 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
+                        className="w-full px-4 py-2 rounded-lg border "
                       />
                     </div>
                   </div>
@@ -508,7 +442,7 @@ export default function ForOrganizersContentManager() {
 
         {/* FAQs Section */}
         {activeTab === 'faqs' && (
-          <div className={`rounded-lg p-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className={`rounded-lg p-8 bg-white dark:bg-gray-800`}>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">FAQs Section</h2>
               <button
@@ -526,11 +460,7 @@ export default function ForOrganizersContentManager() {
                   type="text"
                   value={formData.faqs.title}
                   onChange={(e) => handleInputChange(e, 'faqs', 'title')}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className="w-full px-4 py-2 rounded-lg border "
                 />
               </div>
 
@@ -539,7 +469,7 @@ export default function ForOrganizersContentManager() {
                   <div
                     key={idx}
                     className={`p-6 rounded-lg border ${
-                      isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                      'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-4">
@@ -558,11 +488,7 @@ export default function ForOrganizersContentManager() {
                           type="text"
                           value={item.question}
                           onChange={(e) => handleItemChange('faqs', idx, 'question', e.target.value)}
-                          className={`w-full px-4 py-2 rounded-lg border ${
-                            isDarkMode
-                              ? 'bg-gray-600 border-gray-500 text-white'
-                              : 'bg-white border-gray-300 text-gray-900'
-                          }`}
+                          className="w-full px-4 py-2 rounded-lg border "
                         />
                       </div>
                       <div>
@@ -571,11 +497,7 @@ export default function ForOrganizersContentManager() {
                           value={item.answer}
                           onChange={(e) => handleItemChange('faqs', idx, 'answer', e.target.value)}
                           rows="3"
-                          className={`w-full px-4 py-2 rounded-lg border ${
-                            isDarkMode
-                              ? 'bg-gray-600 border-gray-500 text-white'
-                              : 'bg-white border-gray-300 text-gray-900'
-                          }`}
+                          className="w-full px-4 py-2 rounded-lg border "
                         />
                       </div>
                     </div>
@@ -596,7 +518,7 @@ export default function ForOrganizersContentManager() {
 
         {/* CTA Section */}
         {activeTab === 'cta' && (
-          <div className={`rounded-lg p-8 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className={`rounded-lg p-8 bg-white dark:bg-gray-800`}>
             <h2 className="text-2xl font-bold mb-6">Call To Action Section</h2>
             <div className="space-y-6">
               <div>
@@ -605,11 +527,7 @@ export default function ForOrganizersContentManager() {
                   type="text"
                   value={formData.cta.title}
                   onChange={(e) => handleInputChange(e, 'cta', 'title')}
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className="w-full px-4 py-2 rounded-lg border "
                 />
               </div>
               <div>
@@ -618,11 +536,7 @@ export default function ForOrganizersContentManager() {
                   value={formData.cta.subtitle}
                   onChange={(e) => handleInputChange(e, 'cta', 'subtitle')}
                   rows="3"
-                  className={`w-full px-4 py-2 rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className="w-full px-4 py-2 rounded-lg border "
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -632,11 +546,7 @@ export default function ForOrganizersContentManager() {
                     type="text"
                     value={formData.cta.buttonText1}
                     onChange={(e) => handleInputChange(e, 'cta', 'buttonText1')}
-                    className={`w-full px-4 py-2 rounded-lg border ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
+                    className="w-full px-4 py-2 rounded-lg border "
                   />
                 </div>
                 <div>
@@ -645,11 +555,7 @@ export default function ForOrganizersContentManager() {
                     type="text"
                     value={formData.cta.buttonText2}
                     onChange={(e) => handleInputChange(e, 'cta', 'buttonText2')}
-                    className={`w-full px-4 py-2 rounded-lg border ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    }`}
+                    className="w-full px-4 py-2 rounded-lg border "
                   />
                 </div>
               </div>
@@ -665,7 +571,7 @@ export default function ForOrganizersContentManager() {
         )}
 
         {/* Reset Button */}
-        <div className="mt-12 pt-8 border-t" style={{ borderColor: isDarkMode ? '#374151' : '#e5e7eb' }}>
+        <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={resetToDefaults}
             disabled={saving}
@@ -674,7 +580,10 @@ export default function ForOrganizersContentManager() {
             Reset All Content to Defaults
           </button>
         </div>
-      </div>
-    </div>
+    </AdminLayout>
   )
 }
+
+
+
+

@@ -199,12 +199,12 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19] text-white overflow-x-hidden min-h-screen">
+    <div className="bg-black text-white overflow-x-hidden min-h-screen">
 
       {/* ================= HERO / CINEMATIC CAROUSEL ================= */}
-      <section className="relative min-h-[95vh] overflow-hidden bg-[#0B0F19]">
+      <section className="relative min-h-[95vh] overflow-hidden bg-black">
         {loading ? (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0B0F19] via-[#111827] to-[#1a1f2e] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black flex items-center justify-center">
             <div className="text-center">
               <img 
                 src="/assets/logo.png" 
@@ -289,7 +289,7 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-16 border-t border-white/10 bg-gradient-to-b from-[#0d1221] to-[#0B0F19]"
+        className="py-16 border-t border-white/10 bg-black"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center">
           {[{ label: 'Tickets issued', value: '1.2M+' }, { label: 'Cities covered', value: '30+' }, { label: 'Events live', value: '850+' }, { label: 'Avg. rating', value: '4.8/5' }].map((item, idx) => (
@@ -299,7 +299,7 @@ export default function Home() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: idx * 0.1 }}
-              className="group p-5 md:p-6 rounded-2xl bg-gradient-to-br from-white/8 to-white/3 border border-white/15 hover:border-red-500/50 hover:from-white/12 hover:to-white/6 backdrop-blur-sm transition-all duration-300"
+              className="group p-5 md:p-6 rounded-2xl bg-black border border-white/10 hover:border-red-500/50 backdrop-blur-sm transition-all duration-300"
             >
               <div className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 group-hover:from-red-400 group-hover:to-white transition-all">{item.value}</div>
               <div className="mt-2 text-xs md:text-sm text-gray-300 font-medium">{item.label}</div>
@@ -314,7 +314,7 @@ export default function Home() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-20 bg-gradient-to-b from-[#0B0F19] to-[#0d1221]"
+        className="py-20 bg-black"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
@@ -329,7 +329,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
-                className="group p-6 rounded-2xl bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/15 hover:to-white/8 hover:border-red-500/40 transition-all duration-300 cursor-pointer hover:-translate-y-1"
+                className="group p-6 rounded-2xl bg-black border border-white/10 backdrop-blur-sm hover:border-red-500/40 transition-all duration-300 cursor-pointer hover:-translate-y-1"
               >
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500/30 to-red-600/10 flex items-center justify-center text-red-300 mb-4 group-hover:text-red-200 transition-colors">
                   {card.icon}
@@ -348,7 +348,7 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-20 bg-gradient-to-b from-[#0d1221] to-[#0B0F19]"
+        className="py-20 bg-black"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
@@ -379,7 +379,7 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-20 bg-gradient-to-b from-[#0d1221] to-[#0B0F19]"
+        className="py-20 bg-black"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-10 items-center">
@@ -396,7 +396,7 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: idx * 0.08 }}
-                  className="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm hover:border-red-500/40 transition-colors duration-300"
+                  className="p-6 rounded-2xl border border-white/10 bg-black backdrop-blur-sm hover:border-red-500/40 transition-colors duration-300"
                 >
                   <div className="flex items-center gap-3 mb-3 text-sm font-semibold text-red-200">
                     <span className="w-2 h-2 rounded-full bg-red-400"></span>
@@ -416,7 +416,7 @@ export default function Home() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-24 bg-gradient-to-b from-[#0B0F19] to-[#0d1221]"
+        className="py-24 bg-black"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <div className="text-center mb-16">
@@ -464,7 +464,7 @@ export default function Home() {
                       whileInView: { opacity: 1, y: 0 },
                       transition: { duration: 0.6, delay: idx * 0.15 },
                     })}
-                className="group relative p-10 md:p-12 rounded-3xl backdrop-blur-sm transition-all duration-300 overflow-hidden bg-gradient-to-br from-white/8 to-white/3 border border-white/15 hover:-translate-y-1 hover:from-white/15 hover:to-white/8 hover:border-red-500/40"
+                className="group relative p-10 md:p-12 rounded-3xl backdrop-blur-sm transition-all duration-300 overflow-hidden bg-black border border-white/10 hover:-translate-y-1 hover:border-red-500/40"
               >
                 <div className={`relative z-10 flex flex-col ${idx === 1 ? 'items-center text-center' : 'items-start'}`}>
                   {/* Step Number Badge */}
@@ -510,7 +510,7 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-24 bg-gradient-to-b from-[#0d1221] to-[#0B0F19]"
+        className="py-24 bg-black"
       >
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-14">
@@ -533,7 +533,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
-                className="group p-7 md:p-8 rounded-2xl bg-gradient-to-br from-white/8 to-white/3 border border-white/15 shadow-lg backdrop-blur-sm hover:from-white/15 hover:to-white/8 hover:border-red-500/40 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                className="group p-7 md:p-8 rounded-2xl bg-black border border-white/10 shadow-lg backdrop-blur-sm hover:border-red-500/40 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
               >
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(5)].map((_, i) => (
@@ -558,7 +558,7 @@ export default function Home() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="py-28 bg-gradient-to-b from-[#0B0F19] to-[#0d1221] text-white"
+          className="py-28 bg-black text-white"
         >
           <div className="px-6 lg:px-12 max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-16">
@@ -613,7 +613,7 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className="py-24 bg-gradient-to-b from-[#0B0F19] to-[#0d1221] relative overflow-hidden"
+        className="py-24 bg-black relative overflow-hidden"
       >
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-blue-600 rounded-full blur-3xl"></div>
@@ -765,7 +765,7 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 text-white drop-shadow-lg"
           >
-            Don't Miss Out 🎟️
+            Discover Your Next Event
           </motion.h2>
           
           <motion.p 
@@ -775,7 +775,7 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-white/90 text-lg md:text-xl mb-12 max-w-3xl mx-auto drop-shadow-md"
           >
-            Thousands are booking events daily. Secure your spot for unforgettable experiences.
+            Join thousands of attendees discovering and booking premium events. Reserve your tickets today and experience unforgettable moments.
           </motion.p>
           
           <motion.div
@@ -788,7 +788,7 @@ export default function Home() {
               to="/events"
               className="inline-block px-12 py-5 bg-black hover:bg-gray-900 text-white rounded-xl text-lg font-bold shadow-2xl hover:scale-110 hover:shadow-2xl transition-all duration-300"
             >
-              Book Now
+              Explore Events
             </Link>
           </motion.div>
         </div>

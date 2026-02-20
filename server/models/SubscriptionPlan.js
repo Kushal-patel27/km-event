@@ -4,23 +4,46 @@ const subscriptionPlanSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    unique: true,
-    enum: ['Basic', 'Standard', 'Professional', 'Enterprise']
+    unique: true
   },
   displayName: {
     type: String,
-    required: true
+    required: false // Made optional, defaults to name
   },
   description: {
     type: String,
     required: true
   },
-  price: {
+  // Commission-based revenue model
+  commissionPercentage: {
     type: Number,
     required: true,
     min: 0,
+    max: 100,
+    default: 30
+  },
+  monthlyFee: {
+    type: Number,
     default: 0,
-    description: 'One-time listing price per event'
+    min: 0
+  },
+  eventLimit: {
+    type: Number,
+    default: null // null = unlimited
+  },
+  ticketLimit: {
+    type: Number,
+    default: null // null = unlimited
+  },
+  payoutFrequency: {
+    type: String,
+    enum: ['daily', 'weekly', 'monthly', 'custom'],
+    default: 'monthly'
+  },
+  minPayoutAmount: {
+    type: Number,
+    default: 100,
+    min: 0
   },
   features: {
     ticketing: {
@@ -69,15 +92,11 @@ const subscriptionPlanSchema = new mongoose.Schema({
   limits: {
     eventsPerMonth: {
       type: Number,
-      default: 1
+      default: null
     },
     attendeesPerEvent: {
       type: Number,
-      default: 100
-    },
-    storageGB: {
-      type: Number,
-      default: 1
+      default: null
     },
     customBranding: {
       type: Boolean,
@@ -101,5 +120,13 @@ const subscriptionPlanSchema = new mongoose.Schema({
     default: false
   }
 }, { timestamps: true })
+
+// Pre-save hook to set displayName if not provided
+subscriptionPlanSchema.pre('save', function(next) {
+  if (!this.displayName) {
+    this.displayName = this.name
+  }
+  next()
+})
 
 export default mongoose.model('SubscriptionPlan', subscriptionPlanSchema)

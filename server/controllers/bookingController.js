@@ -7,6 +7,9 @@ import FeatureToggle from "../models/FeatureToggle.js";
 import crypto from "crypto";
 import { sendBookingConfirmationEmail } from "../utils/emailService.js";
 import { generateTicketPDF } from "../utils/generateTicketPDF.js";
+import { notifyNextInLine } from "./waitlistController.js";
+import OrganizerSubscription from "../models/OrganizerSubscription.js";
+import Commission from "../models/Commission.js";
 
 function generateUniqueTicketId() {
   // Generate a short ticket ID like A1B2C3D4 (8 characters)
@@ -31,6 +34,28 @@ export const createBooking = async (req, res) => {
     const event = await Event.findById(eventId);
     if (!event)
       return res.status(404).json({ message: "Event not found" });
+
+    const requestedQuantity = Number(quantity) || 0;
+    if (requestedQuantity <= 0) {
+      return res.status(400).json({ message: "Quantity must be at least 1" });
+    }
+
+    try {
+      const systemConfig = await SystemConfig.findById("system_config");
+      const maxPerUser = Number(systemConfig?.ticketLimits?.maxPerUser);
+      // Check max tickets PER BOOKING, not cumulative across all bookings
+      if (Number.isFinite(maxPerUser) && maxPerUser > 0) {
+        console.log(`[BOOKING] Max tickets per booking: ${maxPerUser}, requested: ${requestedQuantity}`);
+        if (requestedQuantity > maxPerUser) {
+          console.log(`[BOOKING] BOOKING LIMIT EXCEEDED: ${requestedQuantity} > ${maxPerUser}`);
+          return res.status(400).json({
+            message: `Maximum ${maxPerUser} tickets allowed per booking.`
+          });
+        }
+      }
+    } catch (limitError) {
+      console.error('[BOOKING] Error checking max tickets per booking:', limitError.message);
+    }
 
     // Check if ticketing feature is enabled for this event
     try {
@@ -60,7 +85,7 @@ export const createBooking = async (req, res) => {
         return res.status(400).json({ message: "Ticket type is required" });
       }
 
-      if (totalAvailableFromTypes < quantity) {
+      if (totalAvailableFromTypes < requestedQuantity) {
         return res.status(400).json({ message: `Only ${totalAvailableFromTypes} tickets available` });
       }
 
@@ -68,7 +93,7 @@ export const createBooking = async (req, res) => {
       if (!selectedType) {
         return res.status(400).json({ message: "Invalid ticket type" });
       }
-      if (selectedType.available < quantity) {
+      if (selectedType.available < requestedQuantity) {
         return res.status(400).json({ message: `Only ${selectedType.available} tickets available for ${selectedType.name}` });
       }
 
@@ -79,18 +104,18 @@ export const createBooking = async (req, res) => {
         description: selectedType.description || ''
       };
       // Reduce ticket type availability for the selected bucket now
-      selectedType.available = Math.max(0, selectedType.available - quantity);
+      selectedType.available = Math.max(0, selectedType.available - requestedQuantity);
     } else {
-      if (event.availableTickets < quantity)
+      if (event.availableTickets < requestedQuantity)
         return res.status(400).json({ message: "Not enough tickets" });
     }
 
     // If seats are provided, validate them
     if (seats && Array.isArray(seats)) {
       // Check if number of seats matches quantity
-      if (seats.length !== quantity) {
+      if (seats.length !== requestedQuantity) {
         return res.status(400).json({ 
-          message: `Number of seats (${seats.length}) must match quantity (${quantity})` 
+          message: `Number of seats (${seats.length}) must match quantity (${requestedQuantity})` 
         });
       }
 
@@ -112,7 +137,8 @@ export const createBooking = async (req, res) => {
         // Check if any seats are already booked
         const existingBookings = await Booking.find({ 
           event: eventId,
-          seats: { $exists: true, $ne: [] }
+          seats: { $exists: true, $ne: [] },
+          status: { $nin: ["cancelled", "refunded"] }
         });
 
         const bookedSeats = new Set();
@@ -131,7 +157,7 @@ export const createBooking = async (req, res) => {
       }
     }
 
-    const totalAmount = quantity * price;
+    const totalAmount = requestedQuantity * price;
 
     // Check if payments feature is enabled for this event
     try {
@@ -149,14 +175,14 @@ export const createBooking = async (req, res) => {
 
     // Generate unique ticket IDs
     const ticketIds = [];
-    for (let i = 0; i < quantity; i++) {
+    for (let i = 0; i < requestedQuantity; i++) {
       ticketIds.push(generateUniqueTicketId());
     }
 
     const bookingData = {
       user: req.user._id,
       event: eventId,
-      quantity,
+      quantity: requestedQuantity,
       totalAmount,
       ticketIds,
       ...(ticketTypeData && { ticketType: ticketTypeData })
@@ -176,7 +202,7 @@ export const createBooking = async (req, res) => {
       event.availableTickets = Math.max(0, aggregatedAvailable);
       event.totalTickets = Math.max(0, aggregatedTotal);
     } else {
-      event.availableTickets = Math.max(0, event.availableTickets - quantity);
+      event.availableTickets = Math.max(0, event.availableTickets - requestedQuantity);
     }
     await event.save();
 
@@ -236,7 +262,64 @@ export const createBooking = async (req, res) => {
 
     console.log(`[BOOKING] QR Code generation: ${qrEnabled ? 'ENABLED' : 'DISABLED'} - Generated ${qrCodes.length} QR codes`);
 
-    // Populate event and user data for email
+    // ==================== CREATE COMMISSION ====================
+    // Fetch organizer's subscription and create commission
+    try {
+      const organizerSubscription = await OrganizerSubscription.findOne({ organizer: event.organizer });
+      const defaultCommissionPercentage = 30;
+      const commissionPercentage = organizerSubscription?.currentCommissionPercentage ?? defaultCommissionPercentage;
+      const subtotal = quantity * price;
+      const commissionAmount = (subtotal * commissionPercentage) / 100;
+      const organizerAmount = subtotal - commissionAmount;
+
+      // Create commission record
+      const commission = new Commission({
+        booking: booking._id,
+        event: eventId,
+        organizer: event.organizer,
+        ticketPrice: price,
+        quantity: quantity,
+        subtotal: subtotal,
+        commissionPercentage: commissionPercentage,
+        commissionAmount: commissionAmount,
+        organizerAmount: organizerAmount,
+        platformAmount: commissionAmount,
+        status: "pending"
+      });
+
+      await commission.save();
+
+      // Update booking with commission info
+      booking.commission = {
+        commissionPercentage: commissionPercentage,
+        commissionAmount: commissionAmount,
+        organizerAmount: organizerAmount,
+        platformAmount: commissionAmount
+      };
+      booking.commissionId = commission._id;
+      await booking.save();
+
+      // ==================== UPDATE SUBSCRIPTION STATISTICS ====================
+      if (organizerSubscription) {
+        organizerSubscription.totalTicketsSold = (organizerSubscription.totalTicketsSold || 0) + quantity;
+        organizerSubscription.totalRevenue = (organizerSubscription.totalRevenue || 0) + subtotal;
+        organizerSubscription.totalCommissionDeducted = (organizerSubscription.totalCommissionDeducted || 0) + commissionAmount;
+        organizerSubscription.totalNetPayout = (organizerSubscription.totalNetPayout || 0) + organizerAmount;
+        organizerSubscription.pendingPayout = (organizerSubscription.pendingPayout || 0) + organizerAmount;
+        await organizerSubscription.save();
+
+        console.log(`[SUBSCRIPTION] Updated statistics for organizer ${event.organizer} - Revenue: ₹${organizerSubscription.totalRevenue}, Commission: ₹${organizerSubscription.totalCommissionDeducted}, Net: ₹${organizerSubscription.totalNetPayout}`);
+      } else {
+        console.log(`[COMMISSION] No subscription found for organizer ${event.organizer}; using default ${defaultCommissionPercentage}% rate`);
+      }
+
+      console.log(`[COMMISSION] Created for booking ${booking._id} - ${commissionPercentage}% rate - Amount: ₹${commissionAmount}`);
+    } catch (commissionError) {
+      console.error('[COMMISSION ERROR]', commissionError.message);
+      // Don't block booking creation if commission fails
+    }
+
+    // ==================== POPULATE BOOKING DATA ====================
     const populatedBooking = await Booking.findById(booking._id)
       .populate('event', 'title location date image')
       .populate('user', 'name email');
@@ -397,7 +480,25 @@ export const deleteBooking = async (req, res) => {
       const event = await Event.findById(booking.event)
       if (event && typeof event.availableTickets === 'number') {
         event.availableTickets = Math.max(0, event.availableTickets + (Number(booking.quantity) || 0))
+        
+        // If booking had a ticket type, restore to that specific type
+        if (booking.ticketType && Array.isArray(event.ticketTypes)) {
+          const ticketType = event.ticketTypes.find(t => t.name === booking.ticketType.name);
+          if (ticketType) {
+            ticketType.available += booking.quantity;
+          }
+        }
+        
         await event.save()
+
+        // Notify waitlist - tickets are now available
+        try {
+          const ticketTypeName = booking.ticketType?.name || 'General';
+          await notifyNextInLine(event._id, ticketTypeName, booking.quantity);
+        } catch (waitlistError) {
+          console.error('Error notifying waitlist:', waitlistError);
+          // Don't fail the deletion if waitlist notification fails
+        }
       }
     }
 
@@ -421,7 +522,8 @@ export const getBookedSeats = async (req, res) => {
     // Find all bookings for this event that have seats
     const bookings = await Booking.find({ 
       event: eventId,
-      seats: { $exists: true, $ne: [] }
+      seats: { $exists: true, $ne: [] },
+      status: { $nin: ["cancelled", "refunded"] }
     }).select('seats');
 
     // Collect all booked seat numbers

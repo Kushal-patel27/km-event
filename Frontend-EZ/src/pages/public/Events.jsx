@@ -31,7 +31,15 @@ export default function Events(){
       .then(res => {
         if (!mounted) return
         const data = res.data.map(e => ({ ...e, id: e.id || e._id, availableTickets: e.availableTickets }))
-        setEvents(data)
+        const unique = Array.from(
+          new Map(
+            data.map(e => {
+              const key = String(e.id || e._id || `${e.title || ''}-${e.date || ''}-${e.location || ''}`)
+              return [key, e]
+            })
+          ).values()
+        )
+        setEvents(unique)
       })
       .catch(() => {
         // fallback: keep empty list
@@ -72,7 +80,7 @@ export default function Events(){
   return (
     <div className={`min-h-screen py-12 relative overflow-hidden transition-colors duration-300 ${
       isDarkMode
-        ? 'bg-[#0B0F19] text-white'
+        ? 'bg-black text-white'
         : 'bg-gradient-to-br from-sky-50 via-white to-indigo-50 text-gray-900'
     }`}>
       {/* Decorative Background */}
@@ -97,7 +105,7 @@ export default function Events(){
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className={`text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r tracking-tight mb-2 ${
-            isDarkMode ? 'from-red-500 to-red-400' : 'from-indigo-600 to-blue-500'
+            isDarkMode ? 'from-red-600 to-red-500' : 'from-indigo-600 to-blue-500'
           }`}>Explore Events</h1>
           <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Find your next unforgettable experience.</p>
         </div>
@@ -115,7 +123,7 @@ export default function Events(){
                         ? 'bg-red-600 text-white shadow-lg shadow-red-500/30 transform scale-105'
                         : 'bg-indigo-600 text-white shadow-lg shadow-indigo-400/40 transform scale-105') 
                     : (isDarkMode 
-                        ? 'bg-white/10 text-gray-300 border border-white/20 hover:border-red-400 hover:bg-white/20'
+                        ? 'bg-black border border-white/10 text-gray-300 hover:border-red-400 hover:bg-black/80'
                         : 'bg-white text-gray-700 border border-gray-200 shadow-sm hover:border-indigo-300 hover:bg-indigo-50')
                 }`}
               >
@@ -148,7 +156,7 @@ export default function Events(){
         ) : (
           <div className="text-center py-20">
             <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full backdrop-blur-lg mb-4 ${
-              isDarkMode ? 'bg-white/10' : 'bg-white shadow-sm'
+              isDarkMode ? 'bg-black border border-white/10' : 'bg-white shadow-sm'
             }`}>
               <svg className={`w-8 h-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

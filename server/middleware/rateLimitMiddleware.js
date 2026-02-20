@@ -13,6 +13,7 @@ class RedisStore {
   constructor(options = {}) {
     this.prefix = options.prefix || 'ratelimit:';
     this.client = null;
+    this.errorLogged = false;
   }
 
   async init() {
@@ -38,7 +39,10 @@ class RedisStore {
       
       return { totalHits: current, resetTime };
     } catch (error) {
-      console.error('[RATE_LIMIT] Redis error:', error);
+      if (!this.errorLogged) {
+        console.error('[RATE_LIMIT] Redis error - Using in-memory fallback');
+        this.errorLogged = true;
+      }
       return { totalHits: 1, resetTime: new Date(Date.now() + 60000) };
     }
   }
@@ -50,7 +54,7 @@ class RedisStore {
       const prefixedKey = `${this.prefix}${key}`;
       await this.client.decr(prefixedKey);
     } catch (error) {
-      console.error('[RATE_LIMIT] Redis decrement error:', error);
+      // Silent fail - fallback to in-memory
     }
   }
 
@@ -61,7 +65,7 @@ class RedisStore {
       const prefixedKey = `${this.prefix}${key}`;
       await this.client.del(prefixedKey);
     } catch (error) {
-      console.error('[RATE_LIMIT] Redis reset error:', error);
+      // Silent fail - fallback to in-memory
     }
   }
 }

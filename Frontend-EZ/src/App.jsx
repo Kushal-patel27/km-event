@@ -1,5 +1,5 @@
 import React from 'react'
-import { Routes, Route, useLocation, Link } from 'react-router-dom'
+import { Routes, Route, useLocation, Link, Navigate } from 'react-router-dom'
 // Public Pages
 import Home from './pages/public/Home'
 import Events from './pages/public/Events'
@@ -20,11 +20,13 @@ import CreateEventRequest from './pages/public/CreateEventRequest'
 import MyEventRequests from './pages/public/MyEventRequests'
 import ForOrganizers from './pages/public/ForOrganizers'
 import QRScannerTestPage from './pages/public/QRScannerTestPage'
+import Waitlist from './pages/public/Waitlist'
 // Auth Pages
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import AuthCallback from './pages/auth/AuthCallback'
+import SetPassword from './pages/auth/SetPassword'
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminEvents from './pages/admin/AdminEvents'
@@ -32,9 +34,10 @@ import AdminBookings from './pages/admin/AdminBookings'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminContacts from './pages/admin/AdminContacts'
 import AdminTeam from './pages/admin/AdminTeam'
-import AdminFAQ from './pages/admin/AdminFAQ'
-import AdminHelp from './pages/admin/AdminHelp'
+import FAQManager from './pages/admin/FAQManager'
+import HelpManager from './pages/admin/HelpManager'
 import ForOrganizersContentManager from './pages/admin/ForOrganizersContentManager'
+import AdminFeatureToggles from './pages/admin/AdminFeatureToggles'
 // Event Admin Pages
 import EventAdminDashboard from './pages/event-admin/EventAdminDashboard'
 import EventAdminEvents from './pages/event-admin/EventAdminEvents'
@@ -51,6 +54,7 @@ import StaffAdminSettings from './pages/staff-admin/StaffAdminSettings'
 import StaffLogin from './pages/staff/StaffLogin'
 import StaffScanner from './pages/staff/StaffScanner'
 import HighPerformanceScannerScreen from './pages/staff/HighPerformanceScannerScreen'
+import StaffLayout from './components/layout/StaffLayout'
 import ScannerAnalyticsDashboard from './pages/admin/ScannerAnalyticsDashboard'
 // Super Admin Pages
 import SuperAdminLogin from './pages/super-admin/SuperAdminLogin'
@@ -65,18 +69,31 @@ import SuperAdminExport from './pages/super-admin/SuperAdminExport'
 import SuperAdminStaff from './pages/super-admin/SuperAdminStaff'
 import Subscriptions from './pages/super-admin/Subscriptions'
 import FeatureToggles from './pages/super-admin/FeatureToggles'
+// Subscription & Commission Pages (Admin)
+import SubscriptionPlanManager from './pages/admin/SubscriptionPlanManager'
+import OrganizerSubscriptionManager from './pages/admin/OrganizerSubscriptionManager'
+import CommissionAnalytics from './pages/admin/CommissionAnalytics'
+import SubscriptionDashboard from './pages/admin/SubscriptionDashboard'
+import SubscriptionSetup from './pages/admin/SubscriptionSetup'
+import EventAdminPayouts from './pages/admin/EventAdminPayouts'
+// Subscription & Commission Pages (Organizer)
+import OrganizerRevenueDashboard from './pages/event-admin/OrganizerRevenueDashboard'
+import PayoutRequest from './pages/event-admin/PayoutRequest'
+import OrganizerMainDashboard from './pages/event-admin/OrganizerMainDashboard'
 // Layout Components
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 // Common Components
 import ScrollToTop from './components/common/ScrollToTop'
 import SessionNotification from './components/common/SessionNotification'
+import CursorHearts from './components/common/CursorHearts'
 // Auth Components
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import ProtectedAdminRoute from './components/auth/ProtectedAdminRoute'
 import ProtectedSuperAdminRoute from './components/auth/ProtectedSuperAdminRoute'
 // Context
 import { DarkModeProvider } from './context/DarkModeContext'
+import { LoadingProvider } from './context/LoadingContext'
 
 export default function App(){
   const location = useLocation()
@@ -87,9 +104,11 @@ export default function App(){
   const isSuperAdminRoute = location.pathname.startsWith('/super-admin')
   return (
     <DarkModeProvider>
-      <ScrollToTop />
-      <SessionNotification />
-      <div className="min-h-screen flex flex-col">{!isAdminRoute && !isEventAdminRoute && !isStaffAdminRoute && !isStaffRoute && !isSuperAdminRoute && <Navbar />}
+      <LoadingProvider>
+        <ScrollToTop />
+        <SessionNotification />
+      {/*  // <CursorHearts />*/ }
+       <div className="min-h-screen flex flex-col">{!isAdminRoute && !isEventAdminRoute && !isStaffAdminRoute && !isStaffRoute && !isSuperAdminRoute && <Navbar />}
         <main className={isAdminRoute || isEventAdminRoute || isStaffAdminRoute || isStaffRoute ? "flex-1" : "flex-1"}>
             <Routes location={location}>
               <Route path="/" element={<Home />} />
@@ -108,12 +127,14 @@ export default function App(){
               <Route path="/book/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
               <Route path="/booking-success" element={<BookingSuccess />} />
               <Route path="/my-bookings" element={<MyBookings />} />
+              <Route path="/waitlist" element={<ProtectedRoute><Waitlist /></ProtectedRoute>} />
               <Route path="/create-event" element={<ProtectedRoute><CreateEventRequest /></ProtectedRoute>} />
               <Route path="/my-event-requests" element={<ProtectedRoute><MyEventRequests /></ProtectedRoute>} />
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/set-password" element={<ProtectedRoute><SetPassword /></ProtectedRoute>} />
 
               {/* Admin routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
@@ -122,9 +143,16 @@ export default function App(){
               <Route path="/admin/events" element={<ProtectedAdminRoute><AdminEvents /></ProtectedAdminRoute>} />
               <Route path="/admin/bookings" element={<ProtectedAdminRoute><AdminBookings /></ProtectedAdminRoute>} />
               <Route path="/admin/contacts" element={<ProtectedAdminRoute><AdminContacts /></ProtectedAdminRoute>} />
-              <Route path="/admin/faq" element={<ProtectedAdminRoute><AdminFAQ /></ProtectedAdminRoute>} />
-              <Route path="/admin/help" element={<ProtectedAdminRoute><AdminHelp /></ProtectedAdminRoute>} />
+              <Route path="/admin/faq" element={<ProtectedAdminRoute><FAQManager /></ProtectedAdminRoute>} />
+              <Route path="/admin/help" element={<ProtectedAdminRoute><HelpManager /></ProtectedAdminRoute>} />
               <Route path="/admin/organizers-content" element={<ProtectedAdminRoute><ForOrganizersContentManager /></ProtectedAdminRoute>} />
+              <Route path="/admin/events/:eventId/features" element={<ProtectedAdminRoute><AdminFeatureToggles /></ProtectedAdminRoute>} />
+              <Route path="/admin/subscription-plans" element={<ProtectedAdminRoute><SubscriptionPlanManager /></ProtectedAdminRoute>} />
+              <Route path="/admin/organizer-subscriptions" element={<ProtectedAdminRoute><OrganizerSubscriptionManager /></ProtectedAdminRoute>} />
+              <Route path="/admin/commission-analytics" element={<ProtectedAdminRoute><CommissionAnalytics /></ProtectedAdminRoute>} />
+              <Route path="/admin/subscriptions" element={<ProtectedAdminRoute><SubscriptionDashboard /></ProtectedAdminRoute>} />
+              <Route path="/admin/subscription-setup" element={<ProtectedAdminRoute><SubscriptionSetup /></ProtectedAdminRoute>} />
+              <Route path="/admin/event-admin-payouts" element={<ProtectedAdminRoute><EventAdminPayouts /></ProtectedAdminRoute>} />
             
               {/* Event Admin routes */}
             <Route path="/event-admin/login" element={<EventAdminLogin />} />
@@ -139,7 +167,12 @@ export default function App(){
             {/* Staff Scanner area (Scanner Only) */}
             <Route path="/staff/login" element={<StaffLogin />} />
             <Route path="/staff/scanner" element={<ProtectedRoute><StaffScanner /></ProtectedRoute>} />
-            <Route path="/staff/hp-scanner" element={<ProtectedRoute><HighPerformanceScannerScreen /></ProtectedRoute>} />
+            <Route path="/staff/hp-scanner" element={<Navigate to="/staff/scanner" replace />} />
+
+            {/* Event Admin Routes */}
+            <Route path="/event-admin/dashboard" element={<ProtectedRoute allowedRoles={["event_admin"]}><OrganizerMainDashboard /></ProtectedRoute>} />
+            <Route path="/event-admin/revenue" element={<ProtectedRoute allowedRoles={["event_admin"]}><OrganizerRevenueDashboard /></ProtectedRoute>} />
+            <Route path="/event-admin/payout" element={<ProtectedRoute allowedRoles={["event_admin"]}><PayoutRequest /></ProtectedRoute>} />
 
             {/* Super Admin routes */}
             <Route path="/super-admin/login" element={<SuperAdminLogin />} />
@@ -160,6 +193,7 @@ export default function App(){
 
         {!isAdminRoute && !isEventAdminRoute && !isStaffAdminRoute && !isStaffRoute && !isSuperAdminRoute && <Footer />}
       </div>
+      </LoadingProvider>
     </DarkModeProvider>
   )
 }

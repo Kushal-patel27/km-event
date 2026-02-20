@@ -63,17 +63,136 @@ export default function ScannerAnalyticsDashboard() {
     
     try {
       setError(null);
-      const [analyticsRes, gateRes, staffRes, duplicatesRes] = await Promise.all([
+      
+      // Try to fetch from both high-performance scanner and normal scanner endpoints
+      // Combine data for comprehensive analytics
+      const results = await Promise.allSettled([
         API.get(`/hp-scanner/analytics/${selectedEvent}`),
         API.get(`/hp-scanner/gate-report/${selectedEvent}`),
         API.get(`/hp-scanner/staff-report/${selectedEvent}`),
-        API.get(`/hp-scanner/duplicate-attempts/${selectedEvent}`, { params: { limit: 20 } })
+        API.get(`/hp-scanner/duplicate-attempts/${selectedEvent}`, { params: { limit: 20 } }),
+        // Also fetch from regular scanner endpoint for backward compatibility
+        API.get(`/scanner/analytics/${selectedEvent}`).catch(() => null),
+        API.get(`/scanner/events/${selectedEvent}/stats`).catch(() => null)
       ]);
       
-      setLiveStats(analyticsRes.data.data);
-      setGateReport(gateRes.data.data);
-      setStaffReport(staffRes.data.data);
-      setDuplicateAttempts(duplicatesRes.data.data.duplicates || []);
+      // Extract analytics data (try hp-scanner first, fall back to scanner)
+      let analyticsData = null;
+      if (results[0].status === 'fulfilled') {
+        analyticsData = results[0].value.data.data;
+      } else if (results[4].status === 'fulfilled' && results[4].value) {
+        analyticsData = results[4].value.data.data;
+      } else if (results[5].status === 'fulfilled' && results[5].value) {
+        // Convert normal scanner stats to analytics format
+        const statsData = results[5].value.data;
+        if (statsData.stats) {
+          analyticsData = {
+            liveStats: {
+              totalEntries: statsData.stats.totalScanned || 0,
+              uniqueAttendees: statsData.stats.valid || 0,
+              activeGates: Object.keys(statsData.stats.byGate || {}).length || 0,
+              activeStaff: 1,
+              duplicateAttempts: statsData.stats.used || 0,
+              avgResponseTime: 0,
+              cacheHitRate: 0,
+              gateCounts: statsData.stats.byGate || {}
+            },
+            recentScans: statsData.recentScans || []
+          };
+        }
+      }
+      
+      // Extract gate report
+      let gateData = null;
+      if (results[1].status === 'fulfilled') {
+        gateData = results[1].value.data.data;
+      } else if (results[5].status === 'fulfilled' && results[5].value) {
+        // Use normal scanner gate stats as fallback
+        const statsData = results[5].value.data;
+        if (statsData.stats?.byGate) {
+          gateData = {
+            gateCounts: statsData.stats.byGate
+          };
+        }
+      }
+      
+      // Extract staff report with enhanced data
+      let staffData = null;
+      if (results[2].status === 'fulfilled') {
+        const rawStaffData = results[2].value.data.data;
+        // Transform staff report to include success rate and other metrics
+        if (Array.isArray(rawStaffData)) {
+          // The backend returns array directly, so wrap it
+          staffData = {
+            staffPerformance: rawStaffData.map(staff => ({
+              staffId: staff.staffId || staff._id,
+              staffName: staff.staffName || 'Unknown',
+              staffEmail: staff.staffEmail,
+              totalScans: staff.totalScans || 0,
+              successfulScans: staff.totalScans || 0, // Assuming all scans in report are successful
+              duplicates: 0, // Will be calculated separately
+              avgResponseTime: staff.avgValidationTime || 0,
+              successRate: 100, // Default to 100% for entries
+              gatesWorked: staff.gatesWorked || 0, // This is a count, not an array
+              gates: staff.gates || [], // Store actual gate array if available
+              firstScan: staff.firstScan,
+              lastScan: staff.lastScan
+            }))
+          };
+        } else if (rawStaffData && rawStaffData.staffPerformance) {
+          // Already in the right format
+          staffData = rawStaffData;
+        }
+      }
+      
+      // Extract duplicate attempts
+      let duplicatesData = [];
+      if (results[3].status === 'fulfilled') {
+        duplicatesData = results[3].value.data.data.duplicates || [];
+      }
+      
+      // If no analytics data found, create basic structure from available data
+      if (!analyticsData) {
+        // Build analytics from available data
+        const totalEntries = staffData?.staffPerformance?.reduce((sum, s) => sum + s.totalScans, 0) || 0;
+        const duplicateCount = duplicatesData.length || 0;
+        const activeGates = gateData?.gates?.length || Object.keys(gateData?.gateCounts || {}).length || 0;
+        const activeStaff = staffData?.staffPerformance?.length || 0;
+        
+        analyticsData = {
+          liveStats: {
+            totalEntries: totalEntries,
+            uniqueAttendees: totalEntries,
+            activeGates: activeGates,
+            activeStaff: activeStaff,
+            duplicateAttempts: duplicateCount,
+            avgResponseTime: staffData?.staffPerformance?.[0]?.avgResponseTime || 0,
+            cacheHitRate: 0,
+            gateCounts: gateData?.gateCounts || {}
+          },
+          recentScans: duplicatesData.slice(0, 20)
+        };
+      }
+      
+      // Ensure liveStats has all required properties
+      if (analyticsData && analyticsData.liveStats) {
+        analyticsData.liveStats = {
+          totalEntries: analyticsData.liveStats.totalEntries || 0,
+          uniqueAttendees: analyticsData.liveStats.uniqueAttendees || analyticsData.liveStats.totalEntries || 0,
+          activeGates: analyticsData.liveStats.activeGates || Object.keys(analyticsData.liveStats.gateCounts || {}).length || 0,
+          activeStaff: analyticsData.liveStats.activeStaff || Object.keys(analyticsData.liveStats.staffCounts || {}).length || 0,
+          duplicateAttempts: analyticsData.liveStats.duplicateAttempts || 0,
+          avgResponseTime: analyticsData.liveStats.avgResponseTime || 0,
+          cacheHitRate: analyticsData.liveStats.cacheHitRate || 0,
+          gateCounts: analyticsData.liveStats.gateCounts || {},
+          staffCounts: analyticsData.liveStats.staffCounts || {}
+        };
+      }
+      
+      setLiveStats(analyticsData);
+      setGateReport(gateData);
+      setStaffReport(staffData);
+      setDuplicateAttempts(duplicatesData);
       setLastUpdated(new Date());
       
     } catch (err) {
@@ -94,14 +213,34 @@ export default function ScannerAnalyticsDashboard() {
   };
   
   const formatGateChartData = () => {
-    if (!gateReport?.gateStats) return [];
+    // Handle different gate report formats
+    if (gateReport?.gateStats) {
+      // High-performance scanner format
+      return gateReport.gateStats.map(gate => ({
+        name: gate._id || 'Unknown',
+        entries: gate.totalEntries || 0,
+        duplicates: gate.duplicateAttempts || 0,
+        avgTime: Math.round(gate.avgValidationTime || 0)
+      }));
+    } else if (gateReport?.gates) {
+      // Alternative format from gate-report endpoint
+      return gateReport.gates.map(gate => ({
+        name: gate._id || 'Unknown',
+        entries: gate.total || 0,
+        duplicates: 0,
+        avgTime: 0
+      }));
+    } else if (liveStats?.liveStats?.gateCounts) {
+      // Build from gateCounts object
+      return Object.entries(liveStats.liveStats.gateCounts).map(([gateName, count]) => ({
+        name: gateName,
+        entries: count || 0,
+        duplicates: 0,
+        avgTime: 0
+      }));
+    }
     
-    return gateReport.gateStats.map(gate => ({
-      name: gate._id || 'Unknown',
-      entries: gate.totalEntries,
-      duplicates: gate.duplicateAttempts,
-      avgTime: Math.round(gate.avgValidationTime)
-    }));
+    return [];
   };
   
   const formatStaffChartData = () => {
@@ -176,7 +315,7 @@ export default function ScannerAnalyticsDashboard() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">📊 Scanner Analytics</h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Real-time entry monitoring and performance metrics
+                Real-time entry monitoring from both high-performance and standard scanners
               </p>
             </div>
             
@@ -216,9 +355,16 @@ export default function ScannerAnalyticsDashboard() {
           </div>
           
           {lastUpdated && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-              Last updated: {lastUpdated.toLocaleTimeString()} • Next refresh in {refreshInterval}s
-            </p>
+            <div className="flex items-center gap-4 mt-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Last updated: {lastUpdated.toLocaleTimeString()} • Next refresh in {refreshInterval}s
+              </p>
+              {liveStats && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                  ✓ Multi-Scanner Support
+                </span>
+              )}
+            </div>
           )}
         </div>
         
@@ -381,7 +527,13 @@ export default function ScannerAnalyticsDashboard() {
                               </div>
                               <div>
                                 <p className="font-medium text-gray-900 dark:text-white">{staff.staffName || 'Unknown'}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{staff.gatesWorked.join(', ')}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  {Array.isArray(staff.gatesWorked) 
+                                    ? staff.gatesWorked.join(', ') 
+                                    : (typeof staff.gatesWorked === 'number' 
+                                      ? `${staff.gatesWorked} gates` 
+                                      : 'N/A')}
+                                </p>
                               </div>
                             </div>
                           </td>

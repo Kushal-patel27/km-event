@@ -78,11 +78,16 @@ export const createPlan = async (req, res) => {
     const planData = req.body
     
     // Validate required fields
-    if (!planData.name || !planData.displayName || !planData.description) {
+    if (!planData.name || !planData.description) {
       return res.status(400).json({ 
         success: false,
-        message: 'Name, Display Name, and Description are required' 
+        message: 'Name and Description are required' 
       })
+    }
+    
+    // If displayName is not provided, use name as displayName
+    if (!planData.displayName) {
+      planData.displayName = planData.name
     }
     
     const existingPlan = await SubscriptionPlan.findOne({ name: planData.name })
@@ -126,12 +131,10 @@ export const updatePlan = async (req, res) => {
     const { id } = req.params
     const updates = req.body
 
-    // Validate required fields
-    if (!updates.displayName || !updates.description) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Display Name and Description are required' 
-      })
+    // Validate required fields if they are being updated
+    if (updates.name && !updates.displayName) {
+      // If name is provided but displayName isn't, use name as displayName
+      updates.displayName = updates.name
     }
 
     const plan = await SubscriptionPlan.findByIdAndUpdate(

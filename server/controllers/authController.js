@@ -310,7 +310,10 @@ export const getMe = async (req, res) => {
   try {
     // req.user is set by protect middleware without password
     if (!req.user) return res.status(401).json({ message: "Not authorized" });
-    res.json(req.user);
+    const userWithPassword = await User.findById(req.user._id).select("password");
+    const hasPassword = Boolean(userWithPassword?.password);
+    const base = req.user.toObject ? req.user.toObject() : req.user;
+    res.json({ ...base, hasPassword });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -410,6 +413,34 @@ export const changePassword = async (req, res) => {
   }
 };
 
+// Set password for OAuth/first-time accounts
+export const setPassword = async (req, res) => {
+  const { newPassword } = req.body;
+  try {
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+    if (!newPassword) {
+      return res.status(400).json({ message: "New password is required" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.password) {
+      return res.status(400).json({ message: "Password already set. Use change password." });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: "Password set successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const requestPasswordResetOtp = async (req, res) => {
   const email = req.body?.email?.trim().toLowerCase();
   if (!email) return res.status(400).json({ message: "Email is required" });
@@ -420,7 +451,7 @@ export const requestPasswordResetOtp = async (req, res) => {
     const user = await User.findOne({ email });
 
     // Always return generic response for non-existent accounts
-    if (!user || !user.password) {
+    if (!user) {
       await logSecurityEvent({ req, email, type: "password_reset_requested_no_account" });
       return res.json({ message: publicMessage });
     }

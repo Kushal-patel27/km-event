@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import API from '../../services/api'
@@ -6,13 +6,6 @@ import SuperAdminLayout from '../../components/layout/SuperAdminLayout'
 import formatINR from '../../utils/currency'
 
 const PAGE_SIZE = 10
-
-const planPricing = {
-  Basic: '₹999',
-  Standard: '₹2,499',
-  Professional: '₹4,999',
-  Enterprise: 'Custom'
-}
 
 export default function SuperAdminEventRequests() {
   const navigate = useNavigate()
@@ -26,6 +19,7 @@ export default function SuperAdminEventRequests() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [planCatalog, setPlanCatalog] = useState([])
 
   const fetchRequests = useCallback(async (options = {}) => {
     const { silent } = options
@@ -62,6 +56,55 @@ export default function SuperAdminEventRequests() {
     fetchRequests()
     setRejectReason('')
   }, [fetchRequests])
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const { data } = await API.get('/subscriptions/plans')
+        const apiPlans = Array.isArray(data?.plans)
+          ? data.plans
+          : Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data)
+              ? data
+              : []
+        setPlanCatalog(apiPlans)
+      } catch (err) {
+        console.error('Error fetching plans:', err)
+        setPlanCatalog([])
+      }
+    }
+    fetchPlans()
+  }, [])
+
+  const planLookup = useMemo(() => {
+    return planCatalog.reduce((acc, plan) => {
+      acc[plan.name] = plan
+      return acc
+    }, {})
+  }, [planCatalog])
+
+  const getPlanDisplay = (planName, planFromRequest) => {
+    const plan = planFromRequest || planLookup[planName]
+    if (!plan) {
+      return { name: planName || 'N/A', priceLabel: 'N/A' }
+    }
+
+    const displayName = plan.displayName || plan.name
+    const monthlyFee = plan.monthlyFee ?? 0
+    const commissionLabel = plan.commissionPercentage !== undefined
+      ? `Commission ${plan.commissionPercentage}%`
+      : null
+
+    let priceLabel = 'Free'
+    if (monthlyFee > 0) {
+      priceLabel = `${formatINR(monthlyFee)}/month`
+    } else if (commissionLabel) {
+      priceLabel = commissionLabel
+    }
+
+    return { name: displayName, priceLabel }
+  }
 
   const handlePageChange = (nextPage) => {
     if (nextPage < 1 || nextPage > totalPages) return
@@ -184,16 +227,12 @@ export default function SuperAdminEventRequests() {
                   <p className="font-medium text-gray-900">{request.totalTickets}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Price</p>
-                  <p className="font-medium text-gray-900">{formatINR(request.price)}</p>
-                </div>
-                <div>
                   <p className="text-gray-600">Subscription Plan</p>
-                  <p className="font-medium text-blue-600">{request.planSelected}</p>
+                  <p className="font-medium text-blue-600">{getPlanDisplay(request.planSelected, request.subscriptionPlan).name}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Plan Price</p>
-                  <p className="font-medium text-green-600">{planPricing[request.planSelected] || 'N/A'}</p>
+                  <p className="text-gray-600">Plan Fee</p>
+                  <p className="font-medium text-green-600">{getPlanDisplay(request.planSelected, request.subscriptionPlan).priceLabel}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Category</p>
@@ -225,11 +264,11 @@ export default function SuperAdminEventRequests() {
                     <div className="grid md:grid-cols-2 gap-3">
                       <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-blue-100">
                         <span className="text-sm font-medium text-gray-700">Plan Type</span>
-                        <span className="text-sm font-bold text-blue-700">{request.planSelected}</span>
+                        <span className="text-sm font-bold text-blue-700">{getPlanDisplay(request.planSelected, request.subscriptionPlan).name}</span>
                       </div>
                       <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-blue-100">
-                        <span className="text-sm font-medium text-gray-700">Plan Price</span>
-                        <span className="text-sm font-bold text-green-700">{planPricing[request.planSelected] || 'N/A'}</span>
+                        <span className="text-sm font-medium text-gray-700">Plan Fee</span>
+                        <span className="text-sm font-bold text-green-700">{getPlanDisplay(request.planSelected, request.subscriptionPlan).priceLabel}</span>
                       </div>
                     </div>
                     {request.subscriptionPlan && (

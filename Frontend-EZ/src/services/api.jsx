@@ -63,3 +63,11 @@ export const seedHelpArticlesAdmin = () => API.post('/help/admin/seed')
 export const requestPasswordResetOtp = (email) => API.post('/auth/password/forgot', { email })
 export const verifyPasswordResetOtp = (data) => API.post('/auth/password/verify-otp', data)
 export const resetPasswordWithToken = (data) => API.post('/auth/password/reset', data)
+
+// Waitlist helpers
+export const joinWaitlist = (data) => API.post('/waitlist/join', data)
+export const leaveWaitlist = (waitlistId) => API.delete(`/waitlist/${waitlistId}`)
+export const getMyWaitlist = (params = {}) => API.get('/waitlist/my-waitlist', { params })
+export const getEventWaitlist = (eventId, params = {}) => API.get(`/waitlist/event/${eventId}`, { params })
+export const getWaitlistAnalytics = (eventId) => API.get(`/waitlist/event/${eventId}/analytics`)
+export const triggerWaitlistNotification = (eventId, data) => API.post(`/waitlist/event/${eventId}/notify`, data)

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import AdminLayout from '../../components/layout/AdminLayout'
+import ExportDataModal from '../../components/admin/ExportDataModal'
 import API from '../../services/api'
 import formatINR from '../../utils/currency'
 
@@ -19,6 +20,7 @@ export default function AdminDashboard(){
   const [notifications, setNotifications] = useState([])
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [templateName, setTemplateName] = useState('')
+  const [showExportModal, setShowExportModal] = useState(false)
   const editorRef = useRef(null)
 
   useEffect(()=>{
@@ -112,6 +114,72 @@ export default function AdminDashboard(){
     }
   }
 
+  const handleExport = async (format, filters) => {
+    try {
+      setError('')
+      
+      // Build query params - export events by default
+      const params = new URLSearchParams({ format })
+      
+      if (filters.startDate) params.append('startDate', filters.startDate)
+      if (filters.endDate) params.append('endDate', filters.endDate)
+      if (filters.category) params.append('category', filters.category)
+      if (filters.status) params.append('status', filters.status)
+      
+      // Call export API
+      const response = await API.get(`/admin/export/events?${params.toString()}`, {
+        responseType: 'blob'
+      })
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Determine file extension
+      const ext = format === 'csv' ? 'csv' : format === 'xlsx' ? 'xlsx' : 'pdf'
+      link.setAttribute('download', `events-export-${Date.now()}.${ext}`)
+      
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Export error:', err)
+      setError(err.response?.data?.message || 'Failed to export data')
+    }
+  }
+
+  // Filter configuration for export modal
+  const exportFilters = [
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      type: 'date',
+    },
+    {
+      key: 'endDate',
+      label: 'End Date',
+      type: 'date',
+    },
+    {
+      key: 'category',
+      label: 'Category',
+      type: 'text',
+    },
+    {
+      key: 'status',
+      label: 'Event Status',
+      type: 'select',
+      options: [
+        { value: 'upcoming', label: 'Upcoming' },
+        { value: 'ongoing', label: 'Ongoing' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' },
+      ],
+    },
+  ]
+
   return (
     <AdminLayout title="Dashboard">
       {loading && (
@@ -123,6 +191,14 @@ export default function AdminDashboard(){
 
       {!loading && !error && overview && (
         <div className="space-y-8">
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+            >
+              📥 Export Events
+            </button>
+          </div>
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -345,6 +421,14 @@ export default function AdminDashboard(){
           </div>
         </div>
       )}
+
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+        title="Export Events"
+        filters={exportFilters}
+      />
     </AdminLayout>
   )
 }

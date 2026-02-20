@@ -6,26 +6,50 @@ import { Link } from 'react-router-dom'
 
 export default function EventAdminDashboard(){
   const [dashboard, setDashboard] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [revenueSummary, setRevenueSummary] = useState(null)
+  const [loadingDashboard, setLoadingDashboard] = useState(true)
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(()=>{
     const load = async () => {
       try {
-        setLoading(true)
         setError('')
-        const res = await API.get('/event-admin/dashboard')
-        setDashboard(res.data)
+        setLoadingDashboard(true)
+        setLoadingAnalytics(true)
+
+        const dashboardPromise = API.get('/event-admin/dashboard')
+        const analyticsPromise = API.get('/subscriptions/analytics/event-admin')
+
+        dashboardPromise
+          .then((dashboardRes) => {
+            setDashboard(dashboardRes.data)
+          })
+          .catch((err) => {
+            setError(err.response?.data?.message || 'Failed to load dashboard')
+          })
+          .finally(() => {
+            setLoadingDashboard(false)
+          })
+
+        analyticsPromise
+          .then((analyticsRes) => {
+            setRevenueSummary(analyticsRes.data?.data?.summary || null)
+          })
+          .catch(() => {
+            // Keep dashboard usable even if analytics is slow or fails.
+          })
+          .finally(() => {
+            setLoadingAnalytics(false)
+          })
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load dashboard')
-      } finally {
-        setLoading(false)
       }
     }
     load()
   }, [])
 
-  if (loading) {
+  if (loadingDashboard) {
     return (
       <EventAdminLayout title="Dashboard">
         <div className="flex items-center justify-center py-12">
@@ -46,6 +70,7 @@ export default function EventAdminDashboard(){
   }
 
   const stats = dashboard?.stats || {};
+  const ticketsSold = revenueSummary?.totalTickets ?? stats.totalBookings ?? 0;
   const upcomingEvents = dashboard?.upcomingEvents || [];
   const recentBookings = dashboard?.recentBookings || [];
 
@@ -78,6 +103,42 @@ export default function EventAdminDashboard(){
             icon="💰"
             color="bg-gradient-to-br from-yellow-400 to-yellow-600 text-white"
           />
+        </div>
+
+        {/* Revenue Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white border border-blue-200 rounded-xl p-5 shadow-sm">
+            <div className="text-xs font-semibold text-blue-600 uppercase">Total Revenue</div>
+            <div className="text-2xl font-bold text-blue-900 mt-2">
+              {formatINR(revenueSummary?.totalRevenue ?? stats.totalRevenue ?? 0)}
+            </div>
+            <div className="text-xs text-blue-700 mt-1">{ticketsSold} tickets sold</div>
+            {loadingAnalytics && (
+              <div className="text-[11px] text-blue-500 mt-2">Updating analytics...</div>
+            )}
+          </div>
+
+          <div className="bg-white border border-red-200 rounded-xl p-5 shadow-sm">
+            <div className="text-xs font-semibold text-red-600 uppercase">Commission Deducted</div>
+            <div className="text-2xl font-bold text-red-900 mt-2">
+              {formatINR(revenueSummary?.totalCommissionDeducted ?? 0)}
+            </div>
+            <div className="text-xs text-red-700 mt-1">10% average</div>
+            {loadingAnalytics && (
+              <div className="text-[11px] text-red-500 mt-2">Updating analytics...</div>
+            )}
+          </div>
+
+          <div className="bg-white border border-green-200 rounded-xl p-5 shadow-sm">
+            <div className="text-xs font-semibold text-green-600 uppercase">Your Payout</div>
+            <div className="text-2xl font-bold text-green-900 mt-2">
+              {formatINR(revenueSummary?.totalNetPayout ?? revenueSummary?.totalPayout ?? 0)}
+            </div>
+            <div className="text-xs text-green-700 mt-1">After commission</div>
+            {loadingAnalytics && (
+              <div className="text-[11px] text-green-500 mt-2">Updating analytics...</div>
+            )}
+          </div>
         </div>
 
         {/* Upcoming Events */}
@@ -159,14 +220,18 @@ function StatCard({ label, value, icon, color }){
   
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 gap-3">
         <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">{label}</span>
         <div className={`${color} w-10 h-10 rounded-lg flex items-center justify-center text-xl shadow-sm`}>
           {icon}
         </div>
       </div>
-      <div className={`font-bold text-gray-900 ${isRevenue ? 'text-xl sm:text-2xl' : 'text-3xl'}`}>
-        {value}
+      <div className="min-w-0 w-full">
+        <div className={`font-bold text-gray-900 leading-tight whitespace-nowrap tabular-nums tracking-tight ${
+          isRevenue ? 'text-[clamp(0.55rem,1.4vw,1.2rem)]' : 'text-3xl'
+        }`}>
+          {value}
+        </div>
       </div>
     </div>
   )

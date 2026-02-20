@@ -26,8 +26,7 @@ const categorySchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
-// Index for faster queries
-categorySchema.index({ name: 1 })
+// Index for faster queries (note: name field already has unique index via unique: true constraint)
 categorySchema.index({ isActive: 1, isDefault: -1 })
 
 export default mongoose.model('Category', categorySchema)

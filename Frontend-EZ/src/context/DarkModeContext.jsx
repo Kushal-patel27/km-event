@@ -14,18 +14,20 @@ export function useDarkMode() {
 export function DarkModeProvider({ children, forceDark = false }) {
   const [isDarkMode, setIsDarkMode] = useState(forceDark ? true : false)
   const location = useLocation()
-  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff') || location.pathname.startsWith('/event-admin')
-  const isHomeRoute = location.pathname === '/'
+
+  const isAdminRoute = (() => {
+    const path = location.pathname || ''
+    const adminPrefixes = ['/admin', '/super-admin', '/event-admin', '/staff-admin', '/staff']
+    return adminPrefixes.some(prefix => path.startsWith(prefix))
+  })()
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Always disable dark mode for admin/staff/event-admin routes
       if (isAdminRoute) {
-        document.documentElement.classList.remove('dark')
         setIsDarkMode(false)
+        document.documentElement.classList.remove('dark')
         return
       }
-
       const stored = localStorage.getItem('theme')
       const enableDark = stored === 'dark' ? true : false
       setIsDarkMode(enableDark)
@@ -35,11 +37,10 @@ export function DarkModeProvider({ children, forceDark = false }) {
         document.documentElement.classList.remove('dark')
       }
     }
-  }, [isAdminRoute, forceDark, isHomeRoute])
+  }, [forceDark, location.pathname, isAdminRoute])
 
   const toggleDarkMode = () => {
-    // Don't allow toggle if forceDark is true or on admin routes
-    if (forceDark || isAdminRoute || isHomeRoute) return
+    if (forceDark || isAdminRoute) return
     
     const newMode = !isDarkMode
     setIsDarkMode(newMode)

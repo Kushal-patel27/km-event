@@ -18,8 +18,6 @@ export const seedCategories = async () => {
       'Conference',
       'Other'
     ]
-
-    console.log('Seeding default categories...')
     
     for (const name of defaultCategories) {
       await Category.findOneAndUpdate(
@@ -36,10 +34,8 @@ export const seedCategories = async () => {
           setDefaultsOnInsert: true
         }
       )
-      console.log(`✓ Category "${name}" initialized`)
     }
 
-    console.log('✓ Default categories seeded successfully')
     return { success: true, message: 'Default categories initialized' }
   } catch (error) {
     console.error('Error seeding categories:', error)

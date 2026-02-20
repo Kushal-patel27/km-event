@@ -10,10 +10,13 @@ import {
   createEvent,
   getEventDetails,
   updateEvent,
+  deleteEvent,
   getBookings,
   updateBookingStatus,
   getContacts,
   replyContact,
+  exportEventsData,
+  exportBookingsData,
 } from "../controllers/adminController.js";
 import { sendNotification, listNotifications, listTemplates, saveTemplate } from "../controllers/notificationController.js";
 
@@ -36,6 +39,7 @@ router.get("/events", getEvents);
 router.post("/events", createEvent);
 router.get("/events/:eventId", getEventDetails);
 router.put("/events/:eventId", updateEvent);
+router.delete("/events/:eventId", deleteEvent);
 
 // ============ BOOKING MANAGEMENT ============
 router.get("/bookings", getBookings);
@@ -50,5 +54,9 @@ router.post("/notifications/send", sendNotification);
 router.get("/notifications", listNotifications);
 router.get("/notifications/templates", listTemplates);
 router.post("/notifications/templates", saveTemplate);
+
+// ============ EXPORT DATA ============
+router.get("/export/events", exportEventsData);
+router.get("/export/bookings", exportBookingsData);
 
 export default router;

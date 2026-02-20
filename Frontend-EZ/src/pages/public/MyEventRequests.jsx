@@ -4,18 +4,12 @@ import { motion } from 'framer-motion'
 import API from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { useDarkMode } from '../../context/DarkModeContext'
+import LoadingSpinner from '../../components/common/LoadingSpinner'
 
 const statusColors = {
   PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-800', badge: 'bg-yellow-200', darkBg: 'dark:bg-yellow-900/30', darkText: 'dark:text-yellow-300' },
   APPROVED: { bg: 'bg-green-100', text: 'text-green-800', badge: 'bg-green-200', darkBg: 'dark:bg-green-900/30', darkText: 'dark:text-green-300' },
   REJECTED: { bg: 'bg-red-100', text: 'text-red-800', badge: 'bg-red-200', darkBg: 'dark:bg-red-900/30', darkText: 'dark:text-red-300' }
-}
-
-const planPricing = {
-  Basic: '₹999',
-  Standard: '₹2,499',
-  Professional: '₹4,999',
-  Enterprise: 'Custom'
 }
 
 export default function MyEventRequests() {
@@ -71,18 +65,11 @@ export default function MyEventRequests() {
   }
 
   if (loading) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          <div className={`animate-spin rounded-full h-12 w-12 border-4 border-gray-300 mx-auto mb-4 ${isDarkMode ? 'border-t-red-400' : 'border-t-red-600'}`}></div>
-          <p>Loading your requests...</p>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner message="Loading your requests..." />
   }
 
   return (
-    <div className={`min-h-screen py-8 px-4 transition-colors ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen py-8 px-4 transition-colors ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
@@ -142,7 +129,7 @@ export default function MyEventRequests() {
                     ? 'bg-blue-600 text-white'
                     : 'bg-blue-600 text-white'
                   : isDarkMode
-                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-black border border-white/10 text-gray-300 hover:bg-black/80'
                   : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
               }`}
             >
@@ -156,7 +143,7 @@ export default function MyEventRequests() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`text-center py-12 rounded-lg ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}
+            className={`text-center py-12 rounded-lg ${isDarkMode ? 'bg-black border border-white/10' : 'bg-white border border-gray-200'}`}
           >
             <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
               {requests.length === 0 
@@ -186,7 +173,7 @@ export default function MyEventRequests() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`rounded-lg overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                  className={`rounded-lg overflow-hidden ${isDarkMode ? 'bg-black' : 'bg-white'} border ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}
                 >
                   {/* Request Summary */}
                   <button
@@ -266,8 +253,8 @@ export default function MyEventRequests() {
                               <p className={isDarkMode ? 'text-gray-300' : 'text-gray-800'}>{request.organizerPhone || 'Not provided'}</p>
                             </div>
                             <div>
-                              <span className={`font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Plan Price:</span>
-                              <p className={isDarkMode ? 'text-gray-300' : 'text-gray-800'}>{planPricing[request.planSelected] || '—'}</p>
+                              <span className={`font-semibold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Plan:</span>
+                              <p className={isDarkMode ? 'text-gray-300' : 'text-gray-800'}>{request.planSelected || '—'}</p>
                             </div>
                           </div>
                         </div>
