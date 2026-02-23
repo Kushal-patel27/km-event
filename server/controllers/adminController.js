@@ -5,6 +5,44 @@ import Event from "../models/Event.js";
 import Booking from "../models/Booking.js";
 import Contact from "../models/Contact.js";
 import { sendReplyEmail } from "../utils/emailService.js";
+import { notifyNextInLine } from "./waitlistController.js";
+import { generateCSV, generateExcel, generatePDF, formatDate, formatCurrency, formatStatus } from "../utils/exportUtils.js";
+
+const CANCELLATION_STATUSES = new Set(["cancelled", "refunded"]);
+
+async function restoreTicketsAndNotifyWaitlist(booking) {
+  if (!booking?.event) return;
+
+  const eventId = booking.event?._id || booking.event;
+  const event = await Event.findById(eventId);
+  if (!event) return;
+
+  const quantity = Number(booking.quantity) || 0;
+  if (quantity <= 0) return;
+
+  if (Array.isArray(event.ticketTypes) && event.ticketTypes.length > 0 && booking.ticketType?.name) {
+    const ticketType = event.ticketTypes.find(t => t.name === booking.ticketType.name);
+    if (ticketType) {
+      ticketType.available = (ticketType.available ?? 0) + quantity;
+    }
+
+    const aggregatedAvailable = event.ticketTypes.reduce((sum, t) => sum + (t?.available ?? 0), 0);
+    const aggregatedTotal = event.ticketTypes.reduce((sum, t) => sum + (t?.quantity ?? 0), 0);
+    event.availableTickets = Math.max(0, aggregatedAvailable);
+    event.totalTickets = Math.max(0, aggregatedTotal);
+  } else if (typeof event.availableTickets === "number") {
+    event.availableTickets = Math.max(0, event.availableTickets + quantity);
+  }
+
+  await event.save();
+
+  try {
+    const ticketTypeName = booking.ticketType?.name || "General";
+    await notifyNextInLine(event._id, ticketTypeName, quantity);
+  } catch (waitlistError) {
+    console.error("Error notifying waitlist:", waitlistError);
+  }
+}
 
 // ============ DASHBOARD ANALYTICS ============
 
@@ -15,8 +53,8 @@ export const getDashboardOverview = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    // Get admin's events (or all if super_admin)
-    const eventFilter = req.user.role === "super_admin" ? {} : { organizer: userId };
+    // Get events for admin dashboard (all events for admin/super_admin)
+    const eventFilter = ["super_admin", "admin"].includes(req.user.role) ? {} : { organizer: userId };
     const events = await Event.find(eventFilter).lean();
 
     // Get bookings for those events
@@ -34,7 +72,7 @@ export const getDashboardOverview = async (req, res) => {
       return false;
     }).length;
     const totalBookings = bookings.length;
-    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount ?? b.totalPrice ?? 0), 0);
     const confirmedBookings = bookings.filter((b) => b.status === "confirmed").length;
 
     res.json({
@@ -301,7 +339,7 @@ export const getEventDetails = async (req, res) => {
 
     // Get booking analytics
     const bookings = await Booking.find({ event: eventId }).lean();
-    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount ?? b.totalPrice ?? 0), 0);
 
     res.json({
       event,
@@ -440,6 +478,50 @@ export const updateEvent = async (req, res) => {
   }
 };
 
+/**
+ * Delete an event (admin/super_admin only, must own the event or be super_admin)
+ */
+export const deleteEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+      return res.status(400).json({ message: "Invalid event ID" });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Check authorization - only super_admin or the event organizer can delete
+    if (req.user.role !== "super_admin" && event.organizer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized to delete this event" });
+    }
+
+    // Optional: Check if there are active bookings
+    const activeBookingsCount = await Booking.countDocuments({ 
+      event: eventId, 
+      status: { $nin: ['cancelled', 'refunded'] }
+    });
+
+    if (activeBookingsCount > 0) {
+      return res.status(400).json({ 
+        message: `Cannot delete event with ${activeBookingsCount} active bookings. Please cancel all bookings first.` 
+      });
+    }
+
+    await Event.findByIdAndDelete(eventId);
+
+    res.json({
+      message: "Event deleted successfully",
+      eventId
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // ============ BOOKING MANAGEMENT ============
 
 /**
@@ -510,8 +592,13 @@ export const updateBookingStatus = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
+    const previousStatus = booking.status;
     booking.status = status;
     await booking.save();
+
+    if (CANCELLATION_STATUSES.has(status) && !CANCELLATION_STATUSES.has(previousStatus)) {
+      await restoreTicketsAndNotifyWaitlist(booking);
+    }
 
     res.json({
       message: "Booking status updated",
@@ -612,3 +699,179 @@ export const replyContact = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// ============ EXPORT DATA FUNCTIONS ============
+
+/**
+ * Export events data with filters
+ */
+export const exportEventsData = async (req, res) => {
+  try {
+    const { format = 'csv', startDate, endDate, category, location, status } = req.query;
+
+    // Build filter query
+    const filter = {};
+    
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = new Date(startDate);
+      if (endDate) filter.date.$lte = new Date(endDate);
+    }
+    
+    if (category) filter.category = category;
+    if (location) filter.location = { $regex: location, $options: 'i' };
+    if (status) filter.status = status;
+
+    // Fetch events
+    const events = await Event.find(filter)
+      .populate('organizer', 'name email')
+      .sort({ date: -1 })
+      .lean();
+
+    // Define columns for export
+    const columns = [
+      { key: 'title', header: 'Event Title', width: 30 },
+      { key: 'date', header: 'Event Date', width: 20, format: formatDate },
+      { key: 'location', header: 'Location', width: 25 },
+      { key: 'category', header: 'Category', width: 15 },
+      { key: 'price', header: 'Price (INR)', width: 15, format: formatCurrency },
+      { key: 'totalTickets', header: 'Total Tickets', width: 15 },
+      { key: 'availableTickets', header: 'Available Tickets', width: 18 },
+      { key: 'organizerName', header: 'Organizer', width: 20 },
+      { key: 'status', header: 'Status', width: 15, format: formatStatus },
+      { key: 'createdAt', header: 'Created At', width: 20, format: formatDate }
+    ];
+
+    // Format data for export
+    const exportData = events.map(event => ({
+      ...event,
+      organizerName: event.organizer?.name || 'N/A',
+      totalTickets: event.totalTickets || event.capacity || 0,
+      availableTickets: event.availableTickets || 0
+    }));
+
+    // Generate export based on format
+    if (format === 'csv') {
+      const csv = generateCSV(exportData, columns);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=events-export-${Date.now()}.csv`);
+      return res.send(csv);
+    }
+
+    if (format === 'xlsx') {
+      const buffer = await generateExcel(exportData, columns, 'Events');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=events-export-${Date.now()}.xlsx`);
+      return res.send(buffer);
+    }
+
+    if (format === 'pdf') {
+      const buffer = await generatePDF(exportData, columns, {
+        title: 'Events Report',
+        subtitle: `Generated on ${formatDate(new Date())}`
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=events-export-${Date.now()}.pdf`);
+      return res.send(buffer);
+    }
+
+    return res.status(400).json({ message: 'Invalid format. Use csv, xlsx, or pdf' });
+  } catch (error) {
+    console.error('Export events error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Export bookings data with filters
+ */
+export const exportBookingsData = async (req, res) => {
+  try {
+    const { format = 'csv', startDate, endDate, status, eventId, paymentStatus } = req.query;
+
+    // Build filter query
+    const filter = {};
+    
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+    
+    if (status) filter.status = status;
+    if (eventId) filter.event = eventId;
+    if (paymentStatus) filter.paymentStatus = paymentStatus;
+
+    // Fetch bookings
+    const bookings = await Booking.find(filter)
+      .populate('user', 'name email phone')
+      .populate('event', 'title date location')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Define columns for export
+    const columns = [
+      { key: 'bookingId', header: 'Booking ID', width: 25 },
+      { key: 'customerName', header: 'Customer Name', width: 25 },
+      { key: 'customerEmail', header: 'Customer Email', width: 30 },
+      { key: 'customerPhone', header: 'Phone', width: 18 },
+      { key: 'eventTitle', header: 'Event', width: 30 },
+      { key: 'eventDate', header: 'Event Date', width: 20, format: formatDate },
+      { key: 'ticketType', header: 'Ticket Type', width: 20 },
+      { key: 'quantity', header: 'Quantity', width: 12 },
+      { key: 'totalAmount', header: 'Amount (INR)', width: 15, format: formatCurrency },
+      { key: 'status', header: 'Booking Status', width: 15, format: formatStatus },
+      { key: 'paymentStatus', header: 'Payment Status', width: 15, format: formatStatus },
+      { key: 'bookingDate', header: 'Booking Date', width: 20, format: formatDate },
+      { key: 'scanned', header: 'Scanned', width: 12 }
+    ];
+
+    // Format data for export
+    const exportData = bookings.map(booking => ({
+      bookingId: booking._id.toString(),
+      customerName: booking.user?.name || 'N/A',
+      customerEmail: booking.user?.email || 'N/A',
+      customerPhone: booking.user?.phone || 'N/A',
+      eventTitle: booking.event?.title || 'N/A',
+      eventDate: booking.event?.date,
+      ticketType: booking.ticketType?.name || 'General',
+      quantity: booking.quantity || 1,
+      totalAmount: booking.totalAmount || booking.totalPrice || 0,
+      status: booking.status || 'pending',
+      paymentStatus: booking.paymentStatus || 'completed',
+      bookingDate: booking.createdAt,
+      scanned: booking.lastScannedAt ? 'Yes' : 'No'
+    }));
+
+    // Generate export based on format
+    if (format === 'csv') {
+      const csv = generateCSV(exportData, columns);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=bookings-export-${Date.now()}.csv`);
+      return res.send(csv);
+    }
+
+    if (format === 'xlsx') {
+      const buffer = await generateExcel(exportData, columns, 'Bookings');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=bookings-export-${Date.now()}.xlsx`);
+      return res.send(buffer);
+    }
+
+    if (format === 'pdf') {
+      const buffer = await generatePDF(exportData, columns, {
+        title: 'Bookings Report',
+        subtitle: `Generated on ${formatDate(new Date())}`
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=bookings-export-${Date.now()}.pdf`);
+      return res.send(buffer);
+    }
+
+    return res.status(400).json({ message: 'Invalid format. Use csv, xlsx, or pdf' });
+  } catch (error) {
+    console.error('Export bookings error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+

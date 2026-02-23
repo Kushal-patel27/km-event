@@ -1,10 +1,26 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import API from '../../services/api'
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout'
 import formatCurrency from '../../utils/currency'
 import { EventForm } from '../admin/AdminEvents'
 
+const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference']
+
+const featuresList = [
+  { key: 'ticketing', label: 'Ticketing' },
+  { key: 'qrCheckIn', label: 'QR Check-in' },
+  { key: 'scannerApp', label: 'Scanner App' },
+  { key: 'analytics', label: 'Analytics' },
+  { key: 'emailSms', label: 'Email/SMS' },
+  { key: 'payments', label: 'Payments' },
+  { key: 'weatherAlerts', label: 'Weather Alerts' },
+  { key: 'subAdmins', label: 'Sub-Admins' },
+  { key: 'reports', label: 'Reports' }
+]
+
 export default function SuperAdminEvents() {
+  const navigate = useNavigate()
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -15,6 +31,24 @@ export default function SuperAdminEvents() {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [editingMode, setEditingMode] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES)
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories()
+  }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const { data } = await API.get('/categories/all')
+      if (data && data.length > 0) {
+        const categoryNames = data.map(cat => cat.name).filter(name => name !== 'Other')
+        setCategories([...categoryNames, 'Other'])
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+    }
+  }
 
   // Prevent background scroll when modal is open
   useEffect(() => {
@@ -69,7 +103,18 @@ export default function SuperAdminEvents() {
   const handleEventDetails = async (eventId) => {
     try {
       const res = await API.get(`/super-admin/events/${eventId}`)
-      setSelectedEvent(res.data)
+      const data = res.data
+      
+      // Initialize features if not present
+      if (!data.features) {
+        const initialFeatures = {}
+        featuresList.forEach(feature => {
+          initialFeatures[feature.key] = { enabled: true, description: '' }
+        })
+        data.features = initialFeatures
+      }
+      
+      setSelectedEvent(data)
       setEditingMode(false)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load event details')
@@ -278,6 +323,12 @@ export default function SuperAdminEvents() {
                         Close
                       </button>
                       <button
+                        onClick={() => navigate(`/super-admin/event-requests/${selectedEvent.event._id}/features`)}
+                        className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                      >
+                        Configure Features
+                      </button>
+                      <button
                         onClick={() => setEditingMode(true)}
                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                       >
@@ -309,6 +360,7 @@ export default function SuperAdminEvents() {
                       onSave={handleUpdateEvent}
                       onCancel={() => setEditingMode(false)}
                       busy={saving}
+                      categories={categories}
                     />
                   </>
                 )}

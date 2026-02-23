@@ -49,7 +49,8 @@ const eventSchema = new mongoose.Schema(
     },
     category: { 
       type: String,
-      default: ''
+      default: '',
+      trim: true
     },
     status: {
       type: String,
@@ -100,7 +101,12 @@ const eventSchema = new mongoose.Schema(
         type: String,
         default: ''
       }
-    }]
+    }],
+    subscriptionPlan: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubscriptionPlan",
+      default: null
+    }
   },
   { timestamps: true }
 );

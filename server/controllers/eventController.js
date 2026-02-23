@@ -1,4 +1,6 @@
 import Event from "../models/Event.js";
+import OrganizerSubscription from "../models/OrganizerSubscription.js";
+import SubscriptionPlan from "../models/SubscriptionPlan.js";
 import { ADMIN_ROLE_SET } from "../models/User.js";
 
 export const createEvent = async (req, res) => {
@@ -24,6 +26,51 @@ export const createEvent = async (req, res) => {
 
     if (!Number.isFinite(totalTickets) || totalTickets < 1) {
       return res.status(400).json({ message: 'Total tickets must be at least 1' });
+    }
+
+    // Enforce plan limits for non-admin organizers
+    if (!ADMIN_ROLE_SET.has(req.user.role)) {
+      let plan = null;
+      const subscription = await OrganizerSubscription.findOne({ organizer: req.user._id })
+        .populate("plan");
+
+      if (subscription?.plan) {
+        plan = subscription.plan;
+      } else {
+        plan = await SubscriptionPlan.findOne({ name: "Free" });
+      }
+
+      if (plan?.eventLimit !== null && plan?.eventLimit !== undefined) {
+        const totalEvents = await Event.countDocuments({ organizer: req.user._id });
+        if (totalEvents >= plan.eventLimit) {
+          return res.status(403).json({
+            message: `Event limit reached (${plan.eventLimit}). Upgrade your plan to create more events.`
+          });
+        }
+      }
+
+      if (plan?.limits?.eventsPerMonth !== null && plan?.limits?.eventsPerMonth !== undefined) {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const monthEvents = await Event.countDocuments({
+          organizer: req.user._id,
+          createdAt: { $gte: monthStart, $lt: monthEnd }
+        });
+
+        if (monthEvents >= plan.limits.eventsPerMonth) {
+          return res.status(403).json({
+            message: `Monthly event limit reached (${plan.limits.eventsPerMonth}). Upgrade your plan to create more events this month.`
+          });
+        }
+      }
+
+      const maxTickets = plan?.ticketLimit ?? plan?.limits?.attendeesPerEvent;
+      if (maxTickets !== null && maxTickets !== undefined && totalTickets > maxTickets) {
+        return res.status(400).json({
+          message: `Ticket limit exceeded. Max allowed is ${maxTickets}.`
+        });
+      }
     }
 
     const payload = {
@@ -77,6 +124,12 @@ export const getEvents = async (req, res) => {
         return res.json([]);
       }
       query._id = { $in: user.assignedEvents };
+    }
+
+    // Hide past events from regular users (show only upcoming events)
+    // Admin, staff, event_admin, and staff_admin can see all events
+    if (!user || user.role === 'user') {
+      query.date = { $gte: new Date() }; // Only show events in the future
     }
 
     const events = await Event.find(query).populate("organizer", "name email");

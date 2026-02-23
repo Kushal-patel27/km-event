@@ -1,7 +1,11 @@
 import Event from "../models/Event.js";
 import Booking from "../models/Booking.js";
 import User from "../models/User.js";
+import EntryLog from "../models/EntryLog.js";
+import FeatureToggle from "../models/FeatureToggle.js";
+import SubscriptionPlan from "../models/SubscriptionPlan.js";
 import bcrypt from "bcryptjs";
+import { generateCSV, generateExcel, generatePDF, formatDate, formatCurrency, formatStatus } from "../utils/exportUtils.js";
 
 // Recalculate aggregate inventory for events with ticket types
 function recomputeTicketInventory(event) {
@@ -108,6 +112,20 @@ export const createTicketType = async (req, res) => {
     const { eventId } = req.params;
     const { name, price, quantity, description } = req.body;
 
+    // Check if ticketing feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.ticketing?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Ticketing is disabled for this event",
+          feature: "ticketing"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking ticketing feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
@@ -213,6 +231,22 @@ export const getEventBookings = async (req, res) => {
     const { eventId } = req.params;
     const { page = 1, limit = 50, status } = req.query;
 
+    // Check if ticketing feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.ticketing?.enabled === false) {
+        console.log('[EVENT ADMIN] Ticketing disabled for event:', eventId);
+        return res.status(403).json({ 
+          message: "Ticketing is disabled for this event",
+          feature: "ticketing",
+          details: "To view bookings, enable the Ticketing feature in Feature Management."
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking ticketing feature:', featureError.message);
+      // Continue if feature check fails - don't block access
+    }
+
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (pageNum - 1) * limitNum;
@@ -230,6 +264,13 @@ export const getEventBookings = async (req, res) => {
       .limit(limitNum);
 
     const total = await Booking.countDocuments(query);
+
+    console.log('[EVENT ADMIN] Fetched bookings:', {
+      eventId,
+      user: req.user.email,
+      total,
+      returned: bookings.length
+    });
 
     res.json({
       bookings,
@@ -252,6 +293,20 @@ export const getEventBookings = async (req, res) => {
 export const getEventStats = async (req, res) => {
   try {
     const { eventId } = req.params;
+
+    // Check if analytics feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.analytics?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Analytics is disabled for this event",
+          feature: "analytics"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking analytics feature:', featureError.message);
+      // Continue if feature check fails
+    }
 
     const event = await Event.findById(eventId);
     if (!event) {
@@ -306,6 +361,20 @@ export const downloadAttendeeList = async (req, res) => {
   try {
     const { eventId } = req.params;
 
+    // Check if reports feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.reports?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Reports feature is disabled for this event",
+          feature: "reports"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking reports feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
     const bookings = await Booking.find({ 
       event: eventId,
       status: { $ne: 'cancelled' }
@@ -343,6 +412,20 @@ export const assignStaff = async (req, res) => {
   try {
     const { eventId } = req.params;
     const { userId, role = 'staff' } = req.body;
+
+    // Check if subAdmins feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.subAdmins?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Sub-admin management is disabled for this event",
+          feature: "subAdmins"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking subAdmins feature:', featureError.message);
+      // Continue if feature check fails
+    }
 
     if (!['staff', 'staff_admin'].includes(role)) {
       return res.status(400).json({ message: "Invalid role. Must be 'staff' or 'staff_admin'" });
@@ -487,6 +570,20 @@ export const removeStaff = async (req, res) => {
       return res.status(400).json({ message: 'Missing staff id' });
     }
 
+    // Check if subAdmins feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId: eventId });
+      if (featureToggle && featureToggle.features?.subAdmins?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Sub-admin management is disabled for this event",
+          feature: "subAdmins"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking subAdmins feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
@@ -552,9 +649,42 @@ export const getEntryLogs = async (req, res) => {
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
 
-    const bookings = await Booking.find({ 
+    // Fetch entries from the high-performance scanner system (EntryLog)
+    const entryLogs = await EntryLog.find({ 
       event: eventId,
-      lastScannedAt: { $exists: true, $ne: null }
+      isDuplicate: false // Only successful scans
+    })
+      .populate('booking', 'bookingId quantity ticketType user event')
+      .populate('staff', 'name email')
+      .sort({ scannedAt: -1 })
+      .select('booking staff gateId gateName scannedAt validationTime deviceId deviceName');
+
+    // Transform EntryLog entries
+    const allLogs = entryLogs.map((log, index) => ({
+      id: log._id.toString(),
+      logType: 'high_performance', // Flag to distinguish from old system
+      bookingId: log.booking?.bookingId || log.booking?._id?.toString().slice(-8),
+      ticketIndex: 1, // For high-performance scanner, single ticket entry
+      userName: log.booking?.user?.name || 'Unknown',
+      userEmail: log.booking?.user?.email,
+      numberOfTickets: log.booking?.quantity || 1,
+      ticketType: log.booking?.ticketType?.name || 'Standard',
+      scannedAt: log.scannedAt,
+      scannedBy: log.staff?.name || 'Unknown',
+      gateId: log.gateId,
+      gateName: log.gateName,
+      deviceId: log.deviceId,
+      deviceName: log.deviceName,
+      validationTime: log.validationTime,
+      scanMethod: log.scanMethod,
+      isOfflineSync: log.isOfflineSync
+    }));
+
+    // Also fetch entries from legacy booking system for backwards compatibility
+    const legacyBookings = await Booking.find({ 
+      event: eventId,
+      lastScannedAt: { $exists: true, $ne: null },
+      scans: { $exists: true, $ne: [] }
     })
       .populate('user', 'name email')
       .populate({
@@ -563,14 +693,16 @@ export const getEntryLogs = async (req, res) => {
       })
       .sort({ lastScannedAt: -1 });
 
-    // Transform to ticket-wise entries (one entry per ticket scan)
-    const allLogs = [];
-    bookings.forEach(booking => {
-      if (booking.scans && booking.scans.length > 0) {
+    // Add legacy logs that aren't already in allLogs
+    const entryLogIds = new Set(entryLogs.map(log => log.booking?._id?.toString()));
+    
+    legacyBookings.forEach(booking => {
+      if (!entryLogIds.has(booking._id.toString()) && booking.scans && booking.scans.length > 0) {
         booking.scans.forEach((scan, index) => {
           const scannedByStaff = scan.scannedBy;
           allLogs.push({
             id: `${booking._id}-scan-${index}`,
+            logType: 'legacy',
             bookingId: booking.bookingId || booking._id.toString().slice(-8),
             userName: booking.user?.name,
             userEmail: booking.user?.email,
@@ -601,8 +733,12 @@ export const getEntryLogs = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[EVENT ADMIN] Error fetching entry logs:', error);
-    res.status(500).json({ message: error.message });
+    console.error('[GET_ENTRY_LOGS] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch entry logs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -659,6 +795,374 @@ export const getDashboard = async (req, res) => {
     });
   } catch (error) {
     console.error('[EVENT ADMIN] Error fetching dashboard:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Get current subscription for an event
+ */
+export const getCurrentSubscription = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const event = await Event.findById(eventId).populate('subscriptionPlan');
+    
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    if (!event.subscriptionPlan) {
+      return res.json({ 
+        success: true,
+        plan: null,
+        message: 'No subscription plan assigned' 
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      plan: event.subscriptionPlan 
+    });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Error fetching subscription:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Update subscription for an event
+ */
+export const updateSubscription = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { planId } = req.body;
+    
+    console.log('[EVENT ADMIN] Updating subscription for event:', eventId, 'with plan:', planId);
+    console.log('[EVENT ADMIN] User role:', req.user.role);
+    
+    if (!planId) {
+      return res.status(400).json({ message: 'Plan ID is required' });
+    }
+    
+    // Verify the plan exists
+    const plan = await SubscriptionPlan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({ message: 'Subscription plan not found' });
+    }
+    
+    console.log('[EVENT ADMIN] Found plan:', plan.name);
+    
+    // Update the event's subscription plan
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    console.log('[EVENT ADMIN] Found event:', event.title);
+    
+    event.subscriptionPlan = planId;
+    await event.save();
+    
+    console.log('[EVENT ADMIN] Event subscription updated');
+    
+    // Update features based on the plan
+    let featureToggle = await FeatureToggle.findOne({ eventId });
+    
+    if (!featureToggle) {
+      featureToggle = new FeatureToggle({ eventId, features: {} });
+    }
+    
+    // Apply plan features to the event
+    featureToggle.features = {
+      ticketing: plan.features.ticketing || { enabled: false },
+      qrCheckIn: plan.features.qrCheckIn || { enabled: false },
+      scannerApp: plan.features.scannerApp || { enabled: false },
+      analytics: plan.features.analytics || { enabled: false },
+      emailSms: plan.features.emailSms || { enabled: false },
+      payments: plan.features.payments || { enabled: false },
+      weatherAlerts: plan.features.weatherAlerts || { enabled: false },
+      subAdmins: plan.features.subAdmins || { enabled: false },
+      reports: plan.features.reports || { enabled: false }
+    };
+    
+    await featureToggle.save();
+    
+    console.log('[EVENT ADMIN] Features updated successfully');
+    
+    res.json({ 
+      success: true,
+      message: 'Subscription updated successfully',
+      plan: plan
+    });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Error updating subscription:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Generate comprehensive event report
+ */
+export const generateEventReport = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    // Check if reports feature is enabled for this event
+    try {
+      const featureToggle = await FeatureToggle.findOne({ eventId });
+      if (featureToggle && featureToggle.features?.reports?.enabled === false) {
+        return res.status(403).json({ 
+          message: "Reports feature is disabled for this event",
+          feature: "reports"
+        });
+      }
+    } catch (featureError) {
+      console.error('[EVENT ADMIN] Error checking reports feature:', featureError.message);
+      // Continue if feature check fails
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Get all bookings for the event
+    const bookings = await Booking.find({ event: eventId })
+      .populate('user', 'name email phone')
+      .populate('event', 'title date location capacity');
+
+    // Calculate statistics
+    const totalBookings = bookings.length;
+    const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
+    const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
+    const scannedBookings = bookings.filter(b => b.lastScannedAt).length;
+    
+    let totalRevenue = 0;
+    let totalTicketsSold = 0;
+    bookings.forEach(booking => {
+      if (booking.status !== 'cancelled') {
+        totalRevenue += booking.finalTotal || 0;
+        totalTicketsSold += booking.quantity || 0;
+      }
+    });
+
+    const report = {
+      eventId: event._id,
+      eventTitle: event.title,
+      eventDate: event.date,
+      eventLocation: event.location,
+      capacity: event.capacity,
+      generatedAt: new Date(),
+      statistics: {
+        totalBookings,
+        confirmedBookings,
+        cancelledBookings,
+        scannedBookings,
+        totalRevenue,
+        totalTicketsSold,
+        occupancyRate: event.capacity ? ((totalTicketsSold / event.capacity) * 100).toFixed(2) : 0,
+        conversionRate: totalBookings > 0 ? ((confirmedBookings / totalBookings) * 100).toFixed(2) : 0
+      },
+      bookingDetails: bookings.map(b => ({
+        bookingId: b.bookingId,
+        customerName: b.user?.name || 'N/A',
+        customerEmail: b.user?.email || 'N/A',
+        customerPhone: b.user?.phone || 'N/A',
+        quantity: b.quantity || 1,
+        totalAmount: b.finalTotal || 0,
+        status: b.status,
+        bookingDate: b.createdAt,
+        scannedAt: b.lastScannedAt || null,
+        ticketType: b.ticketType || 'General'
+      }))
+    };
+
+    res.json({
+      success: true,
+      report
+    });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Error generating report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Export events assigned to this event admin
+ */
+export const exportEvents = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { format = 'csv', startDate, endDate, status } = req.query;
+
+    // Build filter for events assigned to this event admin
+    const filter = {
+      _id: { $in: req.user.assignedEvents }
+    };
+    
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = new Date(startDate);
+      if (endDate) filter.date.$lte = new Date(endDate);
+    }
+    
+    if (status) filter.status = status;
+
+    // Fetch events
+    const events = await Event.find(filter)
+      .populate('organizer', 'name email')
+      .sort({ date: -1 })
+      .lean();
+
+    // Define columns for export
+    const columns = [
+      { key: 'title', header: 'Event Title', width: 30 },
+      { key: 'date', header: 'Event Date', width: 20, format: formatDate },
+      { key: 'location', header: 'Location', width: 25 },
+      { key: 'category', header: 'Category', width: 15 },
+      { key: 'price', header: 'Price (INR)', width: 15, format: formatCurrency },
+      { key: 'totalTickets', header: 'Total Tickets', width: 15 },
+      { key: 'availableTickets', header: 'Available Tickets', width: 18 },
+      { key: 'status', header: 'Status', width: 15, format: formatStatus },
+      { key: 'createdAt', header: 'Created At', width: 20, format: formatDate }
+    ];
+
+    // Format data for export
+    const exportData = events.map(event => ({
+      ...event,
+      totalTickets: event.totalTickets || event.capacity || 0,
+      availableTickets: event.availableTickets || 0
+    }));
+
+    // Generate export based on format
+    if (format === 'csv') {
+      const csv = generateCSV(exportData, columns);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=my-events-export-${Date.now()}.csv`);
+      return res.send(csv);
+    }
+
+    if (format === 'xlsx') {
+      const buffer = await generateExcel(exportData, columns, 'My Events');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=my-events-export-${Date.now()}.xlsx`);
+      return res.send(buffer);
+    }
+
+    if (format === 'pdf') {
+      const buffer = await generatePDF(exportData, columns, {
+        title: 'My Events Report',
+        subtitle: `Generated on ${formatDate(new Date())}`
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=my-events-export-${Date.now()}.pdf`);
+      return res.send(buffer);
+    }
+
+    return res.status(400).json({ message: 'Invalid format. Use csv, xlsx, or pdf' });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Export events error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Export bookings for events assigned to this event admin
+ */
+export const exportBookings = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { format = 'csv', startDate, endDate, status, eventId, paymentStatus } = req.query;
+
+    // Filter: only bookings for events assigned to this event admin
+    const filter = {
+      event: { $in: req.user.assignedEvents }
+    };
+    
+    // Additional event-specific filter if provided
+    if (eventId && req.user.assignedEvents.includes(eventId)) {
+      filter.event = eventId;
+    }
+    
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+    
+    if (status) filter.status = status;
+    if (paymentStatus) filter.paymentStatus = paymentStatus;
+
+    // Fetch bookings
+    const bookings = await Booking.find(filter)
+      .populate('user', 'name email phone')
+      .populate('event', 'title date location')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Define columns for export
+    const columns = [
+      { key: 'bookingId', header: 'Booking ID', width: 25 },
+      { key: 'customerName', header: 'Customer Name', width: 25 },
+      { key: 'customerEmail', header: 'Customer Email', width: 30 },
+      { key: 'customerPhone', header: 'Phone', width: 18 },
+      { key: 'eventTitle', header: 'Event', width: 30 },
+      { key: 'eventDate', header: 'Event Date', width: 20, format: formatDate },
+      { key: 'ticketType', header: 'Ticket Type', width: 20 },
+      { key: 'quantity', header: 'Quantity', width: 12 },
+      { key: 'totalAmount', header: 'Amount (INR)', width: 15, format: formatCurrency },
+      { key: 'status', header: 'Booking Status', width: 15, format: formatStatus },
+      { key: 'paymentStatus', header: 'Payment Status', width: 15, format: formatStatus },
+      { key: 'bookingDate', header: 'Booking Date', width: 20, format: formatDate },
+      { key: 'scanned', header: 'Scanned', width: 12 }
+    ];
+
+    // Format data for export
+    const exportData = bookings.map(booking => ({
+      bookingId: booking._id.toString(),
+      customerName: booking.user?.name || 'N/A',
+      customerEmail: booking.user?.email || 'N/A',
+      customerPhone: booking.user?.phone || 'N/A',
+      eventTitle: booking.event?.title || 'N/A',
+      eventDate: booking.event?.date,
+      ticketType: booking.ticketType?.name || 'General',
+      quantity: booking.quantity || 1,
+      totalAmount: booking.totalAmount || booking.totalPrice || 0,
+      status: booking.status || 'pending',
+      paymentStatus: booking.paymentStatus || 'completed',
+      bookingDate: booking.createdAt,
+      scanned: booking.lastScannedAt ? 'Yes' : 'No'
+    }));
+
+    // Generate export based on format
+    if (format === 'csv') {
+      const csv = generateCSV(exportData, columns);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=my-bookings-export-${Date.now()}.csv`);
+      return res.send(csv);
+    }
+
+    if (format === 'xlsx') {
+      const buffer = await generateExcel(exportData, columns, 'My Bookings');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=my-bookings-export-${Date.now()}.xlsx`);
+      return res.send(buffer);
+    }
+
+    if (format === 'pdf') {
+      const buffer = await generatePDF(exportData, columns, {
+        title: 'My Bookings Report',
+        subtitle: `Generated on ${formatDate(new Date())}`
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=my-bookings-export-${Date.now()}.pdf`);
+      return res.send(buffer);
+    }
+
+    return res.status(400).json({ message: 'Invalid format. Use csv, xlsx, or pdf' });
+  } catch (error) {
+    console.error('[EVENT ADMIN] Export bookings error:', error);
     res.status(500).json({ message: error.message });
   }
 };

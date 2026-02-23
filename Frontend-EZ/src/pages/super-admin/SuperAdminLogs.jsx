@@ -66,6 +66,17 @@ export default function SuperAdminLogs() {
     return '-'
   }
 
+  const getLogIp = (log) => {
+    return (
+      log.details?.ip ||
+      log.ip ||
+      log.ipAddress ||
+      log.details?.ipAddress ||
+      log.details?.clientIp ||
+      '-'
+    )
+  }
+
   return (
     <SuperAdminLayout title="System Logs & Audit Trail" subtitle="View platform activity and security logs">
 
@@ -120,7 +131,7 @@ export default function SuperAdminLogs() {
                           {log.userEmail || 'N/A'}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {log.details?.ip || '-'}
+                          {getLogIp(log)}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
                           {getLogDetails(log)}

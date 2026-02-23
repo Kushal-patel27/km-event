@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import API from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
@@ -164,7 +165,7 @@ export default function Settings(){
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 min-h-screen py-16 px-4 sm:px-6 lg:px-12">
+    <div className="bg-black dark:bg-black min-h-screen py-16 px-4 sm:px-6 lg:px-12">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -176,9 +177,23 @@ export default function Settings(){
           <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your account, security, and preferences</p>
         </motion.div>
 
+        {user?.hasPassword === false && (
+          <div className="mb-6 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-800">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="text-sm font-semibold">Set a password to enable email login for your account.</div>
+              <Link
+                to="/set-password"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700"
+              >
+                Set Password
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Profile */}
         <section className="mb-8">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+          <div className="bg-black dark:bg-black border border-white/10 dark:border-white/10 rounded-xl p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Profile</h2>
 
             {profileMsg && (
@@ -190,11 +205,11 @@ export default function Settings(){
             <form onSubmit={saveProfile} className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                <input value={profile.name} onChange={e=>setProfile(p=>({...p, name: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
+                <input value={profile.name} onChange={e=>setProfile(p=>({...p, name: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                <input type="email" value={profile.email} onChange={e=>setProfile(p=>({...p, email: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
+                <input type="email" value={profile.email} onChange={e=>setProfile(p=>({...p, email: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div className="sm:col-span-2">
                 <button disabled={profileSaving} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-60">
@@ -207,7 +222,7 @@ export default function Settings(){
 
         {/* Security */}
         <section className="mb-8">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+          <div className="bg-black dark:bg-black border border-white/10 dark:border-white/10 rounded-xl p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Security</h2>
 
             {securityMsg && (
@@ -219,15 +234,15 @@ export default function Settings(){
             <form onSubmit={savePassword} className="grid sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
-                <input type="password" value={security.currentPassword} onChange={e=>setSecurity(s=>({...s, currentPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
+                <input type="password" value={security.currentPassword} onChange={e=>setSecurity(s=>({...s, currentPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
-                <input type="password" value={security.newPassword} onChange={e=>setSecurity(s=>({...s, newPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
+                <input type="password" value={security.newPassword} onChange={e=>setSecurity(s=>({...s, newPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label>
-                <input type="password" value={security.confirmPassword} onChange={e=>setSecurity(s=>({...s, confirmPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
+                <input type="password" value={security.confirmPassword} onChange={e=>setSecurity(s=>({...s, confirmPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div className="sm:col-span-3">
                 <button disabled={securitySaving} className="px-5 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 rounded-lg font-semibold disabled:opacity-60">

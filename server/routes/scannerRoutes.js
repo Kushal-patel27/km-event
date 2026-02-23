@@ -9,6 +9,7 @@ router.use(protect);
 router.use(requireRoles("staff", "staff_admin"));
 
 // Scanning operations
+// Feature check is done in the controller (scanTicket checks scannerApp feature)
 router.post("/scan", staffController.scanTicket);
 router.get("/ticket/:bookingId/status", staffController.getTicketStatus);
 router.post("/manual-entry", staffController.requestManualEntry);

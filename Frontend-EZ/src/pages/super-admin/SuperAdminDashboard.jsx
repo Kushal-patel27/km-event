@@ -14,11 +14,29 @@ export default function SuperAdminDashboard() {
     fetchAnalytics()
   }, [dateRange])
 
+  const buildDateRangeParams = (range) => {
+    const now = new Date()
+    if (range === 'today') {
+      const start = new Date(now)
+      start.setHours(0, 0, 0, 0)
+      return { startDate: start.toISOString(), endDate: now.toISOString() }
+    }
+    if (range === '7days' || range === '30days') {
+      const days = range === '7days' ? 7 : 30
+      const start = new Date(now)
+      start.setDate(start.getDate() - days)
+      return { startDate: start.toISOString(), endDate: now.toISOString() }
+    }
+    return {}
+  }
+
   const fetchAnalytics = async () => {
     try {
       setLoading(true)
       setError('')
-      const res = await API.get('/super-admin/analytics/platform')
+      const params = new URLSearchParams(buildDateRangeParams(dateRange))
+      const query = params.toString()
+      const res = await API.get(`/super-admin/analytics/platform${query ? `?${query}` : ''}`)
       setAnalytics(res.data)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load analytics')
@@ -53,8 +71,14 @@ export default function SuperAdminDashboard() {
   return (
     <SuperAdminLayout title="Super Admin Dashboard" subtitle="Platform-wide control">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-gray-600">Platform-wide system management and analytics</p>
+        <Link
+          to="/admin"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
+        >
+          Open Admin Panel
+        </Link>
       </div>
 
         {/* Date Range Filter */}
@@ -142,10 +166,22 @@ export default function SuperAdminDashboard() {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Bookings by Status</h3>
                 <div className="space-y-3">
-                  {Object.entries(analytics.bookingsByStatus || {}).map(([status, count]) => (
+                  {Object.entries(
+                    // Normalize status keys to lowercase and combine counts
+                    Object.entries(analytics.bookingsByStatus || {}).reduce((acc, [status, count]) => {
+                      const normalizedStatus = status.toLowerCase();
+                      acc[normalizedStatus] = (acc[normalizedStatus] || 0) + count;
+                      return acc;
+                    }, {})
+                  ).map(([status, count]) => (
                     <div key={status} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="inline-block w-3 h-3 rounded-full bg-purple-500"></span>
+                        <span className={`inline-block w-3 h-3 rounded-full ${
+                          status === 'confirmed' ? 'bg-green-500' :
+                          status === 'cancelled' ? 'bg-red-500' :
+                          status === 'pending' ? 'bg-yellow-500' :
+                          'bg-purple-500'
+                        }`}></span>
                         <span className="capitalize font-medium text-gray-700">{status}</span>
                       </div>
                       <span className="font-bold text-gray-900">{count}</span>
@@ -158,10 +194,22 @@ export default function SuperAdminDashboard() {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Events by Status</h3>
                 <div className="space-y-3">
-                  {Object.entries(analytics.eventsByStatus || {}).map(([status, count]) => (
+                  {Object.entries(
+                    // Normalize status keys to lowercase and combine counts
+                    Object.entries(analytics.eventsByStatus || {}).reduce((acc, [status, count]) => {
+                      const normalizedStatus = status.toLowerCase();
+                      acc[normalizedStatus] = (acc[normalizedStatus] || 0) + count;
+                      return acc;
+                    }, {})
+                  ).map(([status, count]) => (
                     <div key={status} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
+                        <span className={`inline-block w-3 h-3 rounded-full ${
+                          status === 'scheduled' ? 'bg-blue-500' :
+                          status === 'completed' ? 'bg-green-500' :
+                          status === 'cancelled' ? 'bg-red-500' :
+                          'bg-purple-500'
+                        }`}></span>
                         <span className="capitalize font-medium text-gray-700">{status}</span>
                       </div>
                       <span className="font-bold text-gray-900">{count}</span>
@@ -198,11 +246,18 @@ export default function SuperAdminDashboard() {
                     color: 'bg-orange-50 border-orange-200',
                   },
                   {
+                    title: 'Subscription Plans',
+                    description: 'Manage pricing tiers, features, and limits',
+                    icon: '💳',
+                    to: '/super-admin/subscriptions',
+                    color: 'bg-green-50 border-green-200',
+                  },
+                  {
                     title: 'System Configuration',
                     description: 'Configure QR rules, ticket limits, security',
                     icon: '⚙️',
                     to: '/super-admin/config',
-                    color: 'bg-green-50 border-green-200',
+                    color: 'bg-cyan-50 border-cyan-200',
                   },
                   {
                     title: 'System Logs',

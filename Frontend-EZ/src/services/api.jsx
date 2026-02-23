@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const BASE = import.meta.env.VITE_API_URL || "";
 
 const API = axios.create({
   baseURL: `${BASE}/api`,
@@ -37,15 +37,12 @@ API.interceptors.response.use(
       error.config._silent403 = true; // Mark for silent handling
     }
 
-    // Avoid refresh loops: our backend refresh route requires a valid token, so
-    // if we hit 401, clear session and surface the error without retrying.
+    // Do not globally clear auth state on 401s.
+    // Let feature-specific callers decide (e.g., AuthContext verify/session).
+    // This prevents unintended logout on transient network changes.
     if (error.response?.status === 401) {
-      if (!original?._retry && !original?.url?.includes('/auth/refresh')) {
-        original._retry = true;
-        // Clear local auth state
-        setAuthToken(null);
-        localStorage.removeItem('authUser');
-      }
+      original._retry = original?._retry || false;
+      // No global side effects here; simply reject so caller can handle.
     }
 
     return Promise.reject(error);
@@ -66,3 +63,11 @@ export const seedHelpArticlesAdmin = () => API.post('/help/admin/seed')
 export const requestPasswordResetOtp = (email) => API.post('/auth/password/forgot', { email })
 export const verifyPasswordResetOtp = (data) => API.post('/auth/password/verify-otp', data)
 export const resetPasswordWithToken = (data) => API.post('/auth/password/reset', data)
+
+// Waitlist helpers
+export const joinWaitlist = (data) => API.post('/waitlist/join', data)
+export const leaveWaitlist = (waitlistId) => API.delete(`/waitlist/${waitlistId}`)
+export const getMyWaitlist = (params = {}) => API.get('/waitlist/my-waitlist', { params })
+export const getEventWaitlist = (eventId, params = {}) => API.get(`/waitlist/event/${eventId}`, { params })
+export const getWaitlistAnalytics = (eventId) => API.get(`/waitlist/event/${eventId}/analytics`)
+export const triggerWaitlistNotification = (eventId, data) => API.post(`/waitlist/event/${eventId}/notify`, data)

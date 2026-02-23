@@ -16,6 +16,11 @@ import {
   searchStaff,
   getEntryLogs,
   createStaffForEvent,
+  getCurrentSubscription,
+  updateSubscription,
+  generateEventReport,
+  exportEvents,
+  exportBookings,
 } from "../controllers/eventAdminController.js";
 
 const router = express.Router();
@@ -33,6 +38,10 @@ router.get("/events/:eventId", requireEventAccess, getEventDetails);
 router.put("/events/:eventId", requireEventAccess, updateEvent);
 router.get("/events/:eventId/stats", requireEventAccess, getEventStats);
 
+// Export
+router.get("/export/events", exportEvents);
+router.get("/export/bookings", exportBookings);
+
 // Ticket Types
 router.post("/events/:eventId/ticket-types", requireEventAccess, createTicketType);
 router.put("/events/:eventId/ticket-types/:ticketTypeId", requireEventAccess, updateTicketType);
@@ -42,6 +51,9 @@ router.delete("/events/:eventId/ticket-types/:ticketTypeId", requireEventAccess,
 router.get("/events/:eventId/bookings", requireEventAccess, getEventBookings);
 router.get("/events/:eventId/attendees/download", requireEventAccess, downloadAttendeeList);
 
+// Reports
+router.get("/events/:eventId/reports", requireEventAccess, generateEventReport);
+
 // Staff Management
 router.get("/staff/search", searchStaff);
 router.post("/events/:eventId/staff", requireEventAccess, assignStaff);
@@ -50,5 +62,9 @@ router.delete("/events/:eventId/staff/:staffId", requireEventAccess, removeStaff
 
 // Entry Logs
 router.get("/events/:eventId/entry-logs", requireEventAccess, getEntryLogs);
+
+// Subscription Management
+router.get("/events/:eventId/subscription", requireEventAccess, getCurrentSubscription);
+router.post("/events/:eventId/subscription", requireEventAccess, updateSubscription);
 
 export default router;

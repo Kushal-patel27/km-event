@@ -34,7 +34,11 @@ import {
   updateSystemConfig,
   // Logs
   getSystemLogs,
+  // Export
   exportPlatformData,
+  exportUsers,
+  exportEvents,
+  exportBookings,
 } from "../controllers/superAdminController.js";
 
 const router = express.Router();
@@ -82,6 +86,11 @@ router.put("/config", updateSystemConfig);
 
 // ============ LOGS ============
 router.get("/logs", getSystemLogs);
+
+// ============ EXPORT ============
+router.get("/export/users", exportUsers);
+router.get("/export/events", exportEvents);
+router.get("/export/bookings", exportBookings);
 router.get("/export", exportPlatformData);
 
 export default router;

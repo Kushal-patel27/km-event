@@ -32,14 +32,14 @@ export default function Signup() {
 
   const handleGoogleSignup = () => {
     // Redirect to backend Google OAuth endpoint
-    const backendURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    const backendURL = import.meta.env.VITE_API_URL || "";
     window.location.href = `${backendURL}/api/auth/google`;
   };
 
   return (
     <>
       <div className={`py-8 px-4 transition-colors duration-300 ${
-        isDarkMode ? 'bg-[#0B0F19] text-white' : 'bg-white text-gray-900'
+        isDarkMode ? 'bg-black text-gray-100' : 'bg-white text-gray-900'
       }`}>
 
         <motion.div 
@@ -50,7 +50,7 @@ export default function Signup() {
         >
           <div className={`rounded-lg shadow-md p-6 backdrop-blur-lg border ${
             isDarkMode
-              ? 'bg-[#1a1f2e]/80 border-white/15 shadow-red-500/20'
+              ? 'bg-black border-gray-800'
               : 'bg-white/90 border-indigo-100/50'
           }`}>
             {/* Header */}
@@ -83,7 +83,7 @@ export default function Signup() {
                   placeholder="John Doe"
                   className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                     isDarkMode
-                      ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-blue-300/50 focus:ring-2 focus:ring-blue-300/20'
+                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
                       : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                   }`}
                 />
@@ -99,7 +99,7 @@ export default function Signup() {
                   placeholder="you@example.com"
                   className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                     isDarkMode
-                      ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-blue-300/50 focus:ring-2 focus:ring-blue-300/20'
+                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
                       : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                   }`}
                 />
@@ -116,14 +116,16 @@ export default function Signup() {
                     placeholder="••••••••"
                     className={`w-full px-4 py-3 pr-12 rounded-lg border transition-all outline-none ${
                       isDarkMode
-                        ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-blue-300/50 focus:ring-2 focus:ring-blue-300/20'
+                        ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
                         : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 focus:outline-none ${
+                      isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'
+                    }`}
                   >
                     {showPassword ? (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,7 +166,7 @@ export default function Signup() {
                 <div className={`w-full border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className={`px-2 ${isDarkMode ? 'bg-[#1a1f2e]/80 text-gray-400' : 'bg-white/90 text-gray-500'}`}>Or continue with</span>
+                <span className={`px-2 ${isDarkMode ? 'bg-black text-gray-400' : 'bg-white/90 text-gray-500'}`}>Or continue with</span>
               </div>
             </div>
 
@@ -176,7 +178,7 @@ export default function Signup() {
               type="button"
               className={`w-full flex items-center justify-center gap-3 px-4 py-3 border rounded-lg font-semibold transition-all ${
                 isDarkMode
-                  ? 'bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30'
+                  ? 'bg-black border-gray-800 text-gray-100 hover:border-gray-600'
                   : 'bg-white border-indigo-200 text-gray-700 hover:bg-indigo-50 hover:border-indigo-300'
               }`}
             >

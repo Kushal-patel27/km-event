@@ -8,6 +8,7 @@ import API from '../../services/api'
 import html2canvas from 'html2canvas'
 
 export default function BookingSuccess() {
+  const backendURL = import.meta.env.VITE_API_URL || ""
   const location = useLocation()
   const { isDarkMode } = useDarkMode()
   const [showToast, setShowToast] = useState(false)
@@ -67,7 +68,7 @@ export default function BookingSuccess() {
       
       // Download each ticket PDF from backend
       for (let i = 0; i < quantity; i++) {
-        const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/ticket/${i}/pdf`, {
+        const response = await fetch(`${backendURL}/api/bookings/${bookingId}/ticket/${i}/pdf`, {
           headers: {
             Authorization: `Bearer ${token}`
           }

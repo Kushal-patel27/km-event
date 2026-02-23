@@ -196,14 +196,14 @@ export default function FAQ() {
       transition={{ delay: index * 0.05 }}
       className={`border rounded-xl overflow-hidden transition-all ${
         isDarkMode
-          ? 'bg-slate-800/50 border-slate-700 hover:border-red-500/50'
+          ? 'bg-neutral-900/70 border-neutral-800 hover:border-red-500/60'
           : 'bg-white border-gray-200 hover:border-indigo-300'
       }`}
     >
       <button
         onClick={() => setOpenIndex(isOpen ? null : index)}
         className={`w-full p-5 text-left flex items-center justify-between transition-all ${
-          isDarkMode ? 'hover:bg-slate-700/30' : 'hover:bg-gray-50'
+          isDarkMode ? 'hover:bg-neutral-900' : 'hover:bg-gray-50'
         }`}
       >
         <span className={`font-semibold text-lg pr-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -227,7 +227,7 @@ export default function FAQ() {
         transition={{ duration: 0.3 }}
         className="overflow-hidden"
       >
-        <div className={`p-5 border-t ${isDarkMode ? 'border-slate-700 bg-slate-900/30' : 'border-gray-100 bg-gray-50/50'}`}>
+        <div className={`p-5 border-t ${isDarkMode ? 'border-neutral-800 bg-neutral-900/60' : 'border-gray-100 bg-gray-50/50'}`}>
           <p className={`text-base leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             {item.a}
           </p>
@@ -239,7 +239,7 @@ export default function FAQ() {
   return (
     <div className={`min-h-screen py-12 transition-colors ${
       isDarkMode
-        ? 'bg-gradient-to-b from-slate-900 to-slate-950'
+        ? 'bg-black'
         : 'bg-gradient-to-b from-gray-50 to-white'
     }`}>
       <div className="max-w-4xl mx-auto px-6">

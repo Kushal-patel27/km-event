@@ -3,6 +3,7 @@ import {
   registerUser,
   loginUser,
   loginAdmin,
+  setPassword,
   loginStaff,
   getMe,
   refreshSession,
@@ -68,6 +69,7 @@ router.get("/verify-session", protect, (req, res) => {
 });
 router.put("/profile", protect, updateProfile);
 router.put("/password", protect, changePassword);
+router.put("/password/set", protect, setPassword);
 router.get("/preferences", protect, getPreferences);
 router.put("/preferences", protect, updatePreferences);
 router.post("/logout-all", protect, logoutAll);

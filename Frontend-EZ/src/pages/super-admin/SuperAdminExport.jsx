@@ -1,146 +1,265 @@
 import React, { useState } from 'react'
+import { motion } from 'framer-motion'
 import API from '../../services/api'
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout'
+import ExportDataModal from '../../components/admin/ExportDataModal'
 
 export default function SuperAdminExport() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [exportType, setExportType] = useState('all')
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [selectedExportType, setSelectedExportType] = useState(null)
+  const [loadingExport, setLoadingExport] = useState(false)
 
-  const handleExport = async () => {
+  // Export filters configuration for each data type
+  const exportFiltersConfig = {
+    users: [
+      {
+        label: 'Date Range',
+        name: 'dateRange',
+        type: 'dateRange',
+        startName: 'startDate',
+        endName: 'endDate'
+      },
+      {
+        label: 'User Role',
+        name: 'role',
+        type: 'select',
+        options: [
+          { value: 'super_admin', label: 'Super Admin' },
+          { value: 'admin', label: 'Admin' },
+          { value: 'event_admin', label: 'Event Admin' },
+          { value: 'organizer', label: 'Organizer' },
+          { value: 'customer', label: 'Customer' },
+          { value: 'staff', label: 'Staff' }
+        ]
+      },
+      {
+        label: 'Status',
+        name: 'active',
+        type: 'select',
+        options: [
+          { value: 'true', label: 'Active' },
+          { value: 'false', label: 'Inactive' }
+        ]
+      }
+    ],
+    events: [
+      {
+        label: 'Date Range',
+        name: 'dateRange',
+        type: 'dateRange',
+        startName: 'startDate',
+        endName: 'endDate'
+      },
+      {
+        label: 'Event Status',
+        name: 'status',
+        type: 'select',
+        options: [
+          { value: 'draft', label: 'Draft' },
+          { value: 'published', label: 'Published' },
+          { value: 'active', label: 'Active' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'cancelled', label: 'Cancelled' }
+        ]
+      }
+    ],
+    bookings: [
+      {
+        label: 'Date Range',
+        name: 'dateRange',
+        type: 'dateRange',
+        startName: 'startDate',
+        endName: 'endDate'
+      },
+      {
+        label: 'Booking Status',
+        name: 'status',
+        type: 'select',
+        options: [
+          { value: 'confirmed', label: 'Confirmed' },
+          { value: 'pending', label: 'Pending' },
+          { value: 'cancelled', label: 'Cancelled' }
+        ]
+      },
+      {
+        label: 'Payment Status',
+        name: 'paymentStatus',
+        type: 'select',
+        options: [
+          { value: 'completed', label: 'Completed' },
+          { value: 'pending', label: 'Pending' },
+          { value: 'failed', label: 'Failed' },
+          { value: 'refunded', label: 'Refunded' }
+        ]
+      }
+    ]
+  }
+
+  const handleOpenExport = (type) => {
+    setSelectedExportType(type)
+    setShowExportModal(true)
+  }
+
+  const handleExport = async (format, filters) => {
     try {
-      setLoading(true)
-      setError('')
-      setSuccess('')
+      setLoadingExport(true)
 
-      const params = new URLSearchParams({
-        dataType: exportType,
+      // Build query parameters
+      const params = new URLSearchParams()
+      params.append('format', format)
+
+      // Add filter values
+      if (filters) {
+        Object.keys(filters).forEach(key => {
+          if (filters[key]) {
+            params.append(key, filters[key])
+          }
+        })
+      }
+
+      // Call appropriate endpoint
+      const response = await API.get(`/super-admin/export/${selectedExportType}?${params}`, {
+        responseType: 'blob'
       })
 
-      const res = await API.get(`/super-admin/export?${params}`)
-
-      // Create and download JSON file
-      const dataStr = JSON.stringify(res.data, null, 2)
-      const dataBlob = new Blob([dataStr], { type: 'application/json' })
-      const url = URL.createObjectURL(dataBlob)
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = document.createElement('a')
       link.href = url
-      link.download = `km-events-export-${exportType}-${new Date().toISOString().split('T')[0]}.json`
+
+      // Determine file extension
+      const ext = format === 'xlsx' ? 'xlsx' : format
+      link.setAttribute('download', `${selectedExportType}-export-${Date.now()}.${ext}`)
+
       document.body.appendChild(link)
       link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+      link.parentNode.removeChild(link)
+      window.URL.revokeObjectURL(url)
 
-      setSuccess(`Successfully exported ${exportType} data!`)
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to export data')
+      setShowExportModal(false)
+    } catch (error) {
+      console.error('Export error:', error)
+      alert(error.response?.data?.message || 'Failed to export data. Please try again.')
     } finally {
-      setLoading(false)
+      setLoadingExport(false)
     }
   }
 
-  const ExportOption = ({ type, title, description, icon }) => (
-    <div
-      onClick={() => setExportType(type)}
-      className={`p-6 rounded-lg border-2 cursor-pointer transition ${
-        exportType === type
-          ? 'border-purple-600 bg-purple-50'
-          : 'border-gray-300 bg-white hover:border-gray-400'
-      }`}
+  const ExportCard = ({ type, title, description, icon }) => (
+    <motion.div
+      whileHover={{ translateY: -4 }}
+      onClick={() => handleOpenExport(type)}
+      className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md cursor-pointer transition-all border border-gray-100"
     >
       <div className="text-4xl mb-3">{icon}</div>
       <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
-      <p className="text-sm text-gray-600">{description}</p>
-    </div>
+      <p className="text-sm text-gray-600 mb-4">{description}</p>
+      <button className="px-4 py-2 bg-purple-100 text-purple-600 rounded-lg text-sm font-semibold hover:bg-purple-200 transition">
+        Export Data
+      </button>
+    </motion.div>
   )
 
   return (
-    <SuperAdminLayout title="Data Export" subtitle="Download platform data for analysis or backup">
-
-      {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-
-      {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
-            ✓ {success}
-          </div>
-        )}
-
-      {/* Export Type Selection */}
-      <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Select Data to Export</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ExportOption
-              type="users"
-              title="👥 Users Only"
-              description="Export all user accounts and profiles"
-              icon="👥"
-            />
-            <ExportOption
-              type="events"
-              title="📅 Events Only"
-              description="Export all events and their details"
-              icon="📅"
-            />
-            <ExportOption
-              type="bookings"
-              title="🎫 Bookings Only"
-              description="Export all booking transactions and payments"
-              icon="🎫"
-            />
-            <ExportOption
-              type="all"
-              title="📦 Everything"
-              description="Export users, events, and bookings together"
-              icon="📦"
-            />
-          </div>
-        </div>
+    <SuperAdminLayout
+      title="Data Export"
+      subtitle="Download platform data in CSV, Excel, or PDF format with custom filters"
+    >
+      {/* Export Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <ExportCard
+          type="users"
+          title="👥 Users"
+          description="Export all user accounts, roles, and activity data"
+          icon="👥"
+        />
+        <ExportCard
+          type="events"
+          title="📅 Events"
+          description="Export all events with details and availability"
+          icon="📅"
+        />
+        <ExportCard
+          type="bookings"
+          title="🎫 Bookings"
+          description="Export booking transactions and payment records"
+          icon="🎫"
+        />
+      </div>
 
       {/* Info Box */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-          <h3 className="font-bold text-blue-900 mb-2">📋 About Data Export</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>✓ Data is exported in JSON format</li>
-            <li>✓ Includes complete records with all fields</li>
-            <li>✓ Suitable for backup, migration, or analysis</li>
-            <li>✓ File names include timestamp and data type</li>
-            <li>⚠️ Large exports may take a few moments to generate</li>
-          </ul>
-        </div>
-
-      {/* Export Button */}
-      <button
-          onClick={handleExport}
-          disabled={loading}
-          className="w-full px-6 py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg font-bold text-lg transition"
-        >
-          {loading ? '⏳ Preparing Export...' : '📥 Download Export'}
-        </button>
-
-      {/* Usage Examples */}
-      <div className="mt-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">How to Use Exported Data</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="font-bold text-gray-900 mb-2">📊 Analytics</h3>
-              <p className="text-sm text-gray-600">Import into spreadsheet or analytics tools for deeper insights</p>
-            </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="font-bold text-gray-900 mb-2">🔄 Migration</h3>
-              <p className="text-sm text-gray-600">Transfer data to another system or backup location safely</p>
-            </div>
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="font-bold text-gray-900 mb-2">📑 Reporting</h3>
-              <p className="text-sm text-gray-600">Create custom reports and documentation for stakeholders</p>
-            </div>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6 mb-8"
+      >
+        <h3 className="font-bold text-gray-900 mb-3">📋 Export Features</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
+          <div className="flex items-start gap-2">
+            <span className="text-green-600 font-bold mt-0.5">✓</span>
+            <span>Multiple formats: CSV, Excel (XLSX), and PDF</span>
           </div>
+          <div className="flex items-start gap-2">
+            <span className="text-green-600 font-bold mt-0.5">✓</span>
+            <span>Professional formatting and styling</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-green-600 font-bold mt-0.5">✓</span>
+            <span>Custom date range and status filters</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-green-600 font-bold mt-0.5">✓</span>
+            <span>Handles large datasets efficiently</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-green-600 font-bold mt-0.5">✓</span>
+            <span>Empty data handling with clear messaging</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-green-600 font-bold mt-0.5">✓</span>
+            <span>Timestamped file names for organization</span>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Use Cases */}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Common Use Cases</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg p-4 text-center">
+            <div className="text-3xl mb-2">📊</div>
+            <h4 className="font-semibold text-gray-900 mb-1">Analytics</h4>
+            <p className="text-xs text-gray-600">Analyze trends and patterns</p>
+          </div>
+          <div className="bg-white rounded-lg p-4 text-center">
+            <div className="text-3xl mb-2">🔄</div>
+            <h4 className="font-semibold text-gray-900 mb-1">Migration</h4>
+            <p className="text-xs text-gray-600">Transfer to another system</p>
+          </div>
+          <div className="bg-white rounded-lg p-4 text-center">
+            <div className="text-3xl mb-2">💾</div>
+            <h4 className="font-semibold text-gray-900 mb-1">Backup</h4>
+            <p className="text-xs text-gray-600">Create data backups safely</p>
+          </div>
+          <div className="bg-white rounded-lg p-4 text-center">
+            <div className="text-3xl mb-2">📑</div>
+            <h4 className="font-semibold text-gray-900 mb-1">Reporting</h4>
+            <p className="text-xs text-gray-600">Generate custom reports</p>
+          </div>
+        </div>
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportDataModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          title={`Export ${selectedExportType?.charAt(0).toUpperCase() + selectedExportType?.slice(1)}`}
+          filters={exportFiltersConfig[selectedExportType] || []}
+          onExport={handleExport}
+          isLoading={loadingExport}
+        />
+      )}
     </SuperAdminLayout>
   )
 }

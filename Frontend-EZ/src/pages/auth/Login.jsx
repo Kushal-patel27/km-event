@@ -73,22 +73,29 @@ export default function Login() {
         throw mode === "admin" ? firstError : lastError;
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      const message = err.response?.data?.message || "Login failed";
+      if (message === "Password login not available for this account") {
+        const encoded = encodeURIComponent(email || "");
+        navigate(`/set-password?email=${encoded}`);
+        return;
+      } else {
+        setError(message);
+      }
     }
   };
 
   const handleGoogleLogin = () => {
-    const backendURL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    const backendURL = import.meta.env.VITE_API_URL || "";
     window.location.href = `${backendURL}/api/auth/google`;
   };
 
   return (
     <div className={`flex items-center justify-center py-8 px-4 ${
-      isDarkMode ? 'bg-gray-900' : 'bg-gray-50'
+      isDarkMode ? 'bg-black' : 'bg-gray-50'
     }`}>
       <div className={`max-w-md w-full p-6 rounded-lg shadow-md border ${
         isDarkMode 
-          ? 'bg-gray-800 border-gray-700' 
+          ? 'bg-black border-gray-800' 
           : 'bg-white border-gray-200'
       }`}>
         <div className="flex justify-center mb-4">
@@ -127,7 +134,7 @@ export default function Login() {
                 aria-selected={mode === "admin"}
                 onClick={() => setMode("admin")}
               >
-                Admin / Organizer
+                Admin / Event Admin
               </button>
             </div>
           </div>
@@ -135,7 +142,7 @@ export default function Login() {
           <h2 className={`text-2xl font-semibold mb-1 ${
             isDarkMode ? 'text-white' : 'text-gray-900'
           }`}>
-            {mode === "admin" ? "Admin / Organizer Login" : "Login"}
+            {mode === "admin" ? "Admin / Event Admin Login" : "Login"}
           </h2>
           <p className={`text-sm mb-3 ${
             isDarkMode ? 'text-gray-400' : 'text-gray-500'
@@ -160,7 +167,7 @@ export default function Login() {
                   placeholder="you@example.com"
                   className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                     isDarkMode
-                      ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-blue-300/50 focus:ring-2 focus:ring-blue-300/20'
+                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
                       : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                   }`}
                 />
@@ -179,7 +186,7 @@ export default function Login() {
                     placeholder="••••••••"
                     className={`w-full px-4 py-3 pr-12 rounded-lg border transition-all outline-none ${
                       isDarkMode
-                        ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-blue-300/50 focus:ring-2 focus:ring-blue-300/20'
+                        ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
                         : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                     }`}
                   />
@@ -236,7 +243,7 @@ export default function Login() {
                     <div className={`w-full border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className={`px-2 ${isDarkMode ? 'bg-[#1a1f2e]/80 text-gray-400' : 'bg-white/90 text-gray-500'}`}>
+                    <span className={`px-2 ${isDarkMode ? 'bg-black text-gray-400' : 'bg-white/90 text-gray-500'}`}>
                     Or continue with
                   </span>
                   </div>
@@ -249,7 +256,7 @@ export default function Login() {
                   type="button"
                   className={`w-full flex items-center justify-center gap-3 px-4 py-3 border rounded-lg font-semibold transition-all ${
                 isDarkMode
-                  ? 'bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30'
+                  ? 'bg-black border-gray-800 text-gray-100 hover:border-gray-600'
                   : 'bg-white border-indigo-200 text-gray-700 hover:bg-indigo-50 hover:border-indigo-300'
               }`}
                 >

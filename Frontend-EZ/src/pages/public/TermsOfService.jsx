@@ -247,14 +247,14 @@ export default function TermsOfService() {
         animate={{ opacity: 1, y: 0 }}
         className={`rounded-xl overflow-hidden border-2 transition ${
           isDarkMode
-            ? 'bg-slate-800/30 border-slate-700 hover:border-red-500/50'
+            ? 'bg-neutral-900/70 border-neutral-800 hover:border-red-500/60'
             : 'bg-white border-gray-200 hover:border-indigo-300'
         }`}
       >
         <button
           onClick={() => setExpandedSection(isOpen ? null : section.id)}
           className={`w-full p-6 text-left flex items-center justify-between transition-all ${
-            isDarkMode ? 'hover:bg-slate-700/30' : 'hover:bg-gray-50'
+            isDarkMode ? 'hover:bg-neutral-900' : 'hover:bg-gray-50'
           }`}
         >
           <h3 className={`text-lg font-black pr-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -278,7 +278,7 @@ export default function TermsOfService() {
           transition={{ duration: 0.3 }}
           className="overflow-hidden"
         >
-          <div className={`p-6 border-t space-y-4 ${isDarkMode ? 'border-slate-700 bg-slate-900/30' : 'border-gray-100 bg-gray-50/50'}`}>
+          <div className={`p-6 border-t space-y-4 ${isDarkMode ? 'border-neutral-800 bg-neutral-900/60' : 'border-gray-100 bg-gray-50/50'}`}>
             {hasSubsections ? (
               <div className="space-y-5">
                 {section.subsections.map((subsection, idx) => (
@@ -310,7 +310,7 @@ export default function TermsOfService() {
   return (
     <div className={`min-h-screen py-12 transition-colors ${
       isDarkMode
-        ? 'bg-gradient-to-b from-slate-900 to-slate-950'
+        ? 'bg-black'
         : 'bg-gradient-to-b from-gray-50 to-white'
     }`}>
       <div className="max-w-4xl mx-auto px-6">
@@ -341,7 +341,7 @@ export default function TermsOfService() {
           transition={{ delay: 0.1 }}
           className={`mb-8 p-6 rounded-xl border-2 ${
             isDarkMode
-              ? 'bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-yellow-600/50'
+              ? 'bg-black border-neutral-800'
               : 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200'
           }`}
         >
@@ -360,7 +360,7 @@ export default function TermsOfService() {
           transition={{ delay: 0.2 }}
           className={`mb-8 p-6 rounded-xl border-2 ${
             isDarkMode
-              ? 'bg-slate-800/30 border-slate-700'
+              ? 'bg-neutral-900/70 border-neutral-800'
               : 'bg-gray-50 border-gray-200'
           }`}
         >
@@ -438,7 +438,7 @@ export default function TermsOfService() {
           transition={{ delay: 0.4 }}
           className={`p-8 rounded-2xl border-2 text-center ${
             isDarkMode
-              ? 'bg-gradient-to-r from-red-900/30 to-orange-900/30 border-red-500/50'
+              ? 'bg-black border-neutral-800'
               : 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200'
           }`}
         >
