@@ -70,9 +70,12 @@ function signRefreshToken(userId, sessionId) {
 
 function getClientMetadata(req) {
   const forwarded = req.headers["x-forwarded-for"];
-  const ip = Array.isArray(forwarded)
+  const cfConnectingIp = req.headers["cf-connecting-ip"];
+  const realIp = req.headers["x-real-ip"];
+  const forwardedIp = Array.isArray(forwarded)
     ? forwarded[0]
-    : forwarded?.split(",")[0]?.trim() || req.ip;
+    : forwarded?.split(",")[0]?.trim();
+  const ip = forwardedIp || cfConnectingIp || realIp || req.ip || req.connection?.remoteAddress;
   return {
     userAgent: req.get("user-agent") || "unknown",
     ip,

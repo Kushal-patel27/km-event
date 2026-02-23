@@ -1213,11 +1213,17 @@ export const getSystemLogs = async (req, res) => {
       .limit(200)
       .sort({ lastLoginAt: -1 });
 
+    const sessionByUserId = new Map();
+
     users.forEach((user) => {
       // Get most recent session for IP info
-      const mostRecentSession = user.sessions && user.sessions.length > 0 
+      const mostRecentSession = user.sessions && user.sessions.length > 0
         ? user.sessions.sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt))[0]
         : null;
+
+      if (mostRecentSession) {
+        sessionByUserId.set(user._id.toString(), mostRecentSession);
+      }
 
       // Add user creation log
       if (user.createdAt) {
@@ -1227,6 +1233,7 @@ export const getSystemLogs = async (req, res) => {
           userEmail: user.email,
           userName: user.name,
           timestamp: user.createdAt,
+          ipAddress: mostRecentSession?.ip,
           details: {
             role: user.role,
             ip: mostRecentSession?.ip,
@@ -1242,6 +1249,7 @@ export const getSystemLogs = async (req, res) => {
           userEmail: user.email,
           userName: user.name,
           timestamp: user.lastLoginAt,
+          ipAddress: mostRecentSession?.ip,
           details: {
             role: user.role,
             ip: mostRecentSession?.ip,
@@ -1254,12 +1262,13 @@ export const getSystemLogs = async (req, res) => {
       if (user.sessions && Array.isArray(user.sessions)) {
         user.sessions.forEach((session) => {
           if (session.lastSeenAt) {
-            logs.push({
+              logs.push({
               type: "session_activity",
               userId: user._id,
               userEmail: user.email,
               userName: user.name,
               timestamp: session.lastSeenAt,
+                ipAddress: session.ip,
               details: {
                 ip: session.ip,
                 userAgent: session.userAgent,
@@ -1280,16 +1289,20 @@ export const getSystemLogs = async (req, res) => {
       .lean();
 
     recentBookings.forEach((booking) => {
+      const bookingUserId = booking.user?._id?.toString();
+      const session = bookingUserId ? sessionByUserId.get(bookingUserId) : null;
       logs.push({
         type: "booking_created",
         userId: booking.user?._id,
         userEmail: booking.user?.email,
         userName: booking.user?.name,
         timestamp: booking.createdAt,
+        ipAddress: session?.ip,
         details: {
           event: booking.event?.title,
           quantity: booking.quantity,
           status: booking.status,
+          ip: session?.ip,
         },
       });
     });

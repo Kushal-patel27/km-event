@@ -25,7 +25,7 @@ export default function StaffAdminLogin() {
         return
       }
       login(res.data)
-      navigate('/staff-admin')
+      navigate('/staff-admin/dashboard')
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed')
     } finally {

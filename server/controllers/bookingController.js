@@ -1,6 +1,6 @@
 import Booking from "../models/Booking.js";
 import Event from "../models/Event.js";
-import generateQR from "../utils/generateQR.js";
+import generateQR, { generateBookingQRCode } from "../utils/generateQR.js";
 import { ADMIN_ROLE_SET } from "../models/User.js";
 import SystemConfig from "../models/SystemConfig.js";
 import FeatureToggle from "../models/FeatureToggle.js";
@@ -10,6 +10,7 @@ import { generateTicketPDF } from "../utils/generateTicketPDF.js";
 import { notifyNextInLine } from "./waitlistController.js";
 import OrganizerSubscription from "../models/OrganizerSubscription.js";
 import Commission from "../models/Commission.js";
+import generateUniqueBookingId from "../utils/generateBookingId.js";
 
 function generateUniqueTicketId() {
   // Generate a short ticket ID like A1B2C3D4 (8 characters)
@@ -179,12 +180,20 @@ export const createBooking = async (req, res) => {
       ticketIds.push(generateUniqueTicketId());
     }
 
+    // Generate unique Booking ID
+    const bookingId = await generateUniqueBookingId();
+
     const bookingData = {
+      bookingId,
       user: req.user._id,
+      userEmail: req.user.email,
+      userName: req.user.name,
+      userPhone: req.body.phone || '',
       event: eventId,
       quantity: requestedQuantity,
       totalAmount,
       ticketIds,
+      paymentStatus: "completed",
       ...(ticketTypeData && { ticketType: ticketTypeData })
     };
 
@@ -239,12 +248,16 @@ export const createBooking = async (req, res) => {
       // Continue with default (enabled) if config fetch fails
     }
 
-    // Generate unique QR codes only if enabled (one per ticket with ticket ID)
+    // Generate unique QR codes only if enabled (one per ticket with ticket ID + Booking ID)
     const qrCodes = [];
     if (qrEnabled) {
+      // Generate main QR code with Booking ID
+      const bookingQRCode = await generateBookingQRCode(booking.bookingId, eventId.toString());
+      
       for (let i = 0; i < quantity; i++) {
         const ticketId = ticketIds[i];
         const qrData = JSON.stringify({
+          bookingId: booking.bookingId,
           ticketId: ticketId,
           bid: booking._id.toString(),
           idx: i + 1,
@@ -260,7 +273,7 @@ export const createBooking = async (req, res) => {
     booking.qrCode = qrCodes.length > 0 ? qrCodes[0].image : undefined; // legacy: first QR as string
     await booking.save();
 
-    console.log(`[BOOKING] QR Code generation: ${qrEnabled ? 'ENABLED' : 'DISABLED'} - Generated ${qrCodes.length} QR codes`);
+    console.log(`[BOOKING] QR Code generation: ${qrEnabled ? 'ENABLED' : 'DISABLED'} - Generated ${qrCodes.length} QR codes for Booking ID: ${booking.bookingId}`);
 
     // ==================== CREATE COMMISSION ====================
     // Fetch organizer's subscription and create commission
@@ -595,6 +608,232 @@ export const downloadTicketPDF = async (req, res) => {
     res.send(pdfBuffer);
   } catch (error) {
     console.error('[DOWNLOAD PDF ERROR]', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Admin API: Get all bookings with pagination
+ */
+export const getAdminAllBookings = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status, eventId } = req.query;
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = {};
+    if (status) filter.status = status;
+    if (eventId) filter.event = eventId;
+
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter)
+        .populate('user', 'name email')
+        .populate('event', 'title date location')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Booking.countDocuments(filter),
+    ]);
+
+    const formattedBookings = bookings.map(booking => ({
+      _id: booking._id,
+      bookingId: booking.bookingId,
+      userName: booking.userName || booking.user?.name || 'N/A',
+      userEmail: booking.userEmail || booking.user?.email || 'N/A',
+      userPhone: booking.userPhone || '-',
+      eventTitle: booking.event?.title || 'N/A',
+      ticketType: booking.ticketType,
+      quantity: booking.quantity,
+      totalAmount: booking.totalAmount,
+      paymentStatus: booking.paymentStatus,
+      status: booking.status,
+      date: booking.createdAt,
+      ticketIds: booking.ticketIds || [],
+    }));
+
+    res.json({
+      bookings: formattedBookings,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Admin API: Search booking by Booking ID
+ */
+export const searchBookingByBookingId = async (req, res) => {
+  try {
+    const { bookingId } = req.query;
+
+    if (!bookingId || bookingId.trim() === '') {
+      return res.status(400).json({ message: 'Booking ID is required' });
+    }
+
+    const booking = await Booking.findOne({ bookingId })
+      .populate('user', 'name email phone')
+      .populate('event', 'title date location')
+      .lean();
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    const formattedBooking = {
+      _id: booking._id,
+      bookingId: booking.bookingId,
+      userName: booking.userName || booking.user?.name || 'N/A',
+      userEmail: booking.userEmail || booking.user?.email || 'N/A',
+      userPhone: booking.userPhone || '-',
+      eventTitle: booking.event?.title || 'N/A',
+      event: {
+        _id: booking.event?._id,
+        title: booking.event?.title || 'N/A',
+        date: booking.event?.date,
+        location: booking.event?.location,
+      },
+      ticketType: booking.ticketType,
+      quantity: booking.quantity,
+      seats: booking.seats || [],
+      ticketIds: booking.ticketIds || [],
+      totalAmount: booking.totalAmount,
+      paymentStatus: booking.paymentStatus,
+      status: booking.status,
+      date: booking.createdAt,
+      createdAt: booking.createdAt,
+      qrCode: booking.qrCode,
+      qrCodes: booking.qrCodes || [],
+    };
+
+    res.json({
+      booking: formattedBooking,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Admin API: Search bookings by email or name
+ */
+export const searchBookingsByUser = async (req, res) => {
+  try {
+    const { search, page = 1, limit = 20 } = req.query;
+
+    if (!search || search.trim() === '') {
+      return res.status(400).json({ message: 'Search term is required' });
+    }
+
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = {
+      $or: [
+        { userEmail: { $regex: search, $options: 'i' } },
+        { userName: { $regex: search, $options: 'i' } },
+      ],
+    };
+
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter)
+        .populate('event', 'title date location')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Booking.countDocuments(filter),
+    ]);
+
+    const formattedBookings = bookings.map(booking => ({
+      _id: booking._id,
+      bookingId: booking.bookingId,
+      userName: booking.userName,
+      userEmail: booking.userEmail,
+      userPhone: booking.userPhone || '-',
+      eventTitle: booking.event?.title || 'N/A',
+      ticketType: booking.ticketType,
+      quantity: booking.quantity,
+      totalAmount: booking.totalAmount,
+      paymentStatus: booking.paymentStatus,
+      status: booking.status,
+      date: booking.createdAt,
+      ticketIds: booking.ticketIds || [],
+    }));
+
+    res.json({
+      bookings: formattedBookings,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Admin API: Search booking by Ticket ID
+ */
+export const searchBookingByTicketId = async (req, res) => {
+  try {
+    const { ticketId } = req.query;
+
+    if (!ticketId || ticketId.trim() === '') {
+      return res.status(400).json({ message: 'Ticket ID is required' });
+    }
+
+    const booking = await Booking.findOne({ ticketIds: ticketId })
+      .populate('user', 'name email phone')
+      .populate('event', 'title date location')
+      .lean();
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found for this ticket ID' });
+    }
+
+    const formattedBooking = {
+      _id: booking._id,
+      bookingId: booking.bookingId,
+      userName: booking.userName || booking.user?.name || 'N/A',
+      userEmail: booking.userEmail || booking.user?.email || 'N/A',
+      userPhone: booking.userPhone || '-',
+      eventTitle: booking.event?.title || 'N/A',
+      event: {
+        _id: booking.event?._id,
+        title: booking.event?.title || 'N/A',
+        date: booking.event?.date,
+        location: booking.event?.location,
+      },
+      ticketType: booking.ticketType,
+      quantity: booking.quantity,
+      seats: booking.seats || [],
+      ticketIds: booking.ticketIds || [],
+      totalAmount: booking.totalAmount,
+      paymentStatus: booking.paymentStatus,
+      status: booking.status,
+      date: booking.createdAt,
+      createdAt: booking.createdAt,
+      qrCode: booking.qrCode,
+      qrCodes: booking.qrCodes || [],
+      foundTicketId: ticketId,
+    };
+
+    res.json({
+      booking: formattedBooking,
+    });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };

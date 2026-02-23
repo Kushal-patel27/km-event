@@ -9,6 +9,7 @@ import formatINR from '../../utils/currency'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 
 export default function MyBookings() {
+  const backendURL = import.meta.env.VITE_API_URL || ""
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -28,7 +29,7 @@ export default function MyBookings() {
       
       // Download each ticket PDF
       for (let i = 0; i < booking.quantity; i++) {
-        const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}/ticket/${i}/pdf`, {
+        const response = await fetch(`${backendURL}/api/bookings/${bookingId}/ticket/${i}/pdf`, {
           headers: {
             Authorization: `Bearer ${token}`
           }

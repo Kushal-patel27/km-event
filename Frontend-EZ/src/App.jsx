@@ -31,6 +31,7 @@ import SetPassword from './pages/auth/SetPassword'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminEvents from './pages/admin/AdminEvents'
 import AdminBookings from './pages/admin/AdminBookings'
+import BookingSearchDashboard from './pages/admin/BookingSearchDashboard'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminContacts from './pages/admin/AdminContacts'
 import AdminTeam from './pages/admin/AdminTeam'
@@ -142,6 +143,7 @@ export default function App(){
             <Route path="/admin/team" element={<ProtectedAdminRoute><AdminTeam /></ProtectedAdminRoute>} />
               <Route path="/admin/events" element={<ProtectedAdminRoute><AdminEvents /></ProtectedAdminRoute>} />
               <Route path="/admin/bookings" element={<ProtectedAdminRoute><AdminBookings /></ProtectedAdminRoute>} />
+              <Route path="/admin/booking-search" element={<ProtectedAdminRoute><BookingSearchDashboard /></ProtectedAdminRoute>} />
               <Route path="/admin/contacts" element={<ProtectedAdminRoute><AdminContacts /></ProtectedAdminRoute>} />
               <Route path="/admin/faq" element={<ProtectedAdminRoute><FAQManager /></ProtectedAdminRoute>} />
               <Route path="/admin/help" element={<ProtectedAdminRoute><HelpManager /></ProtectedAdminRoute>} />
@@ -160,6 +162,8 @@ export default function App(){
               <Route path="/event-admin/events" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminEvents /></ProtectedAdminRoute>} />
               <Route path="/event-admin/bookings" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminBookings /></ProtectedAdminRoute>} />
             <Route path="/event-admin/:eventId/features" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminFeatures /></ProtectedAdminRoute>} />
+            <Route path="/staff-admin" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff-admin/login"><StaffAdminDashboard /></ProtectedAdminRoute>} />
+            <Route path="/staff-admin/dashboard" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff-admin/login"><StaffAdminDashboard /></ProtectedAdminRoute>} />
             <Route path="/staff-admin/team" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff-admin/login"><StaffAdminTeam /></ProtectedAdminRoute>} />
             <Route path="/staff-admin/entries" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff-admin/login"><StaffAdminEntries /></ProtectedAdminRoute>} />
             <Route path="/staff-admin/settings" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff-admin/login"><StaffAdminSettings /></ProtectedAdminRoute>} />

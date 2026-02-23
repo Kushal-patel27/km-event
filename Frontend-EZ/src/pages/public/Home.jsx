@@ -448,7 +448,7 @@ export default function Home() {
               Search, pick seats, pay, and get instant QR tickets on your phone.
             </motion.p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 items-stretch">
             {[
               { title: 'Find the event', desc: 'Use search or browse curated picks by city and category.' },
               { title: 'Choose seats', desc: 'See live availability and lock your seats instantly.' },
@@ -464,37 +464,23 @@ export default function Home() {
                       whileInView: { opacity: 1, y: 0 },
                       transition: { duration: 0.6, delay: idx * 0.15 },
                     })}
-                className="group relative p-10 md:p-12 rounded-3xl backdrop-blur-sm transition-all duration-300 overflow-hidden bg-black border border-white/10 hover:-translate-y-1 hover:border-red-500/40"
+                className="group relative h-full min-h-[340px] p-10 md:p-12 rounded-3xl backdrop-blur-sm transition-all duration-300 overflow-hidden bg-black border border-white/10 hover:-translate-y-1 hover:border-red-500/40"
               >
-                <div className={`relative z-10 flex flex-col ${idx === 1 ? 'items-center text-center' : 'items-start'}`}>
+                <div className="relative z-10 flex h-full flex-col items-center text-center">
                   {/* Step Number Badge */}
-                  <div
-                    className={`relative mb-8 ${idx === 1 ? 'w-28 h-28 md:w-32 md:h-32' : 'w-16 h-16 md:w-20 md:h-20'}`}
-                  >
-                    <div className={`relative w-full h-full rounded-full bg-gradient-to-br from-red-600 to-red-500 flex items-center justify-center font-bold transition-all ${
-                      idx === 1
-                        ? 'text-5xl md:text-6xl shadow-2xl shadow-red-500/40'
-                        : 'text-2xl md:text-3xl shadow-lg group-hover:shadow-xl group-hover:shadow-red-500/50'
-                    }`}>
+                  <div className="relative mb-8 w-20 h-20 md:w-24 md:h-24">
+                    <div className="relative w-full h-full rounded-full bg-gradient-to-br from-red-600 to-red-500 flex items-center justify-center text-3xl md:text-4xl font-bold shadow-lg transition-all group-hover:shadow-xl group-hover:shadow-red-500/50">
                       <span className="text-white">{idx + 1}</span>
                     </div>
                   </div>
 
                   {/* Title */}
-                  <h3 className={`font-bold mb-5 transition-colors ${
-                    idx === 1 
-                      ? 'text-3xl md:text-4xl text-white' 
-                      : 'text-xl md:text-2xl text-white group-hover:text-red-400'
-                  }`}>
+                  <h3 className="text-2xl md:text-3xl font-bold mb-4 text-white transition-colors group-hover:text-red-400">
                     {step.title}
                   </h3>
 
                   {/* Description */}
-                  <p className={`leading-relaxed ${
-                    idx === 1 
-                      ? 'text-gray-300 text-base md:text-lg max-w-xs' 
-                      : 'text-gray-300 text-sm'
-                  }`}>
+                  <p className="text-gray-300 text-base leading-relaxed max-w-xs">
                     {step.desc}
                   </p>
                 </div>

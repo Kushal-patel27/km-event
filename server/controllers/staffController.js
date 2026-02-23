@@ -380,10 +380,7 @@ export const validateAndScanQR = async (req, res) => {
       ticketId = qrData.trim();
     }
 
-    // Validate event match if we have eventIdFromQR
-    if (eventIdFromQR && eventIdFromQR !== eventId && eventIdFromQR !== event._id.toString()) {
-      return res.status(400).json({ message: "QR is for a different event" });
-    }
+    // Defer event match validation until booking is resolved
 
     // Find booking by ticket ID
     let booking;
@@ -409,6 +406,12 @@ export const validateAndScanQR = async (req, res) => {
       }
     } else {
       return res.status(400).json({ message: "Invalid QR format or ticket ID" });
+    }
+
+    // Validate selected event against booking.event
+    const bookingEventId = booking?.event?._id?.toString() || booking?.event?.toString();
+    if (eventId && bookingEventId && bookingEventId !== eventId.toString()) {
+      return res.status(400).json({ message: "QR is for a different event" });
     }
 
     // Block cancelled or refunded bookings

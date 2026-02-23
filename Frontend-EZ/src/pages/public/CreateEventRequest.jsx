@@ -40,7 +40,23 @@ export default function CreateEventRequest() {
   const [limitReached, setLimitReached] = useState(false)
   const [mySubscription, setMySubscription] = useState(null)
 
-  // Fetch plans and categories from backend
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    category: 'Conference',
+    customCategory: '',
+    date: '',
+    location: '',
+    locationDetails: '',
+    price: 0,
+    totalTickets: '',
+    availableTickets: '',
+    ticketTypes: [],
+    organizerPhone: user?.phone || '',
+    organizerCompany: '',
+    image: '',
+    planSelected: ''
+  })
   useEffect(() => {
     fetchPlans()
     fetchCategories()
@@ -231,24 +247,6 @@ export default function CreateEventRequest() {
       setCategoriesLoading(false)
     }
   }
-
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: 'Conference',
-    customCategory: '',
-    date: '',
-    location: '',
-    locationDetails: '',
-    price: 0,
-    totalTickets: '',
-    availableTickets: '',
-    ticketTypes: [],
-    organizerPhone: user?.phone || '',
-    organizerCompany: '',
-    image: '',
-    planSelected: ''
-  })
 
   const handleInputChange = (e) => {
     const { name, value } = e.target

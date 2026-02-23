@@ -16,8 +16,7 @@ export default function StaffLayout({ title, children }) {
 
   // Navigation items for staff
   const scannerNav = [
-    { path: '/staff/hp-scanner', label: '📱 Scanner (Disabled)', icon: '🎫', disabled: true },
-    { path: '/staff/scanner', label: 'Legacy Scanner', icon: '📟' },
+    { path: '/staff/scanner', label: 'Scanner', icon: '📟' },
   ]
 
   const isActive = (path) => location.pathname === path
