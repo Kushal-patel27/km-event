@@ -13,6 +13,7 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
   const nav = [
     { to: '/super-admin', label: 'Overview', icon: '📊' },
     { to: '/super-admin/users', label: 'Users & Roles', icon: '👥' },
+    { to: '/super-admin/deletion-requests', label: 'Deletion Requests', icon: '🗑️' },
     { to: '/super-admin/staff', label: 'Staff (Scanner)', icon: '🎫📱' },
     { to: '/super-admin/events', label: 'Events', icon: '📅' },
     { to: '/super-admin/event-requests', label: 'Event Requests', icon: '✉️', matchPrefix: '/super-admin/event-requests' },

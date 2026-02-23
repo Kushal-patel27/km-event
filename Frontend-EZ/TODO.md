@@ -6,8 +6,8 @@
 - [x] Add dark mode toggle button in Navbar.jsx
 - [x] Update index.css with dark mode styles
 - [x] Apply dark mode classes to footer and other components
-- [ ] Test toggle functionality
-- [ ] Verify dark mode styling across pages
+- [x] Test toggle functionality
+- [x] Verify dark mode styling across pages
 
 # Search Bar Implementation TODO
 

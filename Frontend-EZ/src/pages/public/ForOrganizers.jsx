@@ -237,20 +237,15 @@ export default function ForOrganizers() {
   ]
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19] text-white' : 'bg-gradient-to-b from-gray-50 to-white text-gray-900'}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-[#0B0F19] text-white' : 'bg-white text-gray-900'}`}>
       {/* Hero Section */}
-      <section className="relative py-20 md:py-32 overflow-hidden">
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative z-10 px-6 lg:px-12 max-w-6xl mx-auto text-center">
+      <section className="py-20 md:py-32">
+        <div className="px-6 lg:px-12 max-w-6xl mx-auto text-center">
           <motion.p
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-xs md:text-sm uppercase tracking-[0.3em] text-blue-400 font-semibold mb-4"
+            className={`text-xs md:text-sm uppercase tracking-[0.3em] font-semibold mb-4 ${isDarkMode ? 'text-blue-400' : 'text-indigo-600'}`}
           >
             For Event Organizers
           </motion.p>
@@ -259,10 +254,10 @@ export default function ForOrganizers() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+            className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
           >
             Host Your Next Event with{' '}
-            <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+              <span className={isDarkMode ? 'text-blue-400' : 'text-indigo-600'}>
               K&M Events
             </span>
           </motion.h1>
@@ -271,7 +266,7 @@ export default function ForOrganizers() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className={`text-lg md:text-xl mb-12 max-w-3xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+            className={`text-lg md:text-xl mb-12 max-w-3xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}
           >
             Launch your event on K&M Events and reach thousands of enthusiasts. We handle ticketing, QR codes, payments, and support—so you can focus on creating amazing experiences.
           </motion.p>
@@ -284,7 +279,11 @@ export default function ForOrganizers() {
           >
             <Link
               to="/create-event"
-              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl text-lg font-bold text-white shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-300"
+                className={`px-8 py-4 rounded-xl text-lg font-bold text-white shadow-lg transform hover:scale-105 transition-all duration-300 ${
+                  isDarkMode 
+                    ? 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/50'
+                    : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-500/40'
+                }`}
             >
               Submit Your Event
             </Link>
@@ -293,7 +292,7 @@ export default function ForOrganizers() {
               className={`px-8 py-4 border-2 rounded-xl text-lg font-semibold backdrop-blur-sm transition-all duration-300 ${
                 isDarkMode
                   ? 'border-blue-400/50 text-blue-300 hover:bg-blue-500/10 hover:border-blue-400'
-                  : 'border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700'
+                  : 'border-indigo-600 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-700 hover:shadow-md'
               }`}
             >
               Contact Sales
@@ -303,7 +302,7 @@ export default function ForOrganizers() {
       </section>
 
       {/* Benefits Section */}
-      <section className={`py-20 ${isDarkMode ? 'bg-gradient-to-b from-[#0d1221] to-[#0B0F19]' : 'bg-gray-50'}`}>
+      <section className={`py-20 ${isDarkMode ? 'bg-[#0d1221]' : 'bg-slate-50'}`}>
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -312,10 +311,10 @@ export default function ForOrganizers() {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               Why Choose K&M Events?
             </h2>
-            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-2xl mx-auto`}>
+            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-slate-600'} max-w-2xl mx-auto`}>
               Everything you need to host successful events and sell tickets effortlessly
             </p>
           </motion.div>
@@ -330,15 +329,15 @@ export default function ForOrganizers() {
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
                 className={`group p-6 rounded-2xl backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 ${
                   isDarkMode
-                    ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 hover:from-white/15 hover:to-white/8 hover:border-blue-500/40'
-                    : 'bg-white border border-gray-200 hover:border-blue-500/40 hover:shadow-lg'
+                      ? 'bg-white/8 border border-white/15 hover:bg-white/15 hover:border-blue-500/40'
+                    : 'bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-100/50'
                 }`}
               >
                 <div className="text-4xl mb-4">{benefit.icon}</div>
-                <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   {benefit.title}
                 </h3>
-                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>
                   {benefit.description}
                 </p>
               </motion.div>
@@ -348,7 +347,7 @@ export default function ForOrganizers() {
       </section>
 
       {/* How It Works Section */}
-      <section className={`py-20 ${isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] to-[#0d1221]' : 'bg-white'}`}>
+      <section className={`py-20 ${isDarkMode ? 'bg-[#0B0F19]' : 'bg-white'}`}>
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -357,10 +356,10 @@ export default function ForOrganizers() {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               How It Works
             </h2>
-            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-2xl mx-auto`}>
+            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-slate-600'} max-w-2xl mx-auto`}>
               Get your event live in 4 simple steps
             </p>
           </motion.div>
@@ -377,21 +376,23 @@ export default function ForOrganizers() {
               >
                 {/* Connector Line */}
                 {idx < steps.length - 1 && (
-                  <div className={`hidden lg:block absolute top-12 left-full w-full h-0.5 ${isDarkMode ? 'bg-blue-500/30' : 'bg-blue-300'}`} />
+                  <div className={`hidden lg:block absolute top-12 left-full w-full h-0.5 ${isDarkMode ? 'bg-blue-500/30' : 'bg-indigo-400'}`} />
                 )}
 
-                <div className={`relative z-10 p-8 rounded-2xl backdrop-blur-sm transition-all duration-300 ${
+                <div className={`relative z-10 p-8 rounded-2xl backdrop-blur-sm transition-all duration-300 hover:shadow-xl ${
                   isDarkMode
-                    ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15'
-                    : 'bg-white border border-gray-200 shadow-md'
+                      ? 'bg-white/8 border border-white/15'
+                    : 'bg-white border border-slate-200 shadow-md hover:shadow-indigo-100/50 hover:border-indigo-300'
                 }`}>
-                  <div className="w-16 h-16 mb-6 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                    <div className={`w-16 h-16 mb-6 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg ${
+                      isDarkMode ? 'bg-blue-600' : 'bg-indigo-600'
+                    }`}>
                     {step.number}
                   </div>
-                  <h3 className={`text-xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <h3 className={`text-xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                     {step.title}
                   </h3>
-                  <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>
                     {step.description}
                   </p>
                 </div>
@@ -402,7 +403,7 @@ export default function ForOrganizers() {
       </section>
 
       {/* Pricing Plans Section */}
-      <section className={`py-20 ${isDarkMode ? 'bg-gradient-to-b from-[#0d1221] to-[#0B0F19]' : 'bg-gray-50'}`}>
+      <section className={`py-20 ${isDarkMode ? 'bg-[#0d1221]' : 'bg-slate-50'}`}>
         <div className="px-6 lg:px-12 max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -411,17 +412,21 @@ export default function ForOrganizers() {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               Pricing Plans
             </h2>
-            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-2xl mx-auto mb-6`}>
+            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-slate-600'} max-w-2xl mx-auto mb-6`}>
               Choose the perfect plan for your event size and needs
             </p>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedPlanId('comparison')}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-300 ${
+                isDarkMode 
+                  ? 'bg-purple-600 hover:bg-purple-700'
+                  : 'bg-purple-600 hover:bg-purple-700'
+              }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -468,16 +473,16 @@ export default function ForOrganizers() {
                   } ${
                     isPopular
                       ? isDarkMode
-                        ? 'bg-gradient-to-br from-purple-900/60 via-pink-900/40 to-purple-900/40 border-2 border-purple-400/60 shadow-2xl shadow-purple-500/40 ring-2 ring-purple-500/20'
-                        : 'bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 border-2 border-purple-400 shadow-2xl shadow-purple-300/40 ring-2 ring-purple-500/10'
+                        ? 'bg-purple-900/60 border-2 border-purple-400/60 shadow-2xl shadow-purple-500/40 ring-2 ring-purple-500/20'
+                        : 'bg-purple-50 border-2 border-purple-400 shadow-2xl shadow-purple-300/40 ring-2 ring-purple-400/20'
                       : isDarkMode
-                      ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15'
-                      : 'bg-white border border-gray-200 shadow-md'
+                       ? 'bg-white/8 border border-white/15'
+                      : 'bg-white border border-slate-200 shadow-lg hover:shadow-xl hover:border-indigo-300'
                   }`}
                 >
                   {/* Animated background effect for popular plan */}
                   {isPopular && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-pink-500/10 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                      <div className="absolute inset-0 bg-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                   )}
 
                   {/* Popular Badge */}
@@ -486,7 +491,7 @@ export default function ForOrganizers() {
                       <motion.div
                         animate={{ y: [0, -4, 0] }}
                         transition={{ duration: 2.5, repeat: Infinity }}
-                        className="px-4 py-2 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 rounded-full text-white text-xs font-bold shadow-lg border-2 border-white/40 whitespace-nowrap"
+                          className="px-4 py-2 bg-purple-600 rounded-full text-white text-xs font-bold shadow-lg border-2 border-white/40 whitespace-nowrap"
                       >
                         ⭐ Most Popular
                       </motion.div>
@@ -501,27 +506,27 @@ export default function ForOrganizers() {
                       </div>
 
                       {/* Pricing Section */}
-                      <div className={`mb-3 pb-3 border-b ${isDarkMode ? 'border-white/10' : 'border-purple-100'}`}>
+                      <div className={`mb-3 pb-3 border-b ${isDarkMode ? 'border-white/10' : 'border-slate-200'}`}>
                         <div className="flex items-baseline gap-1">
                         {plan.price === 0 ? (
                           <div>
-                            <span className={`text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            <span className={`text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                               Custom
                             </span>
-                            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>Get in touch for pricing</p>
+                            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-slate-600'} mt-1`}>Get in touch for pricing</p>
                           </div>
                         ) : (
                           <div>
                             <div className="flex items-baseline gap-1">
-                              <span className={`text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              <span className={`text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                                 ₹{plan.price.toLocaleString()}
                               </span>
-                              <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-slate-600'}`}>
                                 / event
                               </span>
                             </div>
                             {isPopular && (
-                              <p className={`text-xs ${isDarkMode ? 'text-pink-300' : 'text-pink-600'} font-semibold mt-1`}>
+                              <p className={`text-xs ${isDarkMode ? 'text-pink-300' : 'text-purple-600'} font-semibold mt-1`}>
                                 Best Value
                               </p>
                             )}
@@ -531,14 +536,14 @@ export default function ForOrganizers() {
                     </div>
 
                       {/* Description */}
-                      <p className={`text-xs mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <p className={`text-xs mb-3 ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>
                         {plan.description}
                       </p>
 
                       {/* Features */}
                       <div className="mb-3">
                       <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${
-                        isDarkMode ? 'text-gray-400' : 'text-gray-700'
+                        isDarkMode ? 'text-gray-400' : 'text-slate-700'
                       }`}>
                         ✨ Features
                       </p>
@@ -547,12 +552,12 @@ export default function ForOrganizers() {
                           <li key={fIdx} className="flex items-start gap-2">
                             <svg className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
                               isPopular 
-                                ? isDarkMode ? 'text-pink-400' : 'text-pink-500'
-                                : 'text-green-500'
+                                ? isDarkMode ? 'text-pink-400' : 'text-purple-600'
+                                : isDarkMode ? 'text-green-500' : 'text-emerald-600'
                             }`} fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
-                            <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>
                               {feature.name.charAt(0).toUpperCase() + feature.name.slice(1).replace(/([A-Z])/g, ' $1')}
                             </span>
                           </li>
@@ -561,7 +566,7 @@ export default function ForOrganizers() {
                           <li 
                             onClick={() => setSelectedPlanId(plan._id || idx)}
                             className={`text-xs font-semibold pt-1 cursor-pointer hover:underline ${
-                              isDarkMode ? 'text-purple-300 hover:text-purple-200' : 'text-purple-600 hover:text-purple-700'
+                              isDarkMode ? 'text-purple-300 hover:text-purple-200' : 'text-indigo-600 hover:text-indigo-700'
                             }`}>
                             +{enabledFeatures.length - (isPopular ? 9 : 8)} more
                           </li>
@@ -571,7 +576,7 @@ export default function ForOrganizers() {
 
                     {/* Limits */}
                     {plan.limits && Object.keys(plan.limits).length > 0 && (
-                      <div className={`mb-4 pb-3 border-t text-xs space-y-1 ${isDarkMode ? 'border-white/10 text-gray-400' : 'border-purple-100 text-gray-600'}`}>
+                      <div className={`mb-4 pb-3 border-t text-xs space-y-1 ${isDarkMode ? 'border-white/10 text-gray-400' : 'border-slate-200 text-slate-600'}`}>
                         {plan.limits.attendeesPerEvent && (
                           <li className="flex items-center justify-between list-none">
                             <span>Max Attendees:</span>
@@ -601,11 +606,11 @@ export default function ForOrganizers() {
                       className={`block w-full py-3 rounded-lg text-center font-bold text-sm transition-all duration-300 ${
                         isPopular
                           ? isDarkMode
-                            ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 hover:from-purple-600 hover:via-pink-600 hover:to-purple-600 text-white shadow-lg hover:shadow-xl'
-                            : 'bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl'
+                             ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-xl'
+                             : 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-xl hover:shadow-purple-300/50'
                           : isDarkMode
                           ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg'
                       }`}
                     >
                       Get Started
@@ -614,7 +619,7 @@ export default function ForOrganizers() {
                     {/* Optional recommendation text */}
                     {isPopular && (
                       <p className={`text-xs text-center font-semibold ${
-                        isDarkMode ? 'text-purple-300' : 'text-purple-600'
+                        isDarkMode ? 'text-purple-300' : 'text-purple-700'
                       }`}>
                         Most teams choose this plan
                       </p>
@@ -629,7 +634,7 @@ export default function ForOrganizers() {
       </section>
 
       {/* FAQ Section */}
-      <section className={`py-20 ${isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] to-[#0d1221]' : 'bg-white'}`}>
+      <section className={`py-20 ${isDarkMode ? 'bg-[#0B0F19]' : 'bg-white'}`}>
         <div className="px-6 lg:px-12 max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -638,7 +643,7 @@ export default function ForOrganizers() {
             transition={{ duration: 0.8 }}
             className="text-center mb-16"
           >
-            <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               Frequently Asked Questions
             </h2>
           </motion.div>
@@ -651,16 +656,16 @@ export default function ForOrganizers() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
-                className={`p-6 rounded-2xl backdrop-blur-sm ${
+                className={`p-6 rounded-2xl backdrop-blur-sm transition-all duration-300 hover:shadow-lg ${
                   isDarkMode
-                    ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15'
-                    : 'bg-gray-50 border border-gray-200'
+                      ? 'bg-white/8 border border-white/15'
+                    : 'bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-indigo-100/50'
                 }`}
               >
-                <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   {faq.question}
                 </h3>
-                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>
                   {faq.answer}
                 </p>
               </motion.div>
@@ -670,13 +675,8 @@ export default function ForOrganizers() {
       </section>
 
       {/* Final CTA Section */}
-      <section className="py-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-700 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative z-10 px-6 lg:px-12 max-w-4xl mx-auto text-center">
+      <section className="py-24 bg-indigo-600">
+        <div className="px-6 lg:px-12 max-w-4xl mx-auto text-center">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -706,13 +706,17 @@ export default function ForOrganizers() {
           >
             <Link
               to="/create-event"
-              className="px-10 py-5 bg-white hover:bg-gray-100 text-blue-600 rounded-xl text-lg font-bold shadow-2xl hover:scale-105 transition-all duration-300"
+              className={`px-10 py-5 rounded-xl text-lg font-bold shadow-2xl hover:scale-105 transition-all duration-300 ${
+                isDarkMode
+                  ? 'bg-white hover:bg-gray-100 text-blue-600'
+                  : 'bg-white hover:bg-slate-50 text-indigo-700'
+              }`}
             >
               Submit Your Event Now
             </Link>
             <Link
               to="/contact"
-              className="px-10 py-5 border-2 border-white rounded-xl text-lg font-semibold text-white hover:bg-white/10 backdrop-blur-sm transition-all duration-300"
+              className="px-10 py-5 border-2 border-white rounded-xl text-lg font-semibold text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-300"
             >
               Talk to Sales
             </Link>
@@ -737,13 +741,13 @@ export default function ForOrganizers() {
             className={`${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto`}
           >
             {/* Modal Header */}
-            <div className={`sticky top-0 flex items-center justify-between p-6 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
-              <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`sticky top-0 flex items-center justify-between p-6 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-slate-200 bg-white'}`}>
+              <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                 Plan Comparison
               </h2>
               <button
                 onClick={() => setSelectedPlanId(null)}
-                className={`text-2xl hover:opacity-70 transition-opacity ${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`text-2xl hover:opacity-70 transition-opacity ${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 ×
               </button>
@@ -751,21 +755,21 @@ export default function ForOrganizers() {
 
             {/* Modal Content - Comparison Table */}
             <div className="p-6 overflow-x-auto">
-              <table className={`w-full text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              <table className={`w-full text-sm ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>
                 <thead>
-                  <tr className={`border-b-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <th className={`text-left py-3 px-4 font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Features</th>
+                  <tr className={`border-b-2 ${isDarkMode ? 'border-gray-700' : 'border-slate-200'}`}>
+                    <th className={`text-left py-3 px-4 font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Features</th>
                     {plans.map((plan, idx) => (
                       <th key={idx} className={`py-3 px-4 text-center font-bold min-w-32 ${
                         selectedPlanId === 'comparison' || (plan._id || idx) === selectedPlanId
                           ? isDarkMode 
                             ? 'bg-purple-900/40 text-purple-300' 
-                            : 'bg-purple-50 text-purple-600'
-                          : isDarkMode ? 'text-white' : 'text-gray-900'
+                            : 'bg-gradient-to-br from-purple-50 to-indigo-50 text-purple-700'
+                          : isDarkMode ? 'text-white' : 'text-slate-900'
                       }`}>
                         <div className="font-bold text-base">{plan.displayName || plan.name}</div>
                         <div className={`text-lg font-extrabold mt-1 ${
-                          isDarkMode ? 'text-purple-300' : 'text-purple-600'
+                          isDarkMode ? 'text-purple-300' : 'text-indigo-700'
                         }`}>₹{plan.price.toLocaleString()}</div>
                       </th>
                     ))}
@@ -773,8 +777,8 @@ export default function ForOrganizers() {
                 </thead>
                 <tbody>
                   {/* Features Section */}
-                  <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <td colSpan={plans.length + 1} className={`py-3 px-4 font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                  <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-slate-200'}`}>
+                    <td colSpan={plans.length + 1} className={`py-3 px-4 font-bold ${isDarkMode ? 'text-purple-300' : 'text-indigo-700'}`}>
                       ✨ Features
                     </td>
                   </tr>
@@ -783,8 +787,8 @@ export default function ForOrganizers() {
                   {Array.from(new Set(
                     plans.flatMap(plan => Object.keys(plan.features || {}))
                   )).map((featureName) => (
-                    <tr key={featureName} className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-gray-100'}`}>
-                      <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <tr key={featureName} className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-slate-100'}`}>
+                      <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>
                         {featureName.charAt(0).toUpperCase() + featureName.slice(1).replace(/([A-Z])/g, ' $1')}
                       </td>
                       {plans.map((plan, idx) => (
@@ -796,7 +800,7 @@ export default function ForOrganizers() {
                             : ''
                         }`}>
                           {plan.features && plan.features[featureName]?.enabled ? (
-                            <svg className={`w-5 h-5 mx-auto ${isDarkMode ? 'text-pink-400' : 'text-pink-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                            <svg className={`w-5 h-5 mx-auto ${isDarkMode ? 'text-pink-400' : 'text-emerald-600'}`} fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                           ) : (
@@ -808,15 +812,15 @@ export default function ForOrganizers() {
                   ))}
 
                   {/* Limits Section */}
-                  <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <td colSpan={plans.length + 1} className={`py-3 px-4 font-bold mt-4 ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                  <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-slate-200'}`}>
+                    <td colSpan={plans.length + 1} className={`py-3 px-4 font-bold mt-4 ${isDarkMode ? 'text-purple-300' : 'text-indigo-700'}`}>
                       📊 Limits & Quotas
                     </td>
                   </tr>
 
                   {/* Attendees Per Event */}
-                  <tr className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-gray-100'}`}>
-                    <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Max Attendees</td>
+                  <tr className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-slate-100'}`}>
+                    <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>Max Attendees</td>
                     {plans.map((plan, idx) => (
                       <td key={idx} className={`py-3 px-4 text-center font-semibold ${
                         selectedPlanId === 'comparison' || (plan._id || idx) === selectedPlanId
@@ -831,8 +835,8 @@ export default function ForOrganizers() {
                   </tr>
 
                   {/* Events Per Month */}
-                  <tr className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-gray-100'}`}>
-                    <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Events/Month</td>
+                  <tr className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-slate-100'}`}>
+                    <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>Events/Month</td>
                     {plans.map((plan, idx) => (
                       <td key={idx} className={`py-3 px-4 text-center font-semibold ${
                         selectedPlanId === 'comparison' || (plan._id || idx) === selectedPlanId
@@ -847,8 +851,8 @@ export default function ForOrganizers() {
                   </tr>
 
                   {/* Storage */}
-                  <tr className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-gray-100'}`}>
-                    <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Storage</td>
+                  <tr className={`border-b ${isDarkMode ? 'border-gray-700/50' : 'border-slate-100'}`}>
+                    <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-gray-300' : 'text-slate-700'}`}>Storage</td>
                     {plans.map((plan, idx) => (
                       <td key={idx} className={`py-3 px-4 text-center font-semibold ${
                         selectedPlanId === 'comparison' || (plan._id || idx) === selectedPlanId
@@ -866,13 +870,13 @@ export default function ForOrganizers() {
             </div>
 
             {/* Modal Footer */}
-            <div className={`sticky bottom-0 flex justify-end gap-3 p-6 border-t ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+            <div className={`sticky bottom-0 flex justify-end gap-3 p-6 border-t ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-slate-200 bg-slate-50'}`}>
               <button
                 onClick={() => setSelectedPlanId(null)}
                 className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
                   isDarkMode 
                     ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                    : 'bg-slate-200 hover:bg-slate-300 text-slate-900'
                 }`}
               >
                 Close
@@ -880,7 +884,7 @@ export default function ForOrganizers() {
               <Link
                 to="/create-event"
                 onClick={() => setSelectedPlanId(null)}
-                className="px-6 py-2 rounded-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white transition-colors"
+                  className="px-6 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
               >
                 Get Started
               </Link>

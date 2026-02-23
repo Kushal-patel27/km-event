@@ -1287,3 +1287,91 @@ export const exportPlatformData = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+/**
+ * Get all pending account deletion requests
+ */
+export const getPendingDeletionRequests = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Find users with pending deletion requests
+    const [users, total] = await Promise.all([
+      User.find({
+        'accountSettings.deletionScheduledAt': { $exists: true, $ne: null }
+      })
+        .select('-password -sessions')
+        .sort({ 'accountSettings.deletionScheduledAt': 1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments({
+        'accountSettings.deletionScheduledAt': { $exists: true, $ne: null }
+      })
+    ]);
+
+    // Format response with deletion details
+    const formattedUsers = users.map(user => ({
+      ...user,
+      deletionDetails: {
+        requestedAt: user.accountSettings?.deleteRequestedAt,
+        scheduledFor: user.accountSettings?.deletionScheduledAt,
+        daysRemaining: user.accountSettings?.deletionScheduledAt 
+          ? Math.max(0, Math.ceil((new Date(user.accountSettings.deletionScheduledAt) - new Date()) / (1000 * 60 * 60 * 24)))
+          : null
+      }
+    }));
+
+    res.json({
+      users: formattedUsers,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Cancel a pending account deletion request (Admin action)
+ */
+export const cancelUserDeletion = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.accountSettings?.deletionScheduledAt) {
+      return res.status(400).json({ message: "User does not have a pending deletion request" });
+    }
+
+    user.accountSettings.deleteRequestedAt = null;
+    user.accountSettings.deletionScheduledAt = null;
+    await user.save();
+
+    res.json({ 
+      message: "Account deletion request cancelled successfully",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

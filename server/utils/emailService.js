@@ -522,9 +522,73 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
 };
 
 /**
+ * Get appropriate template based on risk type
+ */
+function getWeatherTemplate(risks) {
+  if (!risks || risks.length === 0) return null;
+
+  const riskTypes = risks.map((r) => r.type);
+
+  if (riskTypes.includes("HEATWAVE")) return "weatherAlertHeatwave.html";
+  if (riskTypes.includes("THUNDERSTORM") || riskTypes.includes("CYCLONE")) {
+    return "weatherAlertStorm.html";
+  }
+  if (riskTypes.includes("HEAVY_RAIN")) return "weatherAlertRain.html";
+
+  return "weatherAlertRain.html"; // default
+}
+
+/**
+ * Render weather alert email from template
+ */
+function renderWeatherTemplate(templateName, data) {
+  const path = require("path");
+  const fs = require("fs");
+
+  try {
+    const templatePath = path.join(
+      process.cwd(),
+      "server/templates",
+      templateName
+    );
+    let html = fs.readFileSync(templatePath, "utf-8");
+
+    // Replace placeholders
+    const placeholders = {
+      userName: data.user.name,
+      eventName: data.event.title || data.event.name,
+      eventDate: new Date(data.event.date).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      eventLocation: data.event.location,
+      organizerName: data.organizerName || "Event Management Team",
+      temperature: data.weatherData.temperature,
+      feelsLike: data.weatherData.feelsLike || data.weatherData.temperature,
+      humidity: data.weatherData.humidity,
+      windSpeed: data.weatherData.windSpeed,
+      rainfall: data.weatherData.rainfall || 0,
+      condition: data.weatherData.weatherCondition,
+      uvIndex: data.weatherData.uvIndex || "N/A",
+      units: data.weatherData.units === "metric" ? "C" : "F",
+    };
+
+    for (const [key, value] of Object.entries(placeholders)) {
+      html = html.replace(new RegExp(`{{${key}}}`, "g"), value);
+    }
+
+    return html;
+  } catch (error) {
+    console.error("Error rendering template:", error);
+    return null;
+  }
+}
+
+/**
  * Send weather alert email to user who booked tickets
  */
-export const sendWeatherAlertEmail = async (bookingDetails, weatherAlert) => {
+export const sendWeatherAlertEmail = async (bookingDetails, weatherAlert, organizerName = null) => {
   try {
     const weatherIcon = {
       warning: "⚠️",
@@ -532,11 +596,33 @@ export const sendWeatherAlertEmail = async (bookingDetails, weatherAlert) => {
       info: "ℹ️",
     }[weatherAlert.type] || "📍";
 
-    const mailOptions = {
-      from: emailSender,
-      to: bookingDetails.user.email,
-      subject: `${weatherIcon} Weather Alert for Your Event: ${bookingDetails.event.name}`,
-      html: `
+    // Try to use template-based email if risk data available
+    let htmlContent = null;
+
+    if (weatherAlert.riskData?.risks && weatherAlert.riskData.risks.length > 0) {
+      const templateName = getWeatherTemplate(weatherAlert.riskData.risks);
+      if (templateName) {
+        htmlContent = renderWeatherTemplate(templateName, {
+          user: bookingDetails.user,
+          event: bookingDetails.event,
+          weatherData: {
+            temperature: weatherAlert.temperature,
+            feelsLike: weatherAlert.feelsLike || weatherAlert.temperature,
+            humidity: weatherAlert.humidity,
+            windSpeed: weatherAlert.windSpeed,
+            rainfall: weatherAlert.rainfall || 0,
+            weatherCondition: weatherAlert.condition || weatherAlert.weatherCondition,
+            units: weatherAlert.units || "metric",
+            uvIndex: weatherAlert.uvIndex,
+          },
+          organizerName,
+        });
+      }
+    }
+
+    // Fallback to generic template if no template rendered
+    if (!htmlContent) {
+      htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333; border-bottom: 3px solid #ff9800; padding-bottom: 10px;">
             ${weatherIcon} Weather Alert Notification
@@ -556,7 +642,7 @@ export const sendWeatherAlertEmail = async (bookingDetails, weatherAlert) => {
             <table style="width: 100%; font-size: 14px; color: #666;">
               <tr>
                 <td style="padding: 5px 0;"><strong>Event Name:</strong></td>
-                <td style="padding: 5px 0;">${bookingDetails.event.name}</td>
+                <td style="padding: 5px 0;">${bookingDetails.event.title || bookingDetails.event.name}</td>
               </tr>
               <tr>
                 <td style="padding: 5px 0;"><strong>Location:</strong></td>
@@ -591,7 +677,7 @@ export const sendWeatherAlertEmail = async (bookingDetails, weatherAlert) => {
               </tr>
               <tr>
                 <td style="padding: 5px 0;"><strong>🌡️ Temperature:</strong></td>
-                <td style="padding: 5px 0;">${weatherAlert.temperature}°C (Feels like ${weatherAlert.feelsLike || weatherAlert.temperature}°C)</td>
+                <td style="padding: 5px 0;">${weatherAlert.temperature}°${weatherAlert.units === 'metric' ? 'C' : 'F'} (Feels like ${weatherAlert.feelsLike || weatherAlert.temperature}°${weatherAlert.units === 'metric' ? 'C' : 'F'})</td>
               </tr>
               <tr>
                 <td style="padding: 5px 0;"><strong>💧 Humidity:</strong></td>
@@ -599,7 +685,7 @@ export const sendWeatherAlertEmail = async (bookingDetails, weatherAlert) => {
               </tr>
               <tr>
                 <td style="padding: 5px 0;"><strong>💨 Wind Speed:</strong></td>
-                <td style="padding: 5px 0;">${weatherAlert.windSpeed} km/h</td>
+                <td style="padding: 5px 0;">${weatherAlert.windSpeed} ${weatherAlert.units === 'metric' ? 'km/h' : 'mph'}</td>
               </tr>
               ${weatherAlert.rainfall > 0 ? `<tr>
                 <td style="padding: 5px 0;"><strong>🌧️ Rainfall:</strong></td>
@@ -634,7 +720,14 @@ export const sendWeatherAlertEmail = async (bookingDetails, weatherAlert) => {
             <p>&copy; ${new Date().getFullYear()} K&M Events. All rights reserved.</p>
           </div>
         </div>
-      `
+      `;
+    }
+
+    const mailOptions = {
+      from: emailSender,
+      to: bookingDetails.user.email,
+      subject: `${weatherIcon} Weather Alert for Your Event: ${bookingDetails.event.name}`,
+      html: htmlContent,
     };
 
     await ensureTransporter().sendMail(mailOptions);

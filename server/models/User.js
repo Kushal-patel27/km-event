@@ -30,41 +30,81 @@ const userSchema = new mongoose.Schema(
     assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Staff Admin who assigned this staff
     sessions: [sessionSchema],
     lastLoginAt: { type: Date },
+    // Profile information
+    phone: { type: String, default: "" },
+    profileImage: { type: String, default: "" },
+    loginMethod: { type: String, enum: ["email", "google", "otp"], default: "email" },
+    
+    // Account settings
+    accountSettings: {
+      deactivatedAt: { type: Date },
+      deactivationReason: { type: String },
+      deleteRequestedAt: { type: Date },
+      deletionScheduledAt: { type: Date },
+    },
+    
+    // Security settings
+    securitySettings: {
+      twoFactorEnabled: { type: Boolean, default: false },
+      twoFactorMethod: { type: String, enum: ["otp", "email", "none"], default: "none" },
+      twoFactorSecret: { type: String },
+      loginAlerts: { type: Boolean, default: true },
+      suspiciousActivityAlerts: { type: Boolean, default: true },
+    },
+    
+    // Notification preferences
+    notificationPreferences: {
+      email: { type: Boolean, default: true },
+      sms: { type: Boolean, default: false },
+      push: { type: Boolean, default: true },
+      weatherAlerts: { type: Boolean, default: true },
+      eventReminders: { type: Boolean, default: true },
+      promotionalNotifications: { type: Boolean, default: false },
+      emailFrequency: { type: String, enum: ["instant", "daily", "weekly"], default: "instant" },
+      criticalAlertsOverride: { type: Boolean, default: true },
+    },
+    
+    // Event & booking preferences
+    eventPreferences: {
+      preferredLocations: [{ type: String }],
+      preferredCategories: [{ type: String }],
+      autoWeatherNotify: { type: Boolean, default: true },
+      autoCancelAlerts: { type: Boolean, default: true },
+      refundNotifications: { type: Boolean, default: true },
+      rescheduleNotifications: { type: Boolean, default: true },
+    },
+    
+    // Privacy settings
+    privacySettings: {
+      dataVisibility: { type: String, enum: ["private", "public", "friends"], default: "private" },
+      allowAnalytics: { type: Boolean, default: true },
+      allowPersonalization: { type: Boolean, default: true },
+      consentGiven: { type: Boolean, default: false },
+      consentDate: { type: Date },
+    },
+    
+    // Language & region preferences
     preferences: {
-      emailUpdates: { type: Boolean, default: true },
-      bookingReminders: { type: Boolean, default: true },
-      newsletter: { type: Boolean, default: false },
       language: { type: String, default: "en" },
       timezone: { type: String, default: "UTC" },
+      currency: { type: String, default: "INR" },
+      dateFormat: { type: String, enum: ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"], default: "DD/MM/YYYY" },
+      timeFormat: { type: String, enum: ["12h", "24h"], default: "12h" },
     },
-    // Notification preferences for alerts
-    notificationPreferences: {
-      email: {
-        type: Boolean,
-        default: true,
-      },
-      sms: {
-        type: Boolean,
-        default: false,
-      },
-      whatsapp: {
-        type: Boolean,
-        default: false,
-      },
-      push: {
-        type: Boolean,
-        default: true,
-      },
-      weatherAlerts: {
-        type: Boolean,
-        default: true,
-      },
+    
+    // UI settings
+    uiSettings: {
+      theme: { type: String, enum: ["light", "dark", "system"], default: "system" },
+      fontSize: { type: String, enum: ["small", "medium", "large"], default: "medium" },
+      highContrast: { type: Boolean, default: false },
+      reduceAnimations: { type: Boolean, default: false },
+      dashboardLayout: { type: String, default: "default" },
     },
-    // Phone number for SMS/WhatsApp
-    phone: {
-      type: String,
-      default: "",
-    },
+    
+    // Legacy support
+    emailUpdates: { type: Boolean, default: true },
+    bookingReminders: { type: Boolean, default: true },
+    newsletter: { type: Boolean, default: false },
     passwordReset: {
       otpHash: { type: String },
       otpExpiresAt: { type: Date },

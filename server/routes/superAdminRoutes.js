@@ -11,6 +11,8 @@ import {
   reactivateUser,
   assignUserRole,
   deleteUser,
+  getPendingDeletionRequests,
+  cancelUserDeletion,
   // Staff management (Global)
   createGlobalStaff,
   getGlobalStaff,
@@ -52,6 +54,10 @@ router.post("/users/:userId/disable", disableUser);
 router.post("/users/:userId/reactivate", reactivateUser);
 router.put("/users/:userId/role", assignUserRole);
 router.delete("/users/:userId", deleteUser);
+
+// ============ ACCOUNT DELETION REQUESTS ============
+router.get("/users/deletion/pending", getPendingDeletionRequests);
+router.post("/users/:userId/deletion/cancel", cancelUserDeletion);
 
 // ============ STAFF MANAGEMENT (Global) ============
 router.post("/staff", createGlobalStaff);

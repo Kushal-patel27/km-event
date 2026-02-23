@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9; border-radius: 8px; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .content { background: white; padding: 30px; border-radius: 0 0 8px 8px; }
+    .alert-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .alert-icon { font-size: 32px; display: inline-block; margin-right: 10px; }
+    .precautions { list-style: none; padding-left: 0; }
+    .precautions li { padding: 10px 0; padding-left: 30px; position: relative; }
+    .precautions li:before { content: "✓"; position: absolute; left: 0; color: #28a745; font-weight: bold; }
+    .footer { text-align: center; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; margin-top: 20px; }
+    .weather-details { background: #f0f4f8; padding: 15px; border-radius: 4px; margin: 15px 0; }
+    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; }
+    .detail-label { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌧️ Weather Update for Your Event</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear <strong>{{userName}}</strong>,</p>
+      
+      <p>We are writing to inform you about an important weather update for your event.</p>
+      
+      <!-- Event Details -->
+      <div style="background: #f0f7ff; border-left: 4px solid #2196f3; padding: 15px; margin: 15px 0; border-radius: 4px;">
+        <h3 style="margin-top: 0; color: #2196f3;">📅 Event Details</h3>
+        <div class="detail-row">
+          <span class="detail-label">Event Name:</span>
+          <span>{{eventName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Date:</span>
+          <span>{{eventDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Location:</span>
+          <span>📍 {{eventLocation}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Your Tickets:</span>
+          <span>🎫 Booked</span>
+        </div>
+      </div>
+      
+      <div class="alert-box">
+        <span class="alert-icon">🌧️</span>
+        <strong>Rain is expected during the event</strong>
+        <p style="margin: 8px 0 0 0;">{{eventName}} is scheduled on {{eventDate}} at {{eventLocation}}</p>
+      </div>
+      
+      <div class="weather-details">
+        <h3 style="margin-top: 0; color: #1976d2;">🌦️ Current Weather</h3>
+        <div class="detail-row">
+          <span class="detail-label">Temperature:</span>
+          <span>{{temperature}}°{{units}} (Feels like {{feelsLike}}°{{units}})</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Humidity:</span>
+          <span>{{humidity}}%</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Wind Speed:</span>
+          <span>{{windSpeed}} {{units === 'C' ? 'km/h' : 'mph'}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Weather Condition:</span>
+          <span>{{condition}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Rainfall Expected:</span>
+          <span>{{rainfall}} mm</span>
+        </div>
+      </div>
+      
+      <div class="weather-details">
+        <div class="detail-row">
+          <span class="detail-label">Temperature:</span>
+          <span>{{temperature}}°{{units}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Rainfall Expected:</span>
+          <span>{{rainfall}} mm</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Humidity:</span>
+          <span>{{humidity}}%</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Wind Speed:</span>
+          <span>{{windSpeed}} {{units === 'C' ? 'km/h' : 'mph'}}</span>
+        </div>
+      </div>
+      
+      <h3>📋 Recommended Precautions:</h3>
+      <ul class="precautions">
+        <li>Carry an umbrella or raincoat</li>
+        <li>Wear waterproof or non-slippery footwear</li>
+        <li>Bring extra clothes to change if needed</li>
+        <li>Arrive a little earlier to avoid travel delays</li>
+        <li>Keep important documents/electronics protected</li>
+        <li>Stay hydrated despite the rain</li>
+      </ul>
+      
+      <p style="margin-top: 20px;">We are continuously monitoring the weather and will keep you updated with any further changes. Please do not hesitate to reach out if you have any concerns.</p>
+      
+      <p style="margin-top: 20px;">Thank you,<br><strong>{{organizerName}}</strong><br>Event Management Team</p>
+      
+      <div class="footer">
+        <p>This is an automated weather alert notification. Please do not reply to this email.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

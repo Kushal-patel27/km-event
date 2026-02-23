@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9; border-radius: 8px; }
+    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .content { background: white; padding: 30px; border-radius: 0 0 8px 8px; }
+    .alert-box { background: #ffe5e5; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .alert-icon { font-size: 32px; display: inline-block; margin-right: 10px; }
+    .precautions { list-style: none; padding-left: 0; }
+    .precautions li { padding: 10px 0; padding-left: 30px; position: relative; }
+    .precautions li:before { content: "✓"; position: absolute; left: 0; color: #28a745; font-weight: bold; }
+    .footer { text-align: center; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; margin-top: 20px; }
+    .weather-details { background: #fff0f0; padding: 15px; border-radius: 4px; margin: 15px 0; }
+    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; }
+    .detail-label { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌡️ Extreme Heat Alert for Your Event</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear <strong>{{userName}}</strong>,</p>
+      
+      <p>We are notifying you about an important weather alert for your upcoming event.</p>
+      
+      <!-- Event Details -->
+      <div style="background: #f0f7ff; border-left: 4px solid #2196f3; padding: 15px; margin: 15px 0; border-radius: 4px;">
+        <h3 style="margin-top: 0; color: #2196f3;">📅 Event Details</h3>
+        <div class="detail-row">
+          <span class="detail-label">Event Name:</span>
+          <span>{{eventName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Date:</span>
+          <span>{{eventDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Location:</span>
+          <span>📍 {{eventLocation}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Your Tickets:</span>
+          <span>🎫 Booked</span>
+        </div>
+      </div>
+      
+      <div class="alert-box">
+        <span class="alert-icon">🌡️</span>
+        <strong>Extreme heat is expected during the event</strong>
+        <p style="margin: 8px 0 0 0;">{{eventName}} is scheduled on {{eventDate}} at {{eventLocation}}</p>
+      </div>
+      
+      <div class="weather-details">
+        <h3 style="margin-top: 0; color: #d32f2f;">🌦️ Current Weather</h3>
+        <div class="detail-row">
+          <span class="detail-label">Temperature:</span>
+          <span>{{temperature}}°{{units}} (Feels like {{feelsLike}}°{{units}})</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Humidity:</span>
+          <span>{{humidity}}%</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Wind Speed:</span>
+          <span>{{windSpeed}} {{units === 'C' ? 'km/h' : 'mph'}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Weather Condition:</span>
+          <span>{{condition}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">UV Index:</span>
+          <span>{{uvIndex}}</span>
+        </div>
+      </div>
+      
+      <div class="weather-details">
+        <div class="detail-row">
+          <span class="detail-label">Expected Temperature:</span>
+          <span>{{temperature}}°{{units}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Feels Like:</span>
+          <span>{{feelsLike}}°{{units}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Humidity:</span>
+          <span>{{humidity}}%</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">UV Index:</span>
+          <span>{{uvIndex}} (Very High)</span>
+        </div>
+      </div>
+      
+      <h3>📋 Safety Precautions:</h3>
+      <ul class="precautions">
+        <li>Wear light-colored, loose-fitting clothes</li>
+        <li>Apply sunscreen (SPF 30+) regularly</li>
+        <li>Drink plenty of water throughout the day</li>
+        <li>Wear a hat or cap for sun protection</li>
+        <li>Use sunglasses to protect your eyes</li>
+        <li>Take regular breaks in shaded areas</li>
+        <li>Avoid prolonged exposure to direct sunlight</li>
+        <li>Check if you have any heat-sensitive medications</li>
+        <li>Arrive early to acclimatize to the heat</li>
+      </ul>
+      
+      <p style="margin-top: 20px; color: #d32f2f;"><strong>⚠️ Important:</strong> Heat-related illnesses can be serious. If you or anyone experiences dizziness, nausea, or severe headache, seek medical help immediately.</p>
+      
+      <p style="margin-top: 20px;">We are monitoring weather conditions closely. Thank you for your understanding.</p>
+      
+      <p style="margin-top: 20px;">Thank you,<br><strong>{{organizerName}}</strong><br>Event Management Team</p>
+      
+      <div class="footer">
+        <p>This is an automated weather alert notification. Please do not reply to this email.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

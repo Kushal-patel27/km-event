@@ -9,6 +9,7 @@ import {
 import {
   createWeatherAlertConfig,
   getWeatherAlertConfig,
+  updateWeatherAlertConfig,
   triggerWeatherAlert,
   getWeatherAlertHistory,
   acknowledgeWeatherAlert,
@@ -44,6 +45,20 @@ router.get(
   checkWeatherAlertsPermission,
   checkEventWeatherAccess,
   getWeatherAlertConfig
+);
+
+/**
+ * @route   PUT /api/weather-alerts/config/:eventId
+ * @desc    Update weather alert configuration for an event
+ * @access  Private (Super Admin, Event Admin with permission)
+ */
+router.put(
+  "/config/:eventId",
+  protect,
+  checkWeatherAlertsEnabled,
+  checkWeatherAlertsPermission,
+  checkEventWeatherAccess,
+  updateWeatherAlertConfig
 );
 
 /**

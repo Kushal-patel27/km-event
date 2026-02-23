@@ -3,6 +3,7 @@ import Weather from "../models/Weather.js";
 
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY || "demo_key";
 const OPENWEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5";
+const DEFAULT_UNITS = process.env.WEATHER_UNITS || "metric"; // metric | imperial
 
 // Cache to store weather data with timestamps
 const weatherCache = new Map();
@@ -11,9 +12,9 @@ const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 /**
  * Get current weather by coordinates
  */
-export const fetchWeatherByCoordinates = async (latitude, longitude) => {
+export const fetchWeatherByCoordinates = async (latitude, longitude, units = DEFAULT_UNITS) => {
   try {
-    const cacheKey = `${latitude},${longitude}`;
+    const cacheKey = `${latitude},${longitude},${units}`;
     const cachedData = weatherCache.get(cacheKey);
 
     // Return cached data if still valid
@@ -22,8 +23,14 @@ export const fetchWeatherByCoordinates = async (latitude, longitude) => {
     }
 
     const response = await axios.get(
-      `${OPENWEATHER_BASE_URL}/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=metric`
+      `${OPENWEATHER_BASE_URL}/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=${units}`
     );
+
+    const windSpeedRaw = response.data.wind.speed || 0;
+    // OpenWeather returns m/s for metric and miles/hour for imperial
+    const windSpeed = units === "imperial"
+      ? Math.round(windSpeedRaw)
+      : Math.round(windSpeedRaw * 3.6);
 
     const weatherData = {
       location: response.data.name,
@@ -32,12 +39,13 @@ export const fetchWeatherByCoordinates = async (latitude, longitude) => {
       temperature: Math.round(response.data.main.temp),
       feelsLike: Math.round(response.data.main.feels_like),
       humidity: response.data.main.humidity,
-      windSpeed: Math.round(response.data.wind.speed * 3.6), // Convert m/s to km/h
+      windSpeed,
       weatherCondition: response.data.weather[0].main,
       weatherDescription: response.data.weather[0].description,
       visibility: response.data.visibility,
       rainfall: response.data.rain?.["1h"] || 0,
       pressure: response.data.main.pressure,
+      units,
     };
 
     // Cache the data
@@ -56,10 +64,10 @@ export const fetchWeatherByCoordinates = async (latitude, longitude) => {
 /**
  * Get weather forecast
  */
-export const fetchWeatherForecast = async (latitude, longitude) => {
+export const fetchWeatherForecast = async (latitude, longitude, units = DEFAULT_UNITS) => {
   try {
     const response = await axios.get(
-      `${OPENWEATHER_BASE_URL}/forecast?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=metric`
+      `${OPENWEATHER_BASE_URL}/forecast?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=${units}`
     );
 
     const forecast = response.data.list
@@ -71,8 +79,11 @@ export const fetchWeatherForecast = async (latitude, longitude) => {
         condition: item.weather[0].main,
         description: item.weather[0].description,
         humidity: item.main.humidity,
-        windSpeed: Math.round(item.wind.speed * 3.6),
+        windSpeed: units === "imperial"
+          ? Math.round(item.wind.speed || 0)
+          : Math.round((item.wind.speed || 0) * 3.6),
         rainfall: item.rain?.["3h"] || 0,
+        units,
       }));
 
     return forecast;
@@ -98,9 +109,86 @@ export const fetchUVIndex = async (latitude, longitude) => {
 };
 
 /**
+ * Detect weather risk types and return risk level
+ * Returns: { riskType, riskLevel, details }
+ */
+export const detectWeatherRisks = (weatherData) => {
+  const risks = [];
+  const temp = weatherData.temperature;
+  const condition = weatherData.weatherCondition.toLowerCase();
+  const windSpeed = weatherData.windSpeed;
+  const rainfall = weatherData.rainfall || 0;
+  const units = weatherData.units || "metric";
+
+  // EXTREME HEAT (> 35°C / 95°F)
+  const heatThreshold = units === "metric" ? 35 : 95;
+  if (temp > heatThreshold) {
+    risks.push({
+      type: "HEATWAVE",
+      level: temp > (units === "metric" ? 40 : 104) ? "warning" : "caution",
+      temperature: temp,
+      details: `Temperature: ${temp}°${units === "metric" ? "C" : "F"}`,
+    });
+  }
+
+  // THUNDERSTORM (Severe)
+  if (condition.includes("thunderstorm") || condition.includes("tornado")) {
+    risks.push({
+      type: "THUNDERSTORM",
+      level: "warning",
+      condition,
+      details: "Thunderstorm or severe weather expected",
+    });
+  }
+
+  // HEAVY RAIN (> 5mm in 3h)
+  if (condition.includes("rain")) {
+    if (rainfall > 5) {
+      risks.push({
+        type: "HEAVY_RAIN",
+        level: rainfall > 10 ? "warning" : "caution",
+        rainfall,
+        details: `Heavy rainfall expected (${rainfall}mm)`,
+      });
+    }
+  }
+
+  // STRONG WINDS (> 40 km/h)
+  const windThreshold = units === "metric" ? 40 : 25; // km/h or mph
+  if (windSpeed > windThreshold) {
+    risks.push({
+      type: "STRONG_WIND",
+      level: windSpeed > (units === "metric" ? 60 : 37) ? "warning" : "caution",
+      windSpeed,
+      details: `Wind speed: ${windSpeed} ${units === "metric" ? "km/h" : "mph"}`,
+    });
+  }
+
+  // CYCLONE / TORNADO (Condition check)
+  if (condition.includes("tornado") || condition.includes("squall")) {
+    risks.push({
+      type: "CYCLONE",
+      level: "warning",
+      condition,
+      details: "Severe cyclone or tornado alert",
+    });
+  }
+
+  return {
+    hasRisk: risks.length > 0,
+    risks,
+    riskSummary:
+      risks.length > 0
+        ? risks.map((r) => r.type).join(", ")
+        : "No major risks",
+  };
+};
+
+/**
  * Generate weather notification based on conditions
  */
 export const generateWeatherNotification = (weatherData) => {
+  const riskData = detectWeatherRisks(weatherData);
   const alerts = [];
   let notificationType = "info";
 
@@ -110,64 +198,58 @@ export const generateWeatherNotification = (weatherData) => {
   const humidity = weatherData.humidity;
   const rainfall = weatherData.rainfall;
 
-  // Temperature alerts
-  if (temp > 40) {
-    alerts.push("🌡️ Extreme heat warning! Stay hydrated and seek shade.");
-    notificationType = "warning";
-  } else if (temp < 0) {
+  // Map detected risks to alerts
+  for (const risk of riskData.risks) {
+    if (risk.level === "warning") {
+      notificationType = "warning";
+    } else if (risk.level === "caution" && notificationType !== "warning") {
+      notificationType = "caution";
+    }
+
+    switch (risk.type) {
+      case "HEATWAVE":
+        alerts.push(`🌡️ Extreme heat warning! ${risk.details} - Stay hydrated and seek shade.`);
+        break;
+      case "HEAVY_RAIN":
+        alerts.push(`🌧️ Heavy rainfall expected (${rainfall}mm). Carry an umbrella!`);
+        break;
+      case "THUNDERSTORM":
+        alerts.push("⚡ Severe weather warning! Thunderstorm expected.");
+        break;
+      case "STRONG_WIND":
+        alerts.push(`💨 Strong wind warning! Wind speed: ${windSpeed} - Be cautious during the event.`);
+        break;
+      case "CYCLONE":
+        alerts.push("🌀 Severe cyclone/tornado alert! Take shelter immediately.");
+        break;
+    }
+  }
+
+  // Additional conditions not yet flagged as risks
+  if (temp < 0) {
     alerts.push("❄️ Freezing conditions! Wear appropriate winter clothing.");
     notificationType = "warning";
-  } else if (temp > 35) {
-    alerts.push("☀️ High temperature. Please drink plenty of water.");
-    notificationType = "caution";
   }
 
-  // Weather condition alerts
-  if (
-    condition.includes("thunderstorm") ||
-    condition.includes("tornado") ||
-    condition.includes("squall")
-  ) {
-    alerts.push("⚡ Severe weather warning! Thunderstorm or tornado expected.");
-    notificationType = "warning";
-  } else if (condition.includes("rain")) {
-    if (rainfall > 5) {
-      alerts.push("🌧️ Heavy rainfall expected. Carry an umbrella!");
-      notificationType = "caution";
-    } else {
-      alerts.push("🌦️ Light rain expected. Bring an umbrella just in case.");
-      notificationType = "info";
-    }
-  } else if (condition.includes("snow")) {
+  if (condition.includes("snow")) {
     alerts.push("❄️ Snow expected. Dress warmly and wear snow boots.");
-    notificationType = "caution";
+    if (notificationType === "info") notificationType = "caution";
   }
 
-  // Wind alerts
-  if (windSpeed > 50) {
-    alerts.push("💨 Strong wind warning! Be cautious during the event.");
-    notificationType = "warning";
-  } else if (windSpeed > 30) {
-    alerts.push("🌬️ Moderate wind expected. Secure loose items.");
-    notificationType = "caution";
-  }
-
-  // Humidity alerts
   if (humidity > 85) {
     alerts.push("💧 High humidity. It may feel hotter than the actual temperature.");
-    notificationType = "info";
   }
 
-  // Fog/Mist alerts
   if (condition.includes("fog") || condition.includes("mist")) {
     alerts.push("🌫️ Poor visibility expected. Be careful while traveling.");
-    notificationType = "caution";
+    if (notificationType === "info") notificationType = "caution";
   }
 
   return {
     hasAlert: alerts.length > 0,
     notifications: alerts,
     type: notificationType,
+    riskData,
     message:
       alerts.length > 0
         ? alerts.join("\n")
@@ -195,6 +277,9 @@ export const saveWeatherData = async (eventId, weatherData, forecast) => {
       },
       { upsert: true, new: true }
     );
+
+    // Attach risk data to the weather object for downstream use
+    weatherRecord.riskData = notification.riskData;
 
     return weatherRecord;
   } catch (error) {

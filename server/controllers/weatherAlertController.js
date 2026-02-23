@@ -78,21 +78,95 @@ export const getWeatherAlertConfig = async (req, res) => {
       .populate("updatedBy", "name email");
 
     if (!config) {
-      return res.status(404).json({
-        success: false,
-        message: "Weather alert configuration not found for this event",
+      // Return default config if none exists (allows admin to create one)
+      const defaultConfig = {
+        event: eventId,
+        enabled: false,
+        alertThresholds: {
+          temperature: { min: -10, max: 40 },
+          humidity: { min: 10, max: 90 },
+          windSpeed: { max: 50 },
+          precipitation: { max: 50 },
+        },
+        alertTypes: {
+          storm: true,
+          rain: true,
+          heatwave: true,
+          coldWave: false,
+        },
+        notificationTiming: {
+          before: 24, // hours before event
+        },
+        recipients: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      res.json({
+        success: true,
+        config: defaultConfig,
+        logs: [],
+        isNew: true,
       });
+      return;
     }
+
+    // Get recent alert logs
+    const logs = await WeatherAlertLog.find({ event: eventId })
+      .sort({ createdAt: -1 })
+      .limit(20);
 
     res.json({
       success: true,
       config,
+      logs,
     });
   } catch (error) {
     console.error("Error fetching weather alert config:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch configuration",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Update weather alert configuration
+ */
+export const updateWeatherAlertConfig = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user._id;
+    const updates = req.body;
+
+    let config = await WeatherAlertConfig.findOne({ event: eventId });
+
+    if (!config) {
+      // Create new config if it doesn't exist
+      config = new WeatherAlertConfig({
+        event: eventId,
+        createdBy: userId,
+        ...updates,
+      });
+    } else {
+      // Update existing config
+      Object.assign(config, updates);
+      config.updatedBy = userId;
+    }
+
+    await config.save();
+
+    res.json({
+      success: true,
+      message: "Configuration updated successfully",
+      config,
+    });
+  } catch (error) {
+    console.error("Error updating weather alert config:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update configuration",
       error: error.message,
     });
   }
@@ -630,6 +704,7 @@ async function performAutomationAction(event, action) {
 export default {
   createWeatherAlertConfig,
   getWeatherAlertConfig,
+  updateWeatherAlertConfig,
   triggerWeatherAlert,
   getWeatherAlertHistory,
   acknowledgeWeatherAlert,

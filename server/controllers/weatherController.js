@@ -18,6 +18,7 @@ import User from "../models/User.js";
 export const getCurrentWeather = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { units = "metric" } = req.query;
 
     // Get event to fetch coordinates
     const event = await Event.findById(eventId);
@@ -25,22 +26,28 @@ export const getCurrentWeather = async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
+    // Use event coordinates, or fallback to New York if not set
+    const latitude = event.latitude || 40.7128;
+    const longitude = event.longitude || -74.0060;
+
     // Fetch current weather
     const weatherData = await fetchWeatherByCoordinates(
-      event.latitude || 0,
-      event.longitude || 0
+      latitude,
+      longitude,
+      units
     );
 
     // Fetch forecast
     const forecast = await fetchWeatherForecast(
-      event.latitude || 0,
-      event.longitude || 0
+      latitude,
+      longitude,
+      units
     );
 
     // Fetch UV Index
     const uvIndex = await fetchUVIndex(
-      event.latitude || 0,
-      event.longitude || 0
+      latitude,
+      longitude
     );
 
     // Generate notification
@@ -71,6 +78,7 @@ export const getCurrentWeather = async (req, res) => {
       currentWeather: {
         ...weatherData,
         uvIndex,
+        units,
       },
       forecast,
       notification,
@@ -79,7 +87,7 @@ export const getCurrentWeather = async (req, res) => {
   } catch (error) {
     console.error("Error getting current weather:", error.message);
     res.status(500).json({
-      message: "Failed to fetch weather data",
+      message: "Weather data is temporarily unavailable. Please try again soon.",
       error: error.message,
     });
   }

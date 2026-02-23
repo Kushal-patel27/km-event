@@ -25,6 +25,43 @@ html, body, #root {
   height: 100%;
 }
 
+html.font-size-small {
+  font-size: 14px;
+}
+
+html.font-size-medium {
+  font-size: 16px;
+}
+
+html.font-size-large {
+  font-size: 18px;
+}
+
+html.high-contrast body {
+  filter: contrast(1.15);
+}
+
+html.reduce-animations *,
+html.reduce-animations *::before,
+html.reduce-animations *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+html.layout-default {
+  --layout-density: 1;
+}
+
+html.layout-compact {
+  --layout-density: 0.85;
+}
+
+html.layout-spacious {
+  --layout-density: 1.15;
+}
+
 @layer base {
   html, body {
     font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;

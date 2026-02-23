@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9; border-radius: 8px; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .content { background: white; padding: 30px; border-radius: 0 0 8px 8px; }
+    .alert-box { background: #ffe5e5; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .alert-icon { font-size: 32px; display: inline-block; margin-right: 10px; }
+    .precautions { list-style: none; padding-left: 0; }
+    .precautions li { padding: 10px 0; padding-left: 30px; position: relative; }
+    .precautions li:before { content: "✓"; position: absolute; left: 0; color: #28a745; font-weight: bold; }
+    .footer { text-align: center; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; margin-top: 20px; }
+    .weather-details { background: #f0f0ff; padding: 15px; border-radius: 4px; margin: 15px 0; }
+    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; }
+    .detail-label { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚡ Severe Storm/Wind Alert for Your Event</h1>
+    </div>
+    
+    <div class="content">
+      <p>Dear <strong>{{userName}}</strong>,</p>
+      
+      <p>We are issuing a severe weather alert for your upcoming event due to expected storms and strong winds.</p>
+      
+      <!-- Event Details -->
+      <div style="background: #f0f7ff; border-left: 4px solid #2196f3; padding: 15px; margin: 15px 0; border-radius: 4px;">
+        <h3 style="margin-top: 0; color: #2196f3;">📅 Event Details</h3>
+        <div class="detail-row">
+          <span class="detail-label">Event Name:</span>
+          <span>{{eventName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Date:</span>
+          <span>{{eventDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Location:</span>
+          <span>📍 {{eventLocation}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Your Tickets:</span>
+          <span>🎫 Booked</span>
+        </div>
+      </div>
+      
+      <div class="alert-box">
+        <span class="alert-icon">⚠️</span>
+        <strong>Thunderstorm and strong winds expected</strong>
+        <p style="margin: 8px 0 0 0;">{{eventName}} is scheduled on {{eventDate}} at {{eventLocation}}</p>
+      </div>
+      
+      <div class="weather-details">
+        <h3 style="margin-top: 0; color: #d32f2f;">🌦️ Current Weather</h3>
+        <div class="detail-row">
+          <span class="detail-label">Temperature:</span>
+          <span>{{temperature}}°{{units}} (Feels like {{feelsLike}}°{{units}})</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Wind Speed:</span>
+          <span>{{windSpeed}} {{units === 'C' ? 'km/h' : 'mph'}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Humidity:</span>
+          <span>{{humidity}}%</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Weather Condition:</span>
+          <span>{{condition}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Rainfall Expected:</span>
+          <span>{{rainfall}} mm</span>
+        </div>
+      </div>
+      
+      <h3>📋 Safety Guidelines:</h3>
+      <ul class="precautions">
+        <li>Avoid standing under trees or near large structures</li>
+        <li>Secure all loose outdoor items</li>
+        <li>Stay away from open areas during lightning</li>
+        <li>Wear sturdy footwear for strong winds</li>
+        <li>Keep an eye on weather updates</li>
+        <li>Have a shelter or safe zone identified</li>
+        <li>Carry waterproof items</li>
+        <li>Stay updated with official weather alerts</li>
+        <li>Keep emergency contacts handy</li>
+        <li>Do not engage in outdoor activities if conditions worsen</li>
+      </ul>
+      
+      <p style="margin-top: 20px; color: #d32f2f;"><strong>⚠️ Important:</strong> If weather becomes severe during the event, be prepared for potential delays, cancellations, or relocation to indoor venues. We prioritize your safety.</p>
+      
+      <p style="margin-top: 20px;">We are monitoring the situation closely and will provide updates as needed.</p>
+      
+      <p style="margin-top: 20px;">Thank you,<br><strong>{{organizerName}}</strong><br>Event Management Team</p>
+      
+      <div class="footer">
+        <p>This is an automated weather alert notification. Please do not reply to this email.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

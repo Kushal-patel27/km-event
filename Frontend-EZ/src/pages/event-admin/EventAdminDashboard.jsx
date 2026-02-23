@@ -3,6 +3,7 @@ import EventAdminLayout from '../../components/layout/EventAdminLayout'
 import API from '../../services/api'
 import formatINR from '../../utils/currency'
 import { Link } from 'react-router-dom'
+import { WeatherAlertsAdmin } from '../../components/weather'
 
 export default function EventAdminDashboard(){
   const [dashboard, setDashboard] = useState(null)
@@ -147,6 +148,16 @@ export default function EventAdminDashboard(){
                 </tbody>
               </table>
             </div>
+          )}
+        </div>
+
+        {/* Weather Alerts Configuration */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6">
+          <h2 className="text-lg font-bold mb-4">Weather Alerts</h2>
+          {upcomingEvents.length > 0 && upcomingEvents[0]?._id ? (
+            <WeatherAlertsAdmin eventId={upcomingEvents[0]._id} />
+          ) : (
+            <p className="text-sm text-gray-500">No upcoming events to configure weather alerts</p>
           )}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Routes, Route, useLocation, Link } from 'react-router-dom'
 // Public Pages
 import Home from './pages/public/Home'
@@ -11,6 +11,7 @@ import Messages from './pages/public/Messages'
 import Settings from './pages/public/Settings'
 import About from './pages/public/About'
 import Contact from './pages/public/Contact'
+
 import FAQ from './pages/public/FAQ'
 import HelpCenter from './pages/public/HelpCenter'
 import Privacy from './pages/public/Privacy'
@@ -54,6 +55,7 @@ import StaffScanner from './pages/staff/StaffScanner'
 import SuperAdminLogin from './pages/super-admin/SuperAdminLogin'
 import SuperAdminDashboard from './pages/super-admin/SuperAdminDashboard'
 import SuperAdminUsers from './pages/super-admin/SuperAdminUsers'
+import SuperAdminDeletionRequests from './pages/super-admin/SuperAdminDeletionRequests'
 import SuperAdminEvents from './pages/super-admin/SuperAdminEvents'
 import EventRequests from './pages/super-admin/EventRequests'
 import SuperAdminBookings from './pages/super-admin/SuperAdminBookings'
@@ -75,6 +77,7 @@ import ProtectedAdminRoute from './components/auth/ProtectedAdminRoute'
 import ProtectedSuperAdminRoute from './components/auth/ProtectedSuperAdminRoute'
 // Context
 import { DarkModeProvider } from './context/DarkModeContext'
+import { applyUISettingsToDocument, getStoredUISettings } from './utils/uiSettings'
 
 export default function App(){
   const location = useLocation()
@@ -83,6 +86,10 @@ export default function App(){
   const isStaffAdminRoute = location.pathname.startsWith('/staff-admin')
   const isStaffRoute = location.pathname.startsWith('/staff')
   const isSuperAdminRoute = location.pathname.startsWith('/super-admin')
+
+  useEffect(() => {
+    applyUISettingsToDocument(getStoredUISettings())
+  }, [])
   return (
     <DarkModeProvider>
       <ScrollToTop />
@@ -142,6 +149,7 @@ export default function App(){
             <Route path="/super-admin/login" element={<SuperAdminLogin />} />
             <Route path="/super-admin" element={<ProtectedSuperAdminRoute><SuperAdminDashboard /></ProtectedSuperAdminRoute>} />
             <Route path="/super-admin/users" element={<ProtectedSuperAdminRoute><SuperAdminUsers /></ProtectedSuperAdminRoute>} />
+            <Route path="/super-admin/deletion-requests" element={<ProtectedSuperAdminRoute><SuperAdminDeletionRequests /></ProtectedSuperAdminRoute>} />
             <Route path="/super-admin/staff" element={<ProtectedSuperAdminRoute><SuperAdminStaff /></ProtectedSuperAdminRoute>} />
             <Route path="/super-admin/events" element={<ProtectedSuperAdminRoute><SuperAdminEvents /></ProtectedSuperAdminRoute>} />
             <Route path="/super-admin/event-requests" element={<ProtectedSuperAdminRoute><EventRequests /></ProtectedSuperAdminRoute>} />

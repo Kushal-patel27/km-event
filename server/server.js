@@ -26,6 +26,7 @@ import organizersPageRoutes from "./routes/organizersPageRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
 import weatherAlertRoutes from "./routes/weatherAlertRoutes.js";
 import superAdminWeatherRoutes from "./routes/superAdminWeatherRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
 import { startWeatherAlertsScheduler } from "./utils/weatherNotifier.js";
 import User from "./models/User.js";
 import HelpArticle from "./models/HelpArticle.js";
@@ -113,6 +114,7 @@ app.use("/api/help", helpRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/weather-alerts", weatherAlertRoutes);
 app.use("/api/super-admin/weather", superAdminWeatherRoutes);
+app.use("/api/settings", settingsRoutes);
 
 
 app.get("/", (req, res) => {

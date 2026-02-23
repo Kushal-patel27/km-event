@@ -103,53 +103,90 @@ async function runScheduler() {
           continue;
         }
 
-        // Generate notification
-        const notification = generateWeatherNotification(weatherData);
-
-        // Send notifications
-        const notificationResult = await sendWeatherNotification({
-          event,
-          weatherAlert: {
-            ...notification,
-            ...weatherData,
-          },
-          alertConfig,
-          recipients: alertConfig.notifications.email.recipients,
-        });
-
-        // Log the alert
-        const alertLog = await WeatherAlertLog.create({
-          event: event._id,
-          alertType: notification.type,
-          weatherCondition: weatherData.weatherCondition,
-          weatherData: {
-            temperature: weatherData.temperature,
-            feelsLike: weatherData.feelsLike,
-            humidity: weatherData.humidity,
-            windSpeed: weatherData.windSpeed,
-            rainfall: weatherData.rainfall || 0,
-            description: weatherData.weatherDescription,
-          },
-          message: notification.message,
-          notifications: notificationResult.notificationLog,
-          triggeredBy: "auto",
-        });
-
-        // Execute automation actions if configured
-        if (alertConfig.automation?.enabled) {
-          const requiresApproval = systemConfig.weatherAlerts?.requireApproval ?? true;
-          const automationResults = await executeAutomationActions(
-            event,
-            alertConfig,
-            notification.type,
-            null,
-            requiresApproval
+        // Check if we should send notification based on event timing
+        if (!isTimeToSendNotification(event, alertConfig)) {
+          console.log(
+            `Weather scheduler: Event '${event.title}' — not yet time to send (send ${alertConfig.notificationTiming}h before)`
           );
-          alertLog.automationActions = automationResults;
-          await alertLog.save();
+          continue;
         }
 
-        console.log(`✅ Weather alert sent for event '${event.title}' — ${notification.type}`);
+        // Get risk data to check for specific risk types
+        const { risks } = weatherData.riskData || { risks: [] };
+
+        // Check each risk type and send alerts only for new risks
+        let alertsSent = 0;
+        for (const risk of risks) {
+          const riskType = risk.type;
+
+          // Check if we've already sent an alert for this risk type
+          if (hasAlertBeenSent(alertConfig, riskType)) {
+            console.log(
+              `Weather scheduler: Event '${event.title}' — alert for ${riskType} already sent recently`
+            );
+            continue;
+          }
+
+          // Generate notification
+          const notification = generateWeatherNotification(weatherData);
+
+          // Send notifications
+          const notificationResult = await sendWeatherNotification({
+            event,
+            weatherAlert: {
+              ...notification,
+              ...weatherData,
+            },
+            alertConfig,
+            recipients: alertConfig.notifications.email.recipients,
+          });
+
+          // Log the alert
+          const alertLog = await WeatherAlertLog.create({
+            event: event._id,
+            alertType: notification.type,
+            weatherCondition: riskType,
+            weatherData: {
+              temperature: weatherData.temperature,
+              feelsLike: weatherData.feelsLike,
+              humidity: weatherData.humidity,
+              windSpeed: weatherData.windSpeed,
+              rainfall: weatherData.rainfall || 0,
+              description: weatherData.weatherDescription,
+            },
+            message: notification.message,
+            notifications: notificationResult.notificationLog,
+            triggeredBy: "auto",
+          });
+
+          // Mark this risk alert as sent
+          await markAlertAsSent(alertConfig, riskType, notification.message);
+
+          alertsSent++;
+          console.log(
+            `✅ Weather alert sent for event '${event.title}' — ${riskType} (${notification.type})`
+          );
+
+          // Execute automation actions if configured
+          if (alertConfig.automation?.enabled) {
+            const requiresApproval = systemConfig.weatherAlerts?.requireApproval ?? true;
+            const automationResults = await executeAutomationActions(
+              event,
+              alertConfig,
+              notification.type,
+              null,
+              requiresApproval
+            );
+            alertLog.automationActions = automationResults;
+            await alertLog.save();
+          }
+        }
+
+        if (alertsSent === 0) {
+          console.log(
+            `Weather scheduler: Event '${event.title}' — has risks but all alerts already sent`
+          );
+        }
       } catch (e) {
         console.error("Weather scheduler: Error processing event", event._id?.toString(), e.message);
       }
@@ -157,6 +194,65 @@ async function runScheduler() {
   } catch (err) {
     console.error("Weather scheduler: runScheduler failed:", err.message);
   }
+}
+
+/**
+ * Check if alert for this risk type has already been sent recently
+ */
+function hasAlertBeenSent(alertConfig, riskType) {
+  if (!alertConfig.alertsSent || alertConfig.alertsSent.length === 0) {
+    return false;
+  }
+
+  // Find the most recent alert of this type
+  const lastAlert = alertConfig.alertsSent.find((a) => a.alertType === riskType);
+
+  if (!lastAlert) {
+    return false;
+  }
+
+  // Check if alert was sent in the last 3 hours (prevent spam)
+  const threHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  return lastAlert.sentAt > threHoursAgo;
+}
+
+/**
+ * Check if it's time to send notification based on event timing
+ */
+function isTimeToSendNotification(event, config) {
+  const now = new Date();
+  const eventTime = new Date(event.date);
+  const timingHours = config.notificationTiming || 24;
+  const sendBefore = new Date(eventTime.getTime() - timingHours * 60 * 60 * 1000);
+
+  // Send notification only within the time window (up to notificationTiming hours before)
+  return now >= sendBefore && now < eventTime;
+}
+
+/**
+ * Update alert sent tracking to prevent spam
+ */
+async function markAlertAsSent(alertConfig, riskType, weatherCondition) {
+  alertConfig.alertsSent = alertConfig.alertsSent || [];
+
+  // Remove old alerts of this type (keep only recent ones)
+  alertConfig.alertsSent = alertConfig.alertsSent.filter(
+    (a) => a.alertType !== riskType
+  );
+
+  // Add new alert record
+  alertConfig.alertsSent.push({
+    alertType: riskType,
+    sentAt: new Date(),
+    weatherCondition,
+  });
+
+  // Keep only last 10 alerts
+  if (alertConfig.alertsSent.length > 10) {
+    alertConfig.alertsSent = alertConfig.alertsSent.slice(-10);
+  }
+
+  await alertConfig.save();
 }
 
 /**

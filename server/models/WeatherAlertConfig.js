@@ -211,13 +211,23 @@ const weatherAlertConfigSchema = new mongoose.Schema(
         },
       },
     },
-    // Polling settings
-    pollingInterval: {
+    // Notification timing (hours before event)
+    notificationTiming: {
       type: Number,
-      default: 60, // minutes
-      min: 5,
-      max: 1440,
+      default: 24, // Send 24 hours before event
+      enum: [6, 12, 24], // 6h, 12h, or 24h before
     },
+    // Track alerts already sent to prevent spam
+    alertsSent: [
+      {
+        alertType: {
+          type: String,
+          enum: ["HEATWAVE", "HEAVY_RAIN", "THUNDERSTORM", "STRONG_WIND", "CYCLONE"],
+        },
+        sentAt: Date,
+        weatherCondition: String,
+      },
+    ],
     // Last check timestamp
     lastChecked: {
       type: Date,
