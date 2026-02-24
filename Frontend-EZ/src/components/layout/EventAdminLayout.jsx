@@ -28,8 +28,8 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
-              <Link to="/" className="hidden md:flex items-center gap-2 flex-shrink-0">
-                <Logo dark={false} key="event-admin-logo" />
+              <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+                <Logo dark={false} size="4xl" key="event-admin-logo" />
               </Link>
               <div className="hidden md:block border-l border-gray-200 h-6" />
               <h1 className="text-base md:text-lg font-semibold truncate">Event Admin</h1>

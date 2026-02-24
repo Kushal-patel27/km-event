@@ -59,8 +59,8 @@ export default function SuperAdminLayout({ title = 'Super Admin', subtitle = 'Sy
                   </svg>
                 )}
               </button>
-              <Link to="/" className="hidden md:flex items-center gap-2 flex-shrink-0">
-                <Logo dark={false} key="super-admin-logo" />
+              <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+                <Logo dark={false} size="4xl" key="super-admin-logo" />
               </Link>
               <div className="hidden md:block border-l border-slate-200 h-6" />
               <div>

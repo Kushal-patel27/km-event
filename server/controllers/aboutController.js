@@ -28,7 +28,7 @@ export const getAbout = async (req, res) => {
         },
         contactInfo: {
           email: "k.m.easyevents@gmail.com",
-          phone: "+1 (555) 123-4567",
+          phone: "+91 95686-98796",
           address: "123 Event Street, New York, NY 10001",
           businessHours: "Monday - Friday: 9:00 AM - 6:00 PM",
         },

@@ -78,7 +78,7 @@ export default function AdminLayout({ title = 'Admin', children }){
                 )}
               </button>
               <Link to="/" className="hidden md:flex items-center gap-2 flex-shrink-0">
-                <Logo dark={false} key="admin-logo" />
+                <Logo dark={false} size="4xl" key="admin-logo" />
               </Link>
               <div className="hidden md:block border-l border-gray-200 h-6"></div>
               <h1 className="text-base md:text-lg font-semibold truncate">Admin Panel</h1>

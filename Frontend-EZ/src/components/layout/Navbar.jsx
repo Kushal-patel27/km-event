@@ -535,6 +535,33 @@ export default function Navbar(){
                 </button>
               )}
 
+              {!user && (
+                <div className="flex flex-col gap-2 py-2">
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`px-4 py-2.5 text-center text-sm font-semibold rounded-lg transition border ${
+                      isHomePage
+                        ? 'bg-red-600 text-white border-red-600 hover:bg-red-700 hover:border-red-700'
+                        : 'bg-red-600 text-white border-red-600 hover:bg-red-700 hover:border-red-700'
+                    }`}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`px-4 py-2.5 text-center text-sm font-semibold rounded-lg transition border ${
+                      isHomePage
+                        ? 'bg-white/10 text-white border-white/30 hover:bg-white/20 hover:border-white/50'
+                        : 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+
               {user && (
                 <>
                   {/* Show user greeting in menu */}

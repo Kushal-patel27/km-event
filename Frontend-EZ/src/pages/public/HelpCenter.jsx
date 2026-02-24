@@ -421,7 +421,7 @@ export default function HelpCenter() {
       icon: '📞',
       title: 'Phone Support',
       description: 'Speak with our team',
-      value: '+1 (555) 123-4567',
+      value: '+91 95686-98796',
       color: isDarkMode ? 'from-black to-neutral-900 border-neutral-800' : 'from-purple-50 to-pink-50 border-purple-200'
     },
     {

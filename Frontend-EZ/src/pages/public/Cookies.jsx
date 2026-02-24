@@ -111,7 +111,7 @@ export default function Cookies() {
     {
       id: 11,
       title: '11. Contact Us',
-      content: 'If you have questions or concerns about our use of cookies, please contact us:\n\n**K&M Events Privacy Team**\n\nEmail: privacy@kmevents.com\nPhone: +1 (555) 123-4567\nAddress: 123 Event Street, Suite 100, Los Angeles, CA 90001\n\nData Protection Officer: dpo@kmevents.com\n\nFor general inquiries: support@kmevents.com\n\nWe will respond to your inquiry within 30 days.'
+      content: 'If you have questions or concerns about our use of cookies, please contact us:\n\n**K&M Events Privacy Team**\n\nEmail: privacy@kmevents.com\nPhone: +91 95686-98796\nAddress: 123 Event Street, Suite 100, Los Angeles, CA 90001\n\nData Protection Officer: dpo@kmevents.com\n\nFor general inquiries: support@kmevents.com\n\nWe will respond to your inquiry within 30 days.'
     }
   ]
 
