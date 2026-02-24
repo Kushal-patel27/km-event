@@ -46,8 +46,8 @@ export default function StaffAdminLayout({ title = 'Staff Admin', children }){
                   </svg>
                 )}
               </button>
-              <Link to="/" className="hidden md:flex items-center gap-2 flex-shrink-0">
-                <Logo dark={false} key="staff-admin-logo" />
+              <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+                <Logo dark={false} size="sm" key="staff-admin-logo" />
               </Link>
               <div className="hidden md:block border-l border-gray-200 h-6"></div>
               <h1 className="text-base md:text-lg font-semibold truncate">Staff Admin Panel</h1>

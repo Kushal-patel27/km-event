@@ -49,11 +49,11 @@ export default function EventCard({event}){
         </div>
 
         <div className={`flex items-center justify-between gap-3 pt-4 border-t mt-auto ${forceDark ? 'border-white/15' : 'border-gray-200'}`}>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className={`font-bold text-xl ${forceDark ? 'text-red-500' : 'text-indigo-600'}`}>{formatINR(event.price)}</div>
             <Link to={`/event/${eventId}`} className={`text-xs ${forceDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-500 hover:text-indigo-600'} hover:underline transition`}>View details →</Link>
           </div>
-          <Link to={`/book/${eventId}`} className={`inline-flex items-center justify-center text-xs px-4 py-2 rounded-md font-semibold transition-all ${
+          <Link to={`/book/${eventId}`} className={`inline-flex items-center justify-center text-xs px-4 py-2.5 rounded-lg font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
             available > 0 
               ? forceDark
                 ? 'bg-gradient-to-r from-red-600 to-red-500 text-white hover:shadow-md hover:shadow-red-500/40 hover:scale-[1.02]'

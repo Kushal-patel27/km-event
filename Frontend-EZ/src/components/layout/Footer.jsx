@@ -72,7 +72,7 @@ export default function Footer() {
               </li>
               <li className={`text-sm ${forceDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 <span className="font-semibold">Phone:</span><br/>
-                <a href="tel:+15551234567" className={`transition ${forceDark ? 'hover:text-red-500' : 'hover:text-indigo-600'}`}>+1 (555) 123-4567</a>
+                <a href="tel:+919568698796" className={`transition ${forceDark ? 'hover:text-red-500' : 'hover:text-indigo-600'}`}>+91 95686-98796</a>
               </li>
             </ul>
           </div>

@@ -1201,16 +1201,15 @@ export const updateSystemConfig = async (req, res) => {
  */
 export const getSystemLogs = async (req, res) => {
   try {
-    const { page = 1, limit = 50, type, userId } = req.query;
+    const { page = 1, limit = 50, type, userId, email, search, startDate, endDate } = req.query;
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
 
     const logs = [];
 
-    // Get recent users and their sessions
+    // Get ALL users and their sessions (no limit)
     const users = await User.find({}, { sessions: 1, _id: 1, email: 1, name: 1, createdAt: 1, lastLoginAt: 1, role: 1 })
       .lean()
-      .limit(200)
       .sort({ lastLoginAt: -1 });
 
     const sessionByUserId = new Map();
@@ -1233,10 +1232,8 @@ export const getSystemLogs = async (req, res) => {
           userEmail: user.email,
           userName: user.name,
           timestamp: user.createdAt,
-          ipAddress: mostRecentSession?.ip,
           details: {
             role: user.role,
-            ip: mostRecentSession?.ip,
           },
         });
       }
@@ -1249,10 +1246,8 @@ export const getSystemLogs = async (req, res) => {
           userEmail: user.email,
           userName: user.name,
           timestamp: user.lastLoginAt,
-          ipAddress: mostRecentSession?.ip,
           details: {
             role: user.role,
-            ip: mostRecentSession?.ip,
             userAgent: mostRecentSession?.userAgent,
           },
         });
@@ -1268,9 +1263,7 @@ export const getSystemLogs = async (req, res) => {
               userEmail: user.email,
               userName: user.name,
               timestamp: session.lastSeenAt,
-                ipAddress: session.ip,
               details: {
-                ip: session.ip,
                 userAgent: session.userAgent,
                 role: user.role,
               },
@@ -1280,29 +1273,47 @@ export const getSystemLogs = async (req, res) => {
       }
     });
 
-    // Get recent bookings
-    const recentBookings = await Booking.find()
+    // Get ALL bookings (no limit)
+    const allBookings = await Booking.find()
       .populate('user', 'name email')
       .populate('event', 'title')
       .sort({ createdAt: -1 })
-      .limit(100)
       .lean();
 
-    recentBookings.forEach((booking) => {
+    allBookings.forEach((booking) => {
       const bookingUserId = booking.user?._id?.toString();
-      const session = bookingUserId ? sessionByUserId.get(bookingUserId) : null;
       logs.push({
         type: "booking_created",
         userId: booking.user?._id,
         userEmail: booking.user?.email,
         userName: booking.user?.name,
         timestamp: booking.createdAt,
-        ipAddress: session?.ip,
         details: {
           event: booking.event?.title,
           quantity: booking.quantity,
           status: booking.status,
-          ip: session?.ip,
+        },
+      });
+    });
+
+    // Get ALL events (no limit)
+    const allEvents = await Event.find()
+      .populate('organizer', 'name email')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    allEvents.forEach((event) => {
+      logs.push({
+        type: "event_created",
+        userId: event.organizer?._id,
+        userEmail: event.organizer?.email,
+        userName: event.organizer?.name,
+        timestamp: event.createdAt,
+        details: {
+          eventTitle: event.title,
+          eventCategory: event.category,
+          eventDate: event.date,
+          totalTickets: event.totalTickets,
         },
       });
     });
@@ -1312,11 +1323,33 @@ export const getSystemLogs = async (req, res) => {
     
     // Apply filters
     let filteredLogs = sortedLogs;
+    
     if (type) {
       filteredLogs = filteredLogs.filter(log => log.type === type);
     }
     if (userId) {
       filteredLogs = filteredLogs.filter(log => log.userId?.toString() === userId);
+    }
+    if (email) {
+      filteredLogs = filteredLogs.filter(log => log.userEmail?.toLowerCase().includes(email.toLowerCase()));
+    }
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredLogs = filteredLogs.filter(log => 
+        (log.userName?.toLowerCase().includes(searchLower)) ||
+        (log.userEmail?.toLowerCase().includes(searchLower)) ||
+        (log.details?.event?.toLowerCase().includes(searchLower)) ||
+        (log.details?.eventTitle?.toLowerCase().includes(searchLower))
+      );
+    }
+    if (startDate) {
+      const start = new Date(startDate);
+      filteredLogs = filteredLogs.filter(log => new Date(log.timestamp) >= start);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      filteredLogs = filteredLogs.filter(log => new Date(log.timestamp) <= end);
     }
 
     // Paginate
@@ -1330,6 +1363,9 @@ export const getSystemLogs = async (req, res) => {
         limit: limitNum,
         total: filteredLogs.length,
         pages: Math.ceil(filteredLogs.length / limitNum),
+      },
+      filters: {
+        availableTypes: ['login', 'user_created', 'booking_created', 'session_activity', 'event_created'],
       },
     });
   } catch (error) {

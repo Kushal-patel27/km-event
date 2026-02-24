@@ -61,7 +61,7 @@ export default function OrganizerLayout({ title = 'Event Admin', children }) {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <Link to="/" className="flex items-center gap-2">
-                <Logo dark={false} />
+                <Logo dark={false} size="sm" />
               </Link>
               <div className="border-l border-gray-200 h-6" />
               <div className="flex items-center gap-2">
