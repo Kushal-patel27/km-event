@@ -202,17 +202,17 @@ export default function FAQ() {
     >
       <button
         onClick={() => setOpenIndex(isOpen ? null : index)}
-        className={`w-full p-5 text-left flex items-center justify-between transition-all ${
+        className={`w-full p-3 sm:p-4 md:p-5 text-left flex items-center justify-between transition-all ${
           isDarkMode ? 'hover:bg-neutral-900' : 'hover:bg-gray-50'
         }`}
       >
-        <span className={`font-semibold text-lg pr-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        <span className={`font-semibold text-sm sm:text-base md:text-lg pr-3 sm:pr-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
           {item.q}
         </span>
         <motion.svg
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.3 }}
-          className={`w-6 h-6 flex-shrink-0 ${isDarkMode ? 'text-red-400' : 'text-indigo-600'}`}
+          className={`w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 ${isDarkMode ? 'text-red-400' : 'text-indigo-600'}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -227,8 +227,8 @@ export default function FAQ() {
         transition={{ duration: 0.3 }}
         className="overflow-hidden"
       >
-        <div className={`p-5 border-t ${isDarkMode ? 'border-neutral-800 bg-neutral-900/60' : 'border-gray-100 bg-gray-50/50'}`}>
-          <p className={`text-base leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+        <div className={`p-3 sm:p-4 md:p-5 border-t ${isDarkMode ? 'border-neutral-800 bg-neutral-900/60' : 'border-gray-100 bg-gray-50/50'}`}>
+          <p className={`text-xs sm:text-sm md:text-base leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             {item.a}
           </p>
         </div>
@@ -237,25 +237,25 @@ export default function FAQ() {
   )
 
   return (
-    <div className={`min-h-screen py-12 transition-colors ${
+    <div className={`min-h-screen py-8 sm:py-10 md:py-12 transition-colors ${
       isDarkMode
         ? 'bg-black'
         : 'bg-gradient-to-b from-gray-50 to-white'
     }`}>
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-10 md:mb-12"
         >
-          <h1 className={`text-4xl md:text-5xl font-black mb-4 ${
+          <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black mb-3 sm:mb-4 ${
             isDarkMode ? 'text-white' : 'text-gray-900'
           }`}>
             Frequently Asked Questions
           </h1>
-          <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-sm sm:text-base md:text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Find answers to common questions about booking, tickets, payments, and more.
           </p>
         </motion.div>
@@ -268,7 +268,7 @@ export default function FAQ() {
         ) : (
           <>
             {/* FAQ Sections */}
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               {faqItems.map((section, sectionIndex) => (
                 <motion.div
                   key={sectionIndex}
@@ -277,11 +277,11 @@ export default function FAQ() {
                   transition={{ delay: sectionIndex * 0.1 }}
                 >
                   {/* Section Title */}
-                  <div className="mb-6">
-                    <h2 className={`text-2xl font-black mb-4 flex items-center gap-3 ${
+                  <div className="mb-4 sm:mb-6">
+                    <h2 className={`text-lg sm:text-xl md:text-2xl font-black mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3 ${
                       isDarkMode ? 'text-white' : 'text-gray-900'
                     }`}>
-                      <span className={`w-1 h-8 rounded-full ${
+                      <span className={`w-1 h-6 sm:h-8 rounded-full ${
                         isDarkMode ? 'bg-red-600' : 'bg-indigo-600'
                       }`}></span>
                       {section.category}
@@ -289,7 +289,7 @@ export default function FAQ() {
                   </div>
 
                   {/* Questions */}
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {section.questions.map((item, itemIndex) => {
                       const globalIndex = faqItems.slice(0, sectionIndex).reduce((sum, s) => sum + s.questions.length, 0) + itemIndex
                       return (
@@ -310,10 +310,10 @@ export default function FAQ() {
 
         {/* Load more button for older Q&A */}
         {hasMore && (
-          <div className="mt-8 text-center">
+          <div className="mt-6 sm:mt-8 text-center">
             <button
-              onClick={loadMore}
-              className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-semibold rounded-lg transition"
+              onClick={handleLoadMore}
+              className="px-5 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white text-sm sm:text-base font-semibold rounded-lg transition"
             >
               Load more FAQs
             </button>
@@ -331,13 +331,13 @@ export default function FAQ() {
               : 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200'
           }`}
         >
-          <h3 className={`text-2xl font-black mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className={`text-xl sm:text-2xl font-black mb-2 sm:mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             Still need help?
           </h3>
-          <p className={`text-lg mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <p className={`text-base sm:text-lg mb-3 sm:mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             Can't find what you're looking for? Contact our support team:
           </p>
-          <div className={`flex flex-col sm:flex-row gap-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />

@@ -343,6 +343,20 @@ export default function Navbar(){
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
+
+            {/* Mobile Login Button - Show only if user is not logged in */}
+            {!user && (
+              <Link
+                to="/login"
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition flex-shrink-0 ${
+                  isHomePage
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+                }`}
+              >
+                Login
+              </Link>
+            )}
             
             {/* Mobile Menu Button - Always on the right */}
             <button
@@ -400,31 +414,6 @@ export default function Navbar(){
                     }`}
                     aria-label="Search events"
                   />
-
-                  {/* Clear button */}
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setSearchQuery('')
-                        if (location.pathname === '/events') {
-                          navigate('/events', { replace: true })
-                        }
-                      }}
-                      className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
-                        isHomePage
-                          ? 'hover:bg-white/10 text-gray-400 hover:text-red-300'
-                          : 'hover:bg-gray-200 dark:hover:bg-gray-900 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500'
-                      }`}
-                      aria-label="Clear search"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
 
                   {/* Close button */}
                   <button

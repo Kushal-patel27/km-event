@@ -32,6 +32,7 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false, categories = 
     title: '',
     location: '',
     locationDetails: '',
+    mapLink: '',
     category: '',
     description: '',
     image: '',
@@ -68,6 +69,7 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false, categories = 
       title: form.title.trim(),
       location: form.location.trim(),
       locationDetails: (form.locationDetails || '').trim(),
+      mapLink: (form.mapLink || '').trim(),
       category: (form.category || '').trim(),
       description: form.description.trim(),
       image: form.image.trim(),
@@ -118,6 +120,17 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false, categories = 
           <label className="text-sm font-medium">Venue details</label>
           <textarea value={form.locationDetails} onChange={e => setForm({ ...form, locationDetails: e.target.value })} placeholder="Venue name, hall/floor, full address" className="w-full p-2 border rounded" rows={2} />
           <div className="text-xs text-gray-500">Include venue, street, landmark to avoid confusion.</div>
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Map link</label>
+          <input
+            value={form.mapLink}
+            onChange={e => setForm({ ...form, mapLink: e.target.value })}
+            placeholder="Paste a Google/Apple/OpenStreetMap link"
+            className="w-full p-2 border rounded"
+            type="url"
+          />
+          <div className="text-xs text-gray-500">Used for the location map icon on event details.</div>
         </div>
       </div>
 
@@ -301,6 +314,7 @@ export default function AdminEvents() {
         description: data.description,
         location: data.location,
         locationDetails: data.locationDetails || '',
+        mapLink: data.mapLink || '',
         image: data.image,
         category: data.category,
         price: basePrice,
@@ -343,6 +357,7 @@ export default function AdminEvents() {
         description: data.description,
         location: data.location,
         locationDetails: data.locationDetails || '',
+        mapLink: data.mapLink || '',
         image: data.image,
         category: data.category,
         price: basePrice,

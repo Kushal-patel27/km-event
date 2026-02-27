@@ -44,7 +44,7 @@ const systemConfigSchema = new mongoose.Schema(
         passwordMinLength: {
           type: Number,
           default: 8,
-          min: 6,
+          min: 4,
           max: 32,
         },
         sessionTimeout: {

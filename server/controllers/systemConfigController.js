@@ -13,6 +13,9 @@ export const getPublicSystemConfig = async (req, res) => {
       ticketLimits: {
         maxPerEvent: config.ticketLimits?.maxPerEvent ?? 1000,
         maxPerUser: config.ticketLimits?.maxPerUser ?? 10
+      },
+      security: {
+        passwordMinLength: config.security?.passwordMinLength ?? 8
       }
     });
   } catch (error) {

@@ -10,6 +10,19 @@ import { generateCSV, generateExcel, generatePDF, formatDate, formatCurrency, fo
 
 const CANCELLATION_STATUSES = new Set(["cancelled", "refunded"]);
 
+/**
+ * Helper function to get minimum password length from system config
+ */
+async function getMinPasswordLength() {
+  try {
+    const config = await SystemConfig.findById('system_config');
+    return config?.security?.passwordMinLength || 8;
+  } catch (error) {
+    console.error('Error fetching min password length:', error);
+    return 8; // Default to 8 if config fetch fails
+  }
+}
+
 async function restoreTicketsAndNotifyWaitlist(booking) {
   if (!booking?.event) return;
 
@@ -192,8 +205,9 @@ export const updateUserPassword = async (req, res) => {
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
-    if (!incomingPassword || incomingPassword.length < 8) {
-      return res.status(400).json({ message: "Password must be at least 8 characters" });
+    const minLength = await getMinPasswordLength();
+    if (!incomingPassword || incomingPassword.length < minLength) {
+      return res.status(400).json({ message: `Password must be at least ${minLength} characters` });
     }
 
     const user = await User.findById(userId);
@@ -823,6 +837,7 @@ export const updateEvent = async (req, res) => {
       "title",
       "location",
       "locationDetails",
+      "mapLink",
       "price",
       "category",
       "image",
@@ -946,16 +961,56 @@ export const updateBookingStatus = async (req, res) => {
 
     const previousStatus = booking.status;
     booking.status = status;
-    booking.updatedAt = new Date();
-    await booking.save();
 
-    if (CANCELLATION_STATUSES.has(status) && !CANCELLATION_STATUSES.has(previousStatus)) {
+    // If changing from cancelled/pending to confirmed, decrement available tickets
+    if (
+      status === "confirmed" &&
+      ["cancelled", "pending"].includes(previousStatus)
+    ) {
+      const event = await Event.findById(booking.event._id || booking.event);
+      if (event) {
+        const quantity = Number(booking.quantity) || 0;
+        if (
+          Array.isArray(event.ticketTypes) &&
+          event.ticketTypes.length > 0 &&
+          booking.ticketType?.name
+        ) {
+          const ticketType = event.ticketTypes.find(
+            (t) => t.name === booking.ticketType.name
+          );
+          if (ticketType && (ticketType.available ?? 0) >= quantity) {
+            ticketType.available = Math.max(0, (ticketType.available ?? 0) - quantity);
+          }
+          // Recalculate event availableTickets
+          event.availableTickets = Math.max(
+            0,
+            event.ticketTypes.reduce((sum, t) => sum + (t?.available ?? 0), 0)
+          );
+        } else if (typeof event.availableTickets === "number") {
+          event.availableTickets = Math.max(0, event.availableTickets - quantity);
+        }
+        await event.save();
+      }
+    }
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { status, updatedAt: new Date() },
+      { new: true }
+    )
+      .populate("user", "name email")
+      .populate("event");
+
+    if (
+      CANCELLATION_STATUSES.has(status) &&
+      !CANCELLATION_STATUSES.has(previousStatus)
+    ) {
       await restoreTicketsAndNotifyWaitlist(booking);
     }
 
     res.json({
       message: "Booking status updated",
-      booking,
+      booking: updatedBooking,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

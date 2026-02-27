@@ -54,6 +54,10 @@ const eventRequestSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  mapLink: {
+    type: String,
+    default: ''
+  },
   price: {
     type: Number,
     default: 0,

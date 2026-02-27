@@ -251,6 +251,7 @@ function EventDetails({ event, onBack, onUpdate }) {
         description: formData.description,
         location: formData.location,
         locationDetails: formData.locationDetails,
+        mapLink: formData.mapLink || '',
         image: formData.image,
         category: formData.category,
         price: basePrice,

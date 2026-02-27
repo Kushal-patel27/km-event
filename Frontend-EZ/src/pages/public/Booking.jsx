@@ -40,6 +40,8 @@ export default function Booking(){
     }
   }, [authUser, storedToken, navigate, location])
 
+  // ...existing hooks and logic...
+
   // Fetch event features
   useEffect(() => {
     if (!id) return;
@@ -176,7 +178,7 @@ export default function Booking(){
     return (
       <div className={`min-h-screen flex items-center justify-center px-4 py-12 ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
         <div className={`max-w-xl w-full rounded-2xl shadow-lg border transition-colors ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'}`}>
-          <div className={`flex items-center gap-3 px-6 py-5 rounded-t-2xl ${isDarkMode ? 'bg-gradient-to-r from-yellow-700 to-yellow-600' : 'bg-gradient-to-r from-yellow-600 to-yellow-500'}`}>
+          <div className={`flex items-center gap-3 px-6 py-5 rounded-t-2xl ${isDarkMode ? 'bg-yellow-700' : 'bg-yellow-600'}`}>
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -185,7 +187,7 @@ export default function Booking(){
           <div className="px-6 py-5 text-sm">
             <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Ticket sales are currently disabled for this event. Please contact the organizer for more information.</p>
             <div className="mt-4 flex justify-center">
-              <Link to={`/event/${id}`} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200'}`}>
+              <Link to={`/event/${id}`} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600' : 'bg-indigo-600 text-white hover:bg-indigo-500 border border-indigo-600'}`}>
                 Back to Event
               </Link>
             </div>
@@ -202,7 +204,7 @@ export default function Booking(){
     return (
       <div className={`min-h-screen flex items-center justify-center px-4 py-12 ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
         <div className={`max-w-xl w-full rounded-2xl shadow-lg border transition-colors ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'}`}>
-          <div className={`flex items-center gap-3 px-6 py-5 rounded-t-2xl ${isDarkMode ? 'bg-gradient-to-r from-red-700 to-red-600' : 'bg-gradient-to-r from-red-600 to-red-500'}`}>
+          <div className={`flex items-center gap-3 px-6 py-5 rounded-t-2xl ${isDarkMode ? 'bg-red-700' : 'bg-blue-600'}`}>
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
             </svg>
@@ -211,7 +213,7 @@ export default function Booking(){
           <div className="px-6 py-5 text-sm">
             <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>All ticket types are currently unavailable. Please check back later or explore other events.</p>
             <div className="mt-4 flex justify-center">
-              <Link to="/events" className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200'}`}>
+              <Link to="/events" className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600' : 'bg-indigo-600 text-white hover:bg-indigo-500 border border-indigo-600'}`}>
                 Browse Events
               </Link>
             </div>
@@ -387,350 +389,144 @@ export default function Booking(){
   }
 
   return (
-    <div className={`min-h-screen py-4 md:py-8 transition-colors ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
-      <div className="max-w-2xl mx-auto px-4 sm:px-6">
-        <div className={`rounded-2xl shadow-xl overflow-hidden transition-colors ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
-          {/* Event Header */}
-          <div className={`text-white p-4 md:p-6 transition-colors ${
-            isDarkMode 
-              ? 'bg-gradient-to-r from-red-700 to-red-600' 
-              : 'bg-gradient-to-r from-red-600 to-red-500'
-          }`}>
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">{event.title}</h2>
-            <div className="flex flex-col sm:flex-row sm:gap-6 gap-3 text-sm opacity-95">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                {new Date(event.date).toLocaleString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+
+
+    <div className={`min-h-screen py-4 sm:py-8 px-2 sm:px-0 font-[Inter,Poppins,sans-serif] ${isDarkMode ? 'bg-black' : 'bg-gray-50'} animate-fadein`}> 
+      <div className="max-w-3xl mx-auto flex flex-col gap-6">
+        {/* 1️⃣ Event Header Section */}
+        <div className={`rounded-xl shadow-lg overflow-hidden transition-all duration-300 ${isDarkMode ? 'bg-gradient-to-r from-red-700 to-red-600' : 'bg-gradient-to-r from-indigo-600 to-blue-500'}`}> 
+          <div className="p-6 sm:p-8 flex flex-col gap-2 sm:gap-4">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1 sm:mb-2 text-white">{event.title}</h2>
+            <div className="flex flex-wrap gap-4 text-sm sm:text-base">
+              <div className="flex items-center gap-2 text-white/90">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                {new Date(event.date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+              <div className="flex items-center gap-2 text-white/90">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 {event.location}
               </div>
             </div>
           </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className={`p-4 md:p-6 space-y-4 transition-colors ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
-            {/* Personal Info */}
-            <div className="space-y-3">
-              <h3 className={`text-base font-semibold flex items-center gap-2 transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                <svg className={`w-4 h-4 flex-shrink-0 transition-colors ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Your Information
-              </h3>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className={`block text-xs font-medium mb-1.5 transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Full Name *</label>
-                  <input 
-                    required 
-                    value={name} 
-                    onChange={e=>setName(e.target.value)} 
-                    className={`w-full px-3 py-2 border-2 rounded-lg text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none transition ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-red-400 focus:border-red-400' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-600 focus:ring-red-400 focus:border-red-500'}`}
-                    placeholder="John Doe"
-                  />
-                </div>
-                <div>
-                  <label className={`block text-xs font-medium mb-1.5 transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email Address *</label>
-                  <input 
-                    required 
-                    type="email" 
-                    value={email} 
-                    onChange={e=>setEmail(e.target.value)} 
-                    className={`w-full px-3 py-2 border-2 rounded-lg text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none transition ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-red-400 focus:border-red-400' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-600 focus:ring-red-400 focus:border-red-500'}`}
-                    placeholder="john@example.com"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Ticket Type Selection (if available) - Compact Version */}
-            {hasTicketTypes && (
-              <div>
-                <h3 className={`text-base font-semibold flex items-center gap-2 mb-3 transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                  <svg className={`w-4 h-4 flex-shrink-0 transition-colors ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.646 7.23a2 2 0 01-1.789 1.106H2a2 2 0 01-2-2V7a2 2 0 012-2h1.657a2 2 0 011.414.586l2.828 2.828a2 2 0 001.414.586h2.657a2 2 0 012 2v1z" />
-                  </svg>
-                  Ticket Type
-                </h3>
-                <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 transition-colors`}>
-                  {event.ticketTypes.map((ticketType, idx) => (
-                    <label 
-                      key={idx} 
-                      className={`flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        selectedTicketType?.name === ticketType.name
-                          ? isDarkMode 
-                            ? 'bg-black/80 border-blue-400 ring-2 ring-blue-300'
-                            : 'bg-gray-50 border-blue-400 ring-2 ring-blue-200'
-                          : isDarkMode 
-                            ? 'bg-black border-white/10 hover:border-white/20'
-                            : 'bg-white border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3 w-full">
-                        <input
-                          type="radio"
-                          name="ticketType"
-                          checked={selectedTicketType?.name === ticketType.name}
-                          onChange={() => setSelectedTicketType(ticketType)}
-                          className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5"
-                          required
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-sm font-bold transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{ticketType.name}</div>
-                          {ticketType.description && (
-                            <div className={`text-xs transition-colors mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{ticketType.description}</div>
-                          )}
-                          <div className="flex items-baseline gap-2 mt-2">
-                            <div className={`text-lg font-bold transition-colors ${isDarkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{formatINR(ticketType.price)}</div>
-                            <div className={`text-xs transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{ticketType.available} available</div>
-                          </div>
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Ticket Quantity - Only show if ticket type selected or no types */}
-            {(!hasTicketTypes || selectedTicketType) && (
-            <div>
-              <h3 className={`text-base font-semibold flex items-center gap-2 mb-3 transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                <svg className={`w-4 h-4 flex-shrink-0 transition-colors ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                </svg>
-                Select Tickets
-              </h3>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className={`block text-xs font-medium mb-1.5 transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Number of Tickets *</label>
-                  <input 
-                    required 
-                    type="number" 
-                    min="1" 
-                    max={(() => {
-                      const maxLimit = Number.isFinite(maxPerUser) && maxPerUser > 0 ? maxPerUser : null
-                      if (available === Infinity) return maxLimit || undefined
-                      return maxLimit ? Math.min(available, maxLimit) : available
-                    })()} 
-                    value={quantity} 
-                    onChange={e => {
-                      const next = Number(e.target.value)
-                      const maxLimit = Number.isFinite(maxPerUser) && maxPerUser > 0 ? maxPerUser : null
-                      const maxSelectable = available === Infinity
-                        ? (maxLimit || Infinity)
-                        : (maxLimit ? Math.min(available, maxLimit) : available)
-                      setQuantity(Number.isFinite(maxSelectable) ? Math.min(next, maxSelectable) : next)
-                    }} 
-                    className={`w-full px-3 py-2 border-2 rounded-lg text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none transition ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-red-400 focus:border-red-400' : 'border-gray-300 bg-white text-gray-900 focus:ring-red-400 focus:border-red-500'}`}
-                  />
-                  {Number.isFinite(maxPerUser) && maxPerUser > 0 && (
-                    <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Max per user: {maxPerUser}
-                    </p>
-                  )}
-                </div>
-                <div className={`flex items-center justify-center px-3 py-2 rounded-lg text-xs font-semibold min-w-[110px] h-full transition-colors ${isDarkMode ? 'bg-black border border-white/10 text-gray-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
-                  {available === Infinity ? '∞ Available' : `${available} Left`}
-                </div>
-              </div>
-            </div>
-            )}
-
-            {/* Total & Actions - Show after ticket selection */}
-            {(!hasTicketTypes || selectedTicketType) && (
-            <div className={`border-t pt-3 space-y-3 transition-colors ${isDarkMode ? 'border-gray-700' : ''}`}>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-baseline justify-between">
-                  <span className={`font-medium transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Subtotal</span>
-                  <span className={`font-semibold transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{formatINR(subTotal)}</span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className={`flex items-baseline justify-between transition-colors ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
-                    <span className="font-medium">Discount</span>
-                    <span className="font-semibold">-{formatINR(discountAmount)}</span>
-                  </div>
-                )}
-              </div>
-              <div className={`flex items-baseline justify-between pt-2 px-3 py-3 rounded-lg border-2 transition-colors ${isDarkMode ? 'border-indigo-600 bg-indigo-900/20' : 'border-indigo-300 bg-indigo-50'}`}>
-                <span className={`font-semibold transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>Total Amount</span>
-                <span className={`font-bold text-lg transition-colors ${isDarkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>{formatINR(finalTotal)}</span>
-              </div>
-            </div>
-            )}
-
-            {/* Seat Selection - only show if event has seat layout */}
-            {hasSeatLayout && (
-              <div>
-                <h3 className={`text-lg font-semibold flex items-center gap-2 mb-4 transition-colors ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                  <svg className={`w-5 h-5 transition-colors ${isDarkMode ? 'text-red-500' : 'text-indigo-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  Choose Your Seats
-                </h3>
-                
-                <div className={`p-8 rounded-lg border-4 transition-colors ${isDarkMode ? 'bg-black border-white/10' : 'bg-gray-100 border-gray-200'}`}>
-                  <div className="mb-6">
-                    <div className={`text-center font-bold text-lg mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>🎬 SCREEN 🎬</div>
-                    <div className="h-1 bg-gradient-to-r from-yellow-300 via-white to-yellow-300 rounded-full"></div>
-                  </div>
-
-                  <div className={`p-8 rounded-lg transition-colors ${isDarkMode ? 'bg-gray-700' : 'bg-white'}`}>
-                    <div className={`text-sm font-medium mb-6 text-center transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Select {Number(quantity)} seat(s) • {selectedSeats.length} selected
-                    </div>
-
-                    {/* Seat Legend */}
-                    <div className={`mb-6 p-4 rounded-lg border transition-colors ${isDarkMode ? 'bg-black border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                      <div className="flex flex-wrap justify-center gap-6 text-xs">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-6 h-6 rounded border-2 ${isDarkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'}`}></div>
-                          <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>Available</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-6 h-6 rounded border-2 ${isDarkMode ? 'bg-red-500 border-red-400' : 'bg-red-600 border-red-500'}`}></div>
-                          <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>Selected</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-6 h-6 rounded border-2 ${isDarkMode ? 'bg-gray-500 border-gray-400' : 'bg-gray-300 border-gray-400'} cursor-not-allowed opacity-50`}></div>
-                          <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Booked</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <SeatPicker 
-                      layout={generateSeatLayout(event.capacity, 10)}
-                      booked={bookedSeatsFromDB}
-                      selected={selectedSeats}
-                      maxSelectable={quantity}
-                      onToggle={setSelectedSeats}
-                      isDarkMode={isDarkMode}
-                    />
-                  </div>
-
-                  <div className="mt-6">
-                    <div className="h-1 bg-gradient-to-r from-yellow-300 via-white to-yellow-300 rounded-full mb-2"></div>
-                    <div className="text-center text-white font-semibold text-sm opacity-90">Ground Level</div>
-                  </div>
-                </div>
-
-                {/* Selected Seats Display */}
-                {selectedSeats.length > 0 && (
-                  <div style={isDarkMode ? {
-                    backgroundColor: 'rgba(255, 50, 50, 0.15)',
-                    borderColor: '#ff3333',
-                    color: '#ffcccc'
-                  } : {}} className={`mt-4 p-5 rounded-lg border-2 transition-colors ${isDarkMode ? 'border-red-500' : 'bg-red-50 border-red-300 text-red-900'}`}>
-                    <p className={`text-sm font-bold mb-3 ${isDarkMode ? 'text-red-300' : 'text-red-900'}`}>
-                      ✓ Your Selected Seats ({selectedSeats.length}/{quantity})
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSeats.map(seat => (
-                        <span 
-                          key={seat} 
-                          style={isDarkMode ? {
-                            backgroundColor: '#ff3333',
-                            color: 'white',
-                            boxShadow: '0 0 12px rgba(255, 51, 51, 0.9)'
-                          } : {}}
-                          className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${isDarkMode ? '' : 'bg-red-600 text-white'}`}
-                        >
-                          {seat}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Offer Display */}
-            {offer && (
-              <div className={`rounded-xl p-4 border-2 transition-colors ${
-                offer.discount 
-                  ? isDarkMode ? 'bg-green-900 border-green-700' : 'bg-green-50 border-green-300'
-                  : isDarkMode ? 'bg-yellow-900 border-yellow-700' : 'bg-yellow-50 border-yellow-300'
-              }`}>
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className={`font-bold text-lg transition-colors ${
-                      offer.discount 
-                        ? isDarkMode ? 'text-green-100' : 'text-green-800'
-                        : isDarkMode ? 'text-yellow-100' : 'text-yellow-800'
-                    }`}>{offer.title}</div>
-                    <div className={`text-sm mt-1 transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{offer.discount ? `Code ${offer.code} applied` : 'Offer not applicable'}</div>
-                  </div>
-                  {offer.discount && <span className={`font-bold text-xl transition-colors ${isDarkMode ? 'text-green-100' : 'text-green-700'}`}>-{formatINR(discountAmount)}</span>}
-                </div>
-                
-                {offer.discount && offer.requiresId && (
-                  <label className={`flex items-center gap-3 mt-3 p-3 rounded-lg cursor-pointer border transition-colors ${isDarkMode ? 'bg-gray-700 border-green-600' : 'bg-white border-green-200'}`}>
-                    <input 
-                      type="checkbox" 
-                      checked={idVerified} 
-                      onChange={e => setIdVerified(e.target.checked)} 
-                      className="w-4 h-4 rounded text-green-600" 
-                    />
-                    <span className={`text-sm font-medium transition-colors ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>I confirm I have a valid Student ID</span>
-                  </label>
-                )}
-                <button 
-                  type="button" 
-                  onClick={() => {setOffer(null); sessionStorage.removeItem('appliedOffer')}} 
-                  className={`text-xs underline mt-3 transition-colors ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800'}`}
-                >
-                  Remove Offer
-                </button>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className={`border px-4 py-3 rounded-lg text-sm transition-colors ${isDarkMode ? 'bg-red-900 border-red-700 text-red-100' : 'bg-red-50 border-red-200 text-red-700'}`}>
-                {error}
-              </div>
-            )}
-
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              <Link 
-                to={`/event/${event.id}`} 
-                className={`flex-1 px-4 py-2 border-2 rounded-lg text-sm font-semibold transition text-center ${isDarkMode ? 'border-gray-500 text-gray-300 hover:bg-gray-700/50' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
-              >
-                ← Back to Event
-              </Link>
-              <button 
-                type="submit"
-                disabled={bookingLoading || loadingFeatures || (hasTicketTypes && !selectedTicketType) || features?.ticketing?.enabled === false}
-                className={`flex-1 px-4 py-2.5 text-white rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:shadow-lg disabled:hover:translate-y-0 ${isDarkMode ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600' : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600'}`}
-              >
-                {bookingLoading || loadingFeatures ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  'Confirm Booking →'
-                )}
-              </button>
-            </div>
-          </form>
         </div>
+
+        {/* 2️⃣ Main Card: User Info, Ticket, Quantity, Summary, Buttons */}
+        <form onSubmit={handleSubmit} className={`w-full rounded-xl shadow-sm ${isDarkMode ? 'bg-black' : 'bg-white'} p-4 sm:p-8 flex flex-col gap-6 transition-all duration-300 animate-fadein border ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}> 
+          {/* 2️⃣ User Information Section */}
+          <div className="flex flex-col gap-4">
+            <h3 className={`text-base font-semibold ${isDarkMode ? 'text-red-400' : 'text-indigo-600'} mb-1`}>Your Information</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Floating label input */}
+              <div className="relative group">
+                <input required value={name} onChange={e=>setName(e.target.value)} id="name" className={`peer w-full px-4 pt-6 pb-2 rounded-lg text-base font-medium transition-all duration-300 outline-none focus:ring-2 ${isDarkMode ? 'bg-black border border-zinc-700 text-white placeholder-transparent focus:ring-red-500 focus:border-red-500' : 'bg-white border border-gray-300 text-gray-900 placeholder-transparent focus:ring-indigo-500 focus:border-indigo-500'} `} placeholder=" " autoComplete="off" />
+                <label htmlFor="name" className={`absolute left-4 top-2 text-sm font-medium pointer-events-none transition-all duration-300 origin-left peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm ${isDarkMode ? 'text-zinc-400 peer-focus:text-red-400' : 'text-gray-400 peer-focus:text-indigo-400'}`}>Full Name *</label>
+              </div>
+              <div className="relative group">
+                <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} id="email" className={`peer w-full px-4 pt-6 pb-2 rounded-lg text-base font-medium transition-all duration-300 outline-none focus:ring-2 ${isDarkMode ? 'bg-black border border-zinc-700 text-white placeholder-transparent focus:ring-red-500 focus:border-red-500' : 'bg-white border border-gray-300 text-gray-900 placeholder-transparent focus:ring-indigo-500 focus:border-indigo-500'} `} placeholder=" " autoComplete="off" />
+                <label htmlFor="email" className={`absolute left-4 top-2 text-sm font-medium pointer-events-none transition-all duration-300 origin-left peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm ${isDarkMode ? 'text-zinc-400 peer-focus:text-red-400' : 'text-gray-400 peer-focus:text-indigo-400'}`}>Email Address *</label>
+              </div>
+            </div>
+          </div>
+
+          {/* 3️⃣ Ticket Selection */}
+          {hasTicketTypes && (
+            <div className="flex flex-col gap-2">
+              <h3 className={`text-base font-semibold ${isDarkMode ? 'text-red-400' : 'text-indigo-600'} mb-1`}>Ticket Type</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {event.ticketTypes.map((ticketType, idx) => (
+                  <label key={idx} className={`relative flex flex-col gap-2 p-4 rounded-lg cursor-pointer transition-all duration-200 ${isDarkMode ? 'bg-black border border-white/10' : 'bg-gray-50 border border-gray-300'} ${selectedTicketType?.name === ticketType.name ? (isDarkMode ? 'ring-2 ring-red-600 border-red-600 bg-black' : 'ring-2 ring-indigo-500 border-indigo-500 shadow-md bg-indigo-50') : (isDarkMode ? 'hover:border-red-400 hover:bg-black' : 'hover:shadow-sm hover:border-indigo-400')}`}> 
+                    <input type="radio" name="ticketType" checked={selectedTicketType?.name === ticketType.name} onChange={() => setSelectedTicketType(ticketType)} className={`absolute top-3 right-3 w-5 h-5 ${isDarkMode ? 'accent-red-600' : 'accent-indigo-600'}`} required />
+                    <div className="flex flex-col gap-1">
+                      <span className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{ticketType.name}</span>
+                      {ticketType.description && (<span className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-gray-600'}`}>{ticketType.description}</span>)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{formatINR(ticketType.price)}</span>
+                      <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-medium ${isDarkMode ? 'bg-zinc-700 text-zinc-300' : 'bg-indigo-100 text-indigo-700'}`}>{ticketType.available} left</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 4️⃣ Quantity Selector */}
+          {(!hasTicketTypes || selectedTicketType) && (
+            <div className="flex flex-col gap-2">
+              <h3 className={`text-base font-semibold ${isDarkMode ? 'text-red-400' : 'text-indigo-600'} mb-1`}>Select Tickets</h3>
+              <div className="flex items-center gap-4">
+                <div className={`flex items-center gap-2 ${isDarkMode ? 'bg-black' : 'bg-gray-100'} rounded-lg px-3 py-2 border ${isDarkMode ? 'border-zinc-700' : 'border-gray-300'}`}>
+                  <button type="button" aria-label="Decrease" onClick={()=>setQuantity(q=>Math.max(1, q-1))} disabled={quantity<=1} className={`w-8 h-8 flex items-center justify-center rounded-lg font-bold text-lg transition-all duration-200 focus:outline-none ${quantity<=1 ? 'opacity-40 cursor-not-allowed' : isDarkMode ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>-</button>
+                  <span className="w-8 text-center text-lg font-semibold select-none">{quantity}</span>
+                  <button type="button" aria-label="Increase" onClick={()=>setQuantity(q=>{const maxLimit=Number.isFinite(maxPerUser)&&maxPerUser>0?maxPerUser:null;const maxSelectable=available===Infinity?(maxLimit||Infinity):(maxLimit?Math.min(available,maxLimit):available);return Math.min(q+1,maxSelectable)})} disabled={(() => {const maxLimit=Number.isFinite(maxPerUser)&&maxPerUser>0?maxPerUser:null;const maxSelectable=available===Infinity?(maxLimit||Infinity):(maxLimit?Math.min(available,maxLimit):available);return quantity>=maxSelectable})()} className={`w-8 h-8 flex items-center justify-center rounded-lg font-bold text-lg transition-all duration-200 focus:outline-none ${(() => {const maxLimit=Number.isFinite(maxPerUser)&&maxPerUser>0?maxPerUser:null;const maxSelectable=available===Infinity?(maxLimit||Infinity):(maxLimit?Math.min(available,maxLimit):available);return quantity>=maxSelectable})() ? 'opacity-40 cursor-not-allowed' : isDarkMode ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>+</button>
+                </div>
+                <span className={`ml-2 px-3 py-1 rounded-full text-xs font-medium ${isDarkMode ? 'bg-red-900/50 text-red-300' : 'bg-indigo-100 text-indigo-700'}`}>{available===Infinity?'∞':available} Tickets Left</span>
+              </div>
+              {Number.isFinite(maxPerUser)&&maxPerUser>0 && (<span className={`text-xs mt-1 ${isDarkMode?'text-zinc-400':'text-gray-500'}`}>Max per user: {maxPerUser}</span>)}
+            </div>
+          )}
+
+          {/* 5️⃣ Price Summary Card */}
+          {(!hasTicketTypes || selectedTicketType) && (
+            <div className={`rounded-lg p-5 mt-2 ${isDarkMode ? 'bg-black' : 'bg-gray-100'} flex flex-col gap-3 transition-all duration-300 border ${isDarkMode ? 'border-zinc-700' : 'border-gray-300'}`}> 
+              <div className="flex items-center justify-between text-base font-medium">
+                <span className={isDarkMode?'text-gray-400':'text-gray-600'}>Subtotal</span>
+                <span className={isDarkMode?'text-white':'text-gray-900'}>{formatINR(subTotal)}</span>
+              </div>
+              {discountAmount>0 && (<div className="flex items-center justify-between text-base font-medium"><span className={isDarkMode?'text-green-400':'text-green-700'}>Discount</span><span className={isDarkMode?'text-green-200':'text-green-700'}>-{formatINR(discountAmount)}</span></div>)}
+              <div className={`border-t ${isDarkMode ? 'border-zinc-700' : 'border-gray-300'} my-2`}></div>
+              <div className="flex items-center justify-between text-lg font-bold">
+                <span className={isDarkMode?'text-white':'text-gray-900'}>Total</span>
+                <span className={isDarkMode?'text-white':'text-gray-900'}>{formatINR(finalTotal)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* 6️⃣ Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 mt-2">
+            <Link to={`/event/${event.id}`} className={`flex-1 px-4 py-3 rounded-lg font-medium text-center transition-all duration-200 outline-none ${isDarkMode ? 'bg-zinc-700 text-white hover:bg-zinc-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>← Back to Event</Link>
+            <button type="submit" disabled={bookingLoading||loadingFeatures||(hasTicketTypes&&!selectedTicketType)||features?.ticketing?.enabled===false} className={`flex-1 px-4 py-3 rounded-lg font-semibold text-white shadow-lg transition-all duration-200 outline-none flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${isDarkMode ? 'bg-red-600 hover:bg-red-500 shadow-red-500/30' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-400/40'}`}>
+              {bookingLoading||loadingFeatures ? (<><svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>Processing...</>) : 'Confirm Booking →'}
+            </button>
+          </div>
+        </form>
+
+        {/* 7️⃣ Seat Selection (if any) */}
+        {hasSeatLayout && (
+          <div className={`rounded-xl shadow-lg overflow-hidden ${isDarkMode ? 'bg-black' : 'bg-white'} p-4 sm:p-8 mt-4 border ${isDarkMode ? 'border-red-900' : 'border-gray-200'} animate-fadein`}>
+            <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-red-400' : 'text-indigo-700'}`}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>Choose Your Seats</h3>
+            <div className="mb-4">
+              <div className={`text-center font-bold text-base sm:text-lg mb-2 ${isDarkMode ? 'text-red-300' : 'text-indigo-900'}`}>🎬 SCREEN 🎬</div>
+              <div className={`h-1 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-400'} rounded-full`}></div>
+            </div>
+            <div className={`p-4 rounded-xl transition-colors ${isDarkMode ? 'bg-black' : 'bg-gray-50'} border ${isDarkMode ? 'border-zinc-700' : 'border-gray-300'}`}>
+              <div className={`text-xs sm:text-sm font-medium mb-4 text-center transition-colors ${isDarkMode ? 'text-red-300' : 'text-indigo-700'}`}>Select {Number(quantity)} seat(s) • {selectedSeats.length} selected</div>
+              {/* Seat Legend */}
+              <div className={`mb-4 p-3 rounded-lg border transition-colors flex flex-wrap justify-center gap-4 ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-300'}`}>
+                <div className="flex items-center gap-2"><div className={`w-6 h-6 rounded border-2 ${isDarkMode ? 'bg-zinc-700 border-zinc-500' : 'bg-white border-gray-400'}`}></div><span className={isDarkMode ? 'text-zinc-300' : 'text-gray-700'}>Available</span></div>
+                <div className="flex items-center gap-2"><div className={`w-6 h-6 rounded border-2 ${isDarkMode ? 'bg-red-600 border-red-500' : 'bg-indigo-500 border-indigo-400'}`}></div><span className={isDarkMode ? 'text-zinc-300' : 'text-gray-700'}>Selected</span></div>
+                <div className="flex items-center gap-2"><div className={`w-6 h-6 rounded border-2 ${isDarkMode ? 'bg-black/40 border-zinc-600' : 'bg-gray-300 border-gray-400'} cursor-not-allowed opacity-50`}></div><span className={isDarkMode ? 'text-zinc-500' : 'text-gray-600'}>Booked</span></div>
+              </div>
+              <SeatPicker layout={generateSeatLayout(event.capacity, 10)} booked={bookedSeatsFromDB} selected={selectedSeats} maxSelectable={quantity} onToggle={setSelectedSeats} isDarkMode={isDarkMode} />
+            </div>
+            <div className="mt-4">
+              <div className={`h-1 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-400'} rounded-full mb-2`}></div>
+              <div className={`text-center font-medium text-xs sm:text-sm ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Ground Level</div>
+            </div>
+            {/* Selected Seats Display */}
+            {selectedSeats.length > 0 && (
+              <div className={`mt-4 p-4 rounded-lg ${isDarkMode ? 'bg-red-900/30 text-red-200' : 'bg-indigo-50 text-indigo-900'}`}>
+                <p className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-red-300' : 'text-indigo-700'}`}>✓ Your Selected Seats ({selectedSeats.length}/{quantity})</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedSeats.map(seat => (<span key={seat} className={`px-4 py-2 rounded-lg text-sm font-semibold ${isDarkMode ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white'}`}>{seat}</span>))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
 }
+
+

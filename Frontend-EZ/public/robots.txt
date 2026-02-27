@@ -1,0 +1,38 @@
+# Robots.txt for K&M Events
+# This file helps search engines crawl your site properly
+
+User-agent: *
+Allow: /
+Allow: /events
+Allow: /event/*
+
+# Disallow admin and staff panels from search engines
+Disallow: /admin
+Disallow: /staff
+Disallow: /staff-admin
+Disallow: /event-admin
+Disallow: /super-admin
+
+# Disallow private pages
+Disallow: /my-bookings
+Disallow: /my-event-requests
+Disallow: /waitlist
+
+# Disallow API endpoints
+Disallow: /api/
+
+# Specific rules for Googlebot
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Specific rules for Bingbot
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://km-events.com/sitemap.xml
+
+# Cache control
+# Cache pages for 7 days (604800 seconds)

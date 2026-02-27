@@ -21,6 +21,15 @@ export default function EventDetail() {
   const [waitlistStatus, setWaitlistStatus] = useState(null);
   const [joiningWaitlist, setJoiningWaitlist] = useState(false);
 
+  const getMapUrl = (eventData) => {
+    if (eventData?.mapLink && eventData.mapLink.trim()) {
+      return eventData.mapLink.trim();
+    }
+    const query = [eventData?.location, eventData?.locationDetails].filter(Boolean).join(' ');
+    if (!query) return '';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  };
+
   useEffect(() => {
     let mounted = true;
     setFetching(true);
@@ -84,13 +93,25 @@ export default function EventDetail() {
       return;
     }
 
+    if (!event || !event.ticketTypes || event.ticketTypes.length === 0) {
+      alert('Cannot join waitlist: Event ticket information is not available.');
+      return;
+    }
+
     try {
       setJoiningWaitlist(true);
-      const ticketType = event.ticketTypes && event.ticketTypes.length > 0
-        ? event.ticketTypes[0].name
-        : 'General';
       
-      await API.post('/waitlist/join', {
+      // Get first available ticket type
+      const ticketType = event.ticketTypes[0]?.name;
+      
+      if (!ticketType) {
+        alert('Cannot join waitlist: No valid ticket type found.');
+        return;
+      }
+
+      console.log('Joining waitlist with:', { eventId: id, ticketType, quantity: 1 });
+      
+      const response = await API.post('/waitlist/join', {
         eventId: id,
         ticketType: ticketType,
         quantity: 1
@@ -101,11 +122,12 @@ export default function EventDetail() {
       // Refresh waitlist status
       const res = await API.get('/waitlist/my-waitlist');
       const onWaitlist = res.data.waitlist.find(
-        w => w.event._id === id && (w.status === 'waiting' || w.status === 'notified')
+        w => w.event && w.event._id === id && (w.status === 'waiting' || w.status === 'notified')
       );
       setWaitlistStatus(onWaitlist || null);
     } catch (err) {
       console.error('Failed to join waitlist:', err);
+      console.error('Error response:', err.response?.data);
       alert(err.response?.data?.message || 'Failed to join waitlist. Please try again.');
     } finally {
       setJoiningWaitlist(false);
@@ -145,8 +167,8 @@ export default function EventDetail() {
   const available = seatsAvailable(event);
 
   return (
-    <div className={`min-h-screen py-12 ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
-      <div className="max-w-4xl mx-auto px-6">
+    <div className={`min-h-screen py-6 sm:py-12 ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className="max-w-4xl mx-auto px-3 sm:px-6">
         <div className={`rounded-2xl shadow-lg overflow-hidden border ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'}`}>
           {/* Image */}
           <div className="relative w-full aspect-video overflow-hidden">
@@ -163,13 +185,13 @@ export default function EventDetail() {
           </div>
 
           {/* Content */}
-          <div className="p-8">
-            <h1 className={`text-4xl md:text-5xl font-extrabold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</h1>
+          <div className="p-4 sm:p-6 md:p-8">
+            <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold mb-3 sm:mb-4 leading-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</h1>
 
             {/* Date & Location */}
-            <div className="space-y-2 mb-6">
-              <div className={`flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <svg className="w-5 h-5 mr-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="space-y-2 mb-4 sm:mb-6">
+              <div className={`flex items-center text-xs sm:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 {new Date(event.date).toLocaleString('en-US', { 
@@ -181,13 +203,28 @@ export default function EventDetail() {
                   minute: '2-digit'
                 })}
               </div>
-              <div className={`flex items-start ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <svg className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className={`flex items-start text-xs sm:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 mt-0.5 flex-shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <div className="flex-1">
-                  <div>{event.location}</div>
+                  <div className="flex items-start gap-2">
+                    {getMapUrl(event) ? (
+                      <a
+                        href={getMapUrl(event)}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="Open location in maps"
+                        title="Open location in maps"
+                        className={`text-xs sm:text-sm font-semibold underline underline-offset-4 transition ${isDarkMode ? 'text-white/90 hover:text-white' : 'text-gray-800 hover:text-gray-900'}`}
+                      >
+                        {event.location}
+                      </a>
+                    ) : (
+                      <span className="flex-1">{event.location}</span>
+                    )}
+                  </div>
                   {event.locationDetails && (
                     <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{event.locationDetails}</div>
                   )}
@@ -225,64 +262,64 @@ export default function EventDetail() {
             </div>
 
             {/* Description */}
-            <div className="mb-8">
-              <h2 className={`text-xl font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>About this event</h2>
-              <p className={`leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{event.description}</p>
+            <div className="mb-6 sm:mb-8">
+              <h2 className={`text-base sm:text-lg md:text-xl font-semibold mb-2 sm:mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>About this event</h2>
+              <p className={`text-sm sm:text-base leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{event.description}</p>
             </div>
 
             {/* Ticket Types */}
             {event.ticketTypes && event.ticketTypes.length > 0 && (
-              <div className="mb-8">
-                <h2 className={`text-xl font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Available Ticket Types</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mb-6 sm:mb-8">
+                <h2 className={`text-base sm:text-lg md:text-xl font-semibold mb-3 sm:mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Available Ticket Types</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                   {event.ticketTypes.map((ticket, idx) => (
-                    <div key={idx} className={`p-4 border rounded-lg hover:shadow-md transition ${isDarkMode ? 'bg-black border-white/10' : 'border-gray-200'}`}>
+                    <div key={idx} className={`p-3 sm:p-4 border rounded-lg hover:shadow-md transition ${isDarkMode ? 'bg-black border-white/10' : 'border-gray-200'}`}>
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{ticket.name}</h3>
+                          <h3 className={`text-sm sm:text-base font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{ticket.name}</h3>
                           {ticket.description && (
-                            <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{ticket.description}</p>
+                            <p className={`text-xs sm:text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{ticket.description}</p>
                           )}
                         </div>
                       </div>
-                      <div className={`flex items-center justify-between pt-3 border-t ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
-                        <span className={`text-2xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{formatINR(ticket.price)}</span>
-                        <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{ticket.available ?? ticket.quantity} available</span>
+                      <div className={`flex items-center justify-between pt-2 sm:pt-3 border-t ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                        <span className={`text-lg sm:text-xl md:text-2xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{formatINR(ticket.price)}</span>
+                        <span className={`text-xs sm:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{ticket.available ?? ticket.quantity} available</span>
                       </div>
                     </div>
                   ))}
                 </div>
-                {event.ticketTypes.length > 0 && (
-                  <div className={`mt-4 p-4 rounded-lg border ${isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'}`}>
-                    <p className={`text-sm font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-900'}`}>
-                      Price Range: {formatINR(Math.min(...event.ticketTypes.map(t => t.price)))} - {formatINR(Math.max(...event.ticketTypes.map(t => t.price)))}
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 
             {/* Price & Book Button */}
-            <div className={`flex items-center justify-between pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
+            <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 sm:pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
               <div>
                 {event.ticketTypes && event.ticketTypes.length > 0 ? (
-                  <>
-                    <div className={`text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Price range</div>
-                    <div className={`text-3xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
-                      {formatINR(Math.min(...event.ticketTypes.map(t => t.price)))} - {formatINR(Math.max(...event.ticketTypes.map(t => t.price)))}
-                    </div>
-                  </>
+                  event.ticketTypes.length === 1 ? (
+                    <>
+                      <div className={`text-xs sm:text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Price per ticket</div>
+                      <div className={`text-xl sm:text-2xl md:text-3xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{formatINR(event.ticketTypes[0].price)}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className={`text-xs sm:text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Price range</div>
+                      <div className={`text-xl sm:text-2xl md:text-3xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                        {formatINR(Math.min(...event.ticketTypes.map(t => t.price)))} - {formatINR(Math.max(...event.ticketTypes.map(t => t.price)))}
+                      </div>
+                    </>
+                  )
                 ) : (
                   <>
-                    <div className={`text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Price per ticket</div>
-                    <div className={`text-3xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{formatINR(event.price)}</div>
+                    <div className={`text-xs sm:text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Price per ticket</div>
+                    <div className={`text-xl sm:text-2xl md:text-3xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{formatINR(event.price)}</div>
                   </>
                 )}
               </div>
 
               {/* Check if ticketing feature is enabled */}
               {loadingFeatures ? (
-                <div className={`px-8 py-3 rounded-lg font-semibold ${isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'}`}>
+                <div className={`px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold w-full sm:w-auto text-center ${isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'}`}>
                   Loading...
                 </div>
               ) : features?.ticketing?.enabled === false ? (
@@ -306,8 +343,8 @@ export default function EventDetail() {
                   </Link>
                 </div>
               ) : available === 0 ? (
-                <div className="flex flex-col gap-3 items-start">
-                  <div className="px-6 py-3 rounded-lg font-semibold bg-gray-400 text-white cursor-not-allowed">
+                <div className="flex flex-col gap-3 items-start w-full sm:w-auto">
+                  <div className="px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold bg-gray-400 text-white cursor-not-allowed w-full sm:w-auto text-center">
                     Sold Out
                   </div>
                   {waitlistStatus ? (
@@ -326,8 +363,8 @@ export default function EventDetail() {
                   ) : (
                     <button
                       onClick={handleJoinWaitlist}
-                      disabled={joiningWaitlist}
-                      className={`px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition disabled:opacity-50 ${
+                      disabled={joiningWaitlist || !event || !event.ticketTypes || event.ticketTypes.length === 0}
+                      className={`px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto ${
                         isDarkMode
                           ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
                           : 'bg-yellow-500 hover:bg-yellow-600 text-white'
@@ -339,7 +376,7 @@ export default function EventDetail() {
                   {waitlistStatus && waitlistStatus.status === 'notified' && (
                     <button
                       onClick={() => navigate(`/book/${eventId}`)}
-                      className="px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition bg-green-600 hover:bg-green-700 text-white"
+                      className="px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
                     >
                       Book Now
                     </button>
@@ -348,7 +385,7 @@ export default function EventDetail() {
               ) : (
                 <button
                   onClick={() => navigate(`/book/${eventId}`)}
-                  className={`px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition text-white ${
+                  className={`px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition text-white w-full sm:w-auto ${
                     isDarkMode
                       ? 'bg-blue-600 hover:bg-blue-700'
                       : 'bg-blue-600 hover:bg-blue-700'

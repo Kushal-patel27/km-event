@@ -69,13 +69,15 @@ export default function SuperAdminConfig() {
     </div>
   )
 
-  const ConfigInput = ({ label, value, onChange, type = 'text', help }) => (
+  const ConfigInput = ({ label, value, onChange, type = 'text', help, min, max }) => (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       <input
         type={type}
         value={value}
         onChange={onChange}
+        min={min}
+        max={max}
         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
       />
       {help && <p className="text-xs text-gray-500 mt-1">{help}</p>}
@@ -189,7 +191,9 @@ export default function SuperAdminConfig() {
                 onChange={(e) =>
                   updateNestedConfig('security.passwordMinLength', parseInt(e.target.value))
                 }
-                help="Minimum characters required for passwords"
+                min={4}
+                max={32}
+                help="Minimum characters required for passwords (4-32)"
               />
               <ConfigInput
                 label="Session Timeout (seconds)"

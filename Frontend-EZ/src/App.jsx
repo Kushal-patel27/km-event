@@ -103,6 +103,10 @@ export default function App(){
   const isStaffAdminRoute = location.pathname.startsWith('/staff-admin')
   const isStaffRoute = location.pathname.startsWith('/staff')
   const isSuperAdminRoute = location.pathname.startsWith('/super-admin')
+  const isLoginRoute = location.pathname === '/login' || location.pathname === '/admin/login' || location.pathname === '/event-admin/login' || location.pathname === '/staff/login' || location.pathname === '/super-admin/login'
+  const isSignupRoute = location.pathname === '/signup'
+  const isForgotPasswordRoute = location.pathname === '/forgot-password'
+  const isAuthRoute = isLoginRoute || isSignupRoute || isForgotPasswordRoute
   return (
     <DarkModeProvider>
       <LoadingProvider>
@@ -114,6 +118,7 @@ export default function App(){
             <Routes location={location}>
               <Route path="/" element={<Home />} />
               <Route path="/event/:id" element={<EventDetail />} />
+              <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/events" element={<Events />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
@@ -195,7 +200,7 @@ export default function App(){
           </Routes>
         </main>
 
-        {!isAdminRoute && !isEventAdminRoute && !isStaffAdminRoute && !isStaffRoute && !isSuperAdminRoute && <Footer />}
+        {!isAdminRoute && !isEventAdminRoute && !isStaffAdminRoute && !isStaffRoute && !isSuperAdminRoute && !isAuthRoute && <Footer />}
       </div>
       </LoadingProvider>
     </DarkModeProvider>

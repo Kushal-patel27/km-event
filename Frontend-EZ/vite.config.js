@@ -5,8 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
+    port: 5173,
     strictPort: true,
     allowedHosts: true,   // ← use boolean true instead of 'all'
+    open: true,           // ← Auto-open browser on npm run dev
     proxy: {
       '/api': {
         target: 'http://localhost:5000',

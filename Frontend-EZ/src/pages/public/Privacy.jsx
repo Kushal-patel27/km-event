@@ -139,7 +139,7 @@ export default function PrivacyPolicy() {
     {
       id: 14,
       title: '14. Contact Us',
-      content: 'If you have questions about this Privacy Policy or our privacy practices, please contact us:\n\nEmail: privacy@kmevents.com\nMailing Address: K&M Events, Privacy Department, [Address]\nPhone: +1 (555) 123-4567\n\nWe will respond to your inquiry within 30 days.'
+      content: 'If you have questions about this Privacy Policy or our privacy practices, please contact us:\n\nEmail: privacy@kmevents.com\nMailing Address: K&M Events, Privacy Department, [Address]\nPhone: +91 95686 98796\n\nWe will respond to your inquiry within 30 days.'
     },
     {
       id: 15,
@@ -366,10 +366,10 @@ export default function PrivacyPolicy() {
             </div>
             <div className="hidden sm:block">•</div>
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773c.058.3.238.646.519 1.001.281.355.645.738 1.035 1.122.39.384.793.645 1.055.788.262.143.527.145.774.01l1.3-1.208a1 1 0 011.438.331l2.786 4.884a1 1 0 01-.604 1.419l-2.074.521c-.909.228-1.359 1.229-1.191 2.247.021.131.032.262.044.392.261 2.921-1.604 5.625-3.132 5.832-.504.073-1.14-.235-1.558-.923-.419-.688-.79-1.656-.996-3.071-.404-2.831.068-6.537 1.239-8.339.381-.577.322-1.355.588-2.177.266-.822.641-1.674.734-2.417.31-2.35-1.857-4.383-4.224-4.383H3a1 1 0 01-1-1V3z" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              <span className="font-semibold">+1 (555) 123-4567</span>
+              <span className="font-semibold">+91 95686 98796</span>
             </div>
           </div>
         </motion.div>

@@ -450,20 +450,20 @@ export default function HelpCenter() {
         ? 'bg-black'
         : 'bg-gradient-to-b from-gray-50 to-white'
     }`}>
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-10 md:mb-12"
         >
-          <h1 className={`text-4xl md:text-5xl font-black mb-4 ${
+          <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black mb-3 sm:mb-4 ${
             isDarkMode ? 'text-white' : 'text-gray-900'
           }`}>
             Help Center
           </h1>
-          <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-sm sm:text-base md:text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Everything you need to know about booking events and managing your tickets
           </p>
         </motion.div>
@@ -473,27 +473,27 @@ export default function HelpCenter() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10 md:mb-12"
         >
           {contactMethods.map((method, index) => (
             <motion.div
               key={index}
               whileHover={{ y: -5 }}
-              className={`bg-gradient-to-br ${method.color} border-2 rounded-xl p-6 transition`}
+              className={`bg-gradient-to-br ${method.color} border-2 rounded-xl p-4 sm:p-5 md:p-6 transition`}
             >
-              <div className="text-3xl mb-3">{method.icon}</div>
-              <h3 className={`font-bold text-lg mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">{method.icon}</div>
+              <h3 className={`font-bold text-base sm:text-lg mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                 {method.title}
               </h3>
-              <p className={`text-sm mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`text-xs sm:text-sm mb-2 sm:mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 {method.description}
               </p>
               {method.link ? (
-                <Link to={method.link} className={`font-semibold ${isDarkMode ? 'text-green-400 hover:text-green-300' : 'text-green-600 hover:text-green-700'}`}>
+                <Link to={method.link} className={`text-sm sm:text-base font-semibold ${isDarkMode ? 'text-green-400 hover:text-green-300' : 'text-green-600 hover:text-green-700'}`}>
                   {method.value} →
                 </Link>
               ) : (
-                <p className={`font-semibold ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                <p className={`text-sm sm:text-base font-semibold ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                   {method.value}
                 </p>
               )}
@@ -505,7 +505,7 @@ export default function HelpCenter() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 space-y-3"
+          className="mb-4 sm:mb-6 space-y-2 sm:space-y-3"
         >
           <div className="flex flex-col md:flex-row gap-3 md:items-center">
             <input
@@ -513,7 +513,7 @@ export default function HelpCenter() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search help articles (title, description, category)"
-              className={`flex-1 px-4 py-3 rounded-lg border ${
+              className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base border ${
                 isDarkMode
                   ? 'bg-black border-neutral-800 text-white placeholder:text-neutral-500'
                   : 'bg-white border-gray-200 text-gray-900 placeholder:text-gray-500'
@@ -533,7 +533,7 @@ export default function HelpCenter() {
           </div>
 
           {error && (
-            <div className={`p-3 rounded-lg border text-sm ${
+            <div className={`p-2 sm:p-3 rounded-lg border text-xs sm:text-sm ${
               isDarkMode
                 ? 'border-amber-500/40 text-amber-200 bg-amber-500/10'
                 : 'border-amber-400 text-amber-700 bg-amber-50'
@@ -592,10 +592,10 @@ export default function HelpCenter() {
               transition={{ duration: 0.3 }}
               className="space-y-8"
             >
-              <h2 className={`text-3xl font-black mb-8 flex items-center gap-3 ${
+              <h2 className={`text-xl sm:text-2xl md:text-3xl font-black mb-6 sm:mb-8 flex items-center gap-2 sm:gap-3 ${
                 isDarkMode ? 'text-white' : 'text-gray-900'
               }`}>
-                <span className="text-4xl">{activeSection.icon}</span>
+                <span className="text-3xl sm:text-4xl">{activeSection.icon}</span>
                 {activeSection.title}
               </h2>
 
@@ -613,10 +613,10 @@ export default function HelpCenter() {
                     }`}
                   >
                     <div className={`p-6 ${isDarkMode ? 'bg-neutral-900/60' : 'bg-gray-50'}`}>
-                      <h3 className={`text-xl font-black mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`text-base sm:text-lg md:text-xl font-black mb-1 sm:mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         {item.title}
                       </h3>
-                      <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <p className={`text-xs sm:text-sm mb-3 sm:mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         {item.description}
                       </p>
                     </div>
@@ -626,14 +626,14 @@ export default function HelpCenter() {
                         <ul className="space-y-3">
                           {item.steps.map((step, stepIndex) => (
                             <li key={`${step}-${stepIndex}`} className="flex gap-3">
-                              <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center font-bold text-sm ${
+                              <div className={`flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm ${
                                 isDarkMode
                                   ? 'bg-red-600/30 text-red-400'
                                   : 'bg-indigo-100 text-indigo-600'
                               }`}>
                                 {stepIndex + 1}
                               </div>
-                              <p className={`pt-0.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              <p className={`pt-0.5 text-xs sm:text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                 {step}
                               </p>
                             </li>
@@ -655,7 +655,7 @@ export default function HelpCenter() {
           transition={{ delay: 0.4 }}
           className="mt-16"
         >
-          <h2 className={`text-3xl font-black mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h2 className={`text-xl sm:text-2xl md:text-3xl font-black mb-4 sm:mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             📹 Video Tutorials (Coming Soon)
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

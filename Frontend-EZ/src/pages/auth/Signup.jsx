@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from '../../context/AuthContext';
 import { useDarkMode } from '../../context/DarkModeContext';
@@ -12,14 +12,36 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [minPasswordLength, setMinPasswordLength] = useState(8);
   const { isDarkMode } = useDarkMode();
 
   const { signup } = useAuth();
   const navigate = useNavigate();
 
+  // Fetch minimum password length from system config
+  useEffect(() => {
+    const fetchMinPasswordLength = async () => {
+      try {
+        const response = await API.get('/config/public');
+        if (response.data?.security?.passwordMinLength) {
+          setMinPasswordLength(response.data.security.passwordMinLength);
+        }
+      } catch (err) {
+        console.log('Unable to fetch password config, using default');
+      }
+    };
+    fetchMinPasswordLength();
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Validate password length
+    if (password.length < minPasswordLength) {
+      setError(`Password must be at least ${minPasswordLength} characters long`);
+      return;
+    }
 
     try {
       const res = await API.post('/auth/register', { name, email, password })
@@ -80,7 +102,7 @@ export default function Signup() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Kushal Patel"
                   className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                     isDarkMode
                       ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
@@ -106,7 +128,10 @@ export default function Signup() {
               </div>
 
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
+                <div className="flex justify-between items-baseline mb-2">
+                  <label className={`block text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Min {minPasswordLength} characters</span>
+                </div>
                 <div className="relative">
                   <input
                     required

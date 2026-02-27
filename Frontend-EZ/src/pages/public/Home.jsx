@@ -242,7 +242,7 @@ export default function Home() {
           ) : (
             <>
               {/* Image Section */}
-              <div className="relative h-[35vh] overflow-hidden group">
+              <div className="relative aspect-video overflow-hidden group">
                 <motion.div
                   className="flex h-full"
                   animate={{ x: `-${currentSlide * 100}%` }}
@@ -251,10 +251,10 @@ export default function Home() {
                   {featured.map((e, i) => (
                     <div
                       key={i}
-                      className="min-w-full bg-cover bg-center bg-no-repeat"
+                      className="min-w-full h-full bg-cover bg-center bg-no-repeat relative"
                       style={{ backgroundImage: `url(${e.image})` }}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-transparent" />
                     </div>
                   ))}
                 </motion.div>
@@ -356,7 +356,7 @@ export default function Home() {
               {[...featured, ...featured].map((e, i) => (
                 <div
                   key={i}
-                  className="min-w-full bg-contain bg-center bg-no-repeat relative"
+                  className="min-w-full h-full bg-contain bg-center bg-no-repeat relative"
                   style={{ backgroundImage: `url(${e.image})` }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/70 to-transparent" />
@@ -454,11 +454,11 @@ export default function Home() {
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6 mb-10 sm:mb-12">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-red-400 font-semibold mb-1 sm:mb-2">Happening soon</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-red-600 font-semibold mb-1 sm:mb-2">Happening soon</p>
               <h2 className="text-2xl sm:text-4xl font-extrabold text-white drop-shadow-lg">Trending now</h2>
               <p className="text-gray-400 text-xs sm:text-sm mt-1 hidden sm:block">Popular events everyone's talking about</p>
             </div>
-            <Link to="/events" className="text-xs sm:text-sm text-red-400 hover:text-red-300 font-semibold transition-colors whitespace-nowrap">View all →</Link>
+            <Link to="/events" className="text-xs sm:text-sm text-red-600 hover:text-red-500 font-semibold transition-colors whitespace-nowrap">View all →</Link>
           </div>
           
           {loading ? (

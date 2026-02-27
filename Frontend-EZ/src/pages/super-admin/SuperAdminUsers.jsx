@@ -28,6 +28,7 @@ export default function SuperAdminUsers() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [limit] = useState(20)
+  const [minPasswordLength, setMinPasswordLength] = useState(8)
 
   const roles = [
     { id: 'super_admin', label: 'Super Admin' },
@@ -40,6 +41,16 @@ export default function SuperAdminUsers() {
 
   useEffect(() => {
     fetchUsers()
+    // Fetch minimum password length from config
+    const fetchMinLength = async () => {
+      try {
+        const res = await API.get('/config/public')
+        setMinPasswordLength(res.data?.security?.passwordMinLength || 8)
+      } catch (err) {
+        setMinPasswordLength(8) // Default to 8 if fetch fails
+      }
+    }
+    fetchMinLength()
   }, [page, search, filterRole, filterActive])
 
   const fetchUsers = async () => {
@@ -115,6 +126,11 @@ export default function SuperAdminUsers() {
       return
     }
 
+    if (createForm.password.length < minPasswordLength) {
+      setError(`Password must be at least ${minPasswordLength} characters`)
+      return
+    }
+
     setCreatingUser(true)
     try {
       const res = await API.post('/super-admin/users', {
@@ -142,8 +158,8 @@ export default function SuperAdminUsers() {
   }
 
   const handleChangePasswordForUser = async () => {
-    if (!passwordForm.newPassword || passwordForm.newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters')
+    if (!passwordForm.newPassword || passwordForm.newPassword.length < minPasswordLength) {
+      setPasswordError(`New password must be at least ${minPasswordLength} characters`)
       return
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -306,7 +322,7 @@ export default function SuperAdminUsers() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center py-12">
+        <div className={`flex justify-center items-center py-12 ${isDarkMode ? 'bg-black' : ''}`}> 
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
         </div>
       ) : (
