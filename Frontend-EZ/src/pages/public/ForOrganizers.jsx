@@ -130,7 +130,7 @@ export default function ForOrganizers() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
         <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           <div className={`animate-spin rounded-full h-12 w-12 border-4 border-gray-300 mx-auto mb-4 ${isDarkMode ? 'border-t-blue-400' : 'border-t-blue-600'}`}></div>
           <p>Loading page content...</p>
@@ -235,13 +235,11 @@ export default function ForOrganizers() {
   ]
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19] text-white' : 'bg-gradient-to-b from-gray-50 to-white text-gray-900'}`}>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900'}`}>
       {/* Hero Section */}
-      <section className="relative py-20 md:py-32 overflow-hidden">
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600 rounded-full blur-3xl"></div>
-        </div>
+
+      <section className={`relative py-20 md:py-32 overflow-hidden ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
+        {/* Remove blurred color backgrounds for a clean look in both modes */}
 
         <div className="relative z-10 px-6 lg:px-12 max-w-6xl mx-auto text-center">
           <motion.p
@@ -257,7 +255,7 @@ export default function ForOrganizers() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+            className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold mb-4 sm:mb-6 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
           >
             {content.hero?.title || 'Host Your Next Event with K&M Events'}
           </motion.h1>
@@ -266,7 +264,7 @@ export default function ForOrganizers() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className={`text-lg md:text-xl mb-12 max-w-3xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+            className={`text-base sm:text-lg md:text-xl mb-8 sm:mb-10 md:mb-12 max-w-3xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
           >
             {content.hero?.subtitle || 'Launch your event on K&M Events and reach thousands of enthusiasts. We handle ticketing, QR codes, payments, and support—so you can focus on creating amazing experiences.'}
           </motion.p>
@@ -279,13 +277,13 @@ export default function ForOrganizers() {
           >
             <Link
               to="/create-event"
-              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl text-lg font-bold text-white shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-300"
+              className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl text-base sm:text-lg font-bold text-white shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-300"
             >
               {content.hero?.buttonText1 || 'Submit Your Event'}
             </Link>
             <Link
               to="/contact"
-              className={`px-8 py-4 border-2 rounded-xl text-lg font-semibold backdrop-blur-sm transition-all duration-300 ${
+              className={`px-6 sm:px-8 py-3 sm:py-4 border-2 rounded-xl text-base sm:text-lg font-semibold backdrop-blur-sm transition-all duration-300 ${
                 isDarkMode
                   ? 'border-blue-400/50 text-blue-300 hover:bg-blue-500/10 hover:border-blue-400'
                   : 'border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700'
@@ -298,7 +296,7 @@ export default function ForOrganizers() {
       </section>
 
       {/* Benefits Section */}
-      <section className={`py-20 ${isDarkMode ? 'bg-gradient-to-b from-[#0d1221] to-[#0B0F19]' : 'bg-gray-50'}`}>
+      <section className={`py-20 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -323,14 +321,14 @@ export default function ForOrganizers() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
-                className={`group p-6 rounded-2xl backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 ${
+                className={`group p-6 rounded-2xl transition-all duration-300 hover:-translate-y-1 ${
                   isDarkMode
-                    ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 hover:from-white/15 hover:to-white/8 hover:border-blue-500/40'
-                    : 'bg-white border border-gray-200 hover:border-blue-500/40 hover:shadow-lg'
+                    ? 'bg-black border border-white/10'
+                    : 'bg-white border border-gray-300 hover:border-blue-500/40 hover:shadow-lg'
                 }`}
               >
-                <div className="text-4xl mb-4">{benefit.icon}</div>
-                <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">{benefit.icon}</div>
+                <h3 className={`text-base sm:text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   {benefit.title}
                 </h3>
                 <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -343,7 +341,7 @@ export default function ForOrganizers() {
       </section>
 
       {/* How It Works Section */}
-      <section className={`py-20 ${isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] to-[#0d1221]' : 'bg-white'}`}>
+      <section className={`py-20 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
         <div className="px-6 lg:px-12 max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -375,15 +373,15 @@ export default function ForOrganizers() {
                   <div className={`hidden lg:block absolute top-12 left-full w-full h-0.5 ${isDarkMode ? 'bg-blue-500/30' : 'bg-blue-300'}`} />
                 )}
 
-                <div className={`relative z-10 p-8 rounded-2xl backdrop-blur-sm transition-all duration-300 h-full flex flex-col ${
+                <div className={`relative z-10 p-8 rounded-2xl transition-all duration-300 h-full flex flex-col ${
                   isDarkMode
-                    ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15'
-                    : 'bg-white border border-gray-200 shadow-md'
+                    ? 'bg-black border border-white/10'
+                    : 'bg-white border border-gray-300 shadow-md'
                 }`}>
-                  <div className="w-16 h-16 mb-6 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mb-4 sm:mb-5 md:mb-6 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-lg sm:text-xl md:text-2xl font-bold shadow-lg">
                     {step.number}
                   </div>
-                  <h3 className={`text-xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <h3 className={`text-lg sm:text-xl font-bold mb-2 sm:mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     {step.title}
                   </h3>
                   <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-auto`}>
@@ -397,7 +395,7 @@ export default function ForOrganizers() {
       </section>
 
       {/* Pricing Plans Section */}
-      <section className={`py-20 ${isDarkMode ? 'bg-gradient-to-b from-[#0d1221] to-[#0B0F19]' : 'bg-gray-50'}`}>
+      <section className={`py-20 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
         <div className="px-6 lg:px-12 max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -409,7 +407,7 @@ export default function ForOrganizers() {
             <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               Pricing Plans
             </h2>
-            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-2xl mx-auto mb-6`}>
+            <p className={`text-sm sm:text-base md:text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} max-w-2xl mx-auto mb-4 sm:mb-6`}>
               Choose the perfect plan for your event size and needs
             </p>
             <motion.button
@@ -459,18 +457,18 @@ export default function ForOrganizers() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: idx * 0.1 }}
-                  className={`relative rounded-2xl backdrop-blur-sm transition-all duration-300 overflow-visible group h-full cursor-pointer ${
+                  className={`relative rounded-2xl transition-all duration-300 overflow-visible group h-full cursor-pointer ${
                     isPopular
                       ? 'hover:-translate-y-3 hover:shadow-2xl hover:shadow-purple-500/50'
                       : 'hover:-translate-y-2 hover:shadow-xl'
                   } ${
                     isPopular
                       ? isDarkMode
-                        ? 'bg-gradient-to-br from-purple-900/60 via-pink-900/40 to-purple-900/40 border-2 border-purple-400/60 shadow-2xl shadow-purple-500/40 ring-2 ring-purple-500/20'
-                        : 'bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 border-2 border-purple-400 shadow-2xl shadow-purple-300/40 ring-2 ring-purple-500/10'
+                        ? 'bg-black border-2 border-purple-400/60 shadow-2xl shadow-purple-500/40 ring-2 ring-purple-500/20'
+                        : 'bg-white border-2 border-purple-400 shadow-2xl shadow-purple-300/40 ring-2 ring-purple-500/10'
                       : isDarkMode
-                      ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15'
-                      : 'bg-white border border-gray-200 shadow-md'
+                      ? 'bg-black border border-white/10'
+                      : 'bg-white border border-gray-300 shadow-md'
                   }`}
                 >
                   {/* Animated background effect for popular plan */}
@@ -511,7 +509,7 @@ export default function ForOrganizers() {
                         ) : (
                           <div>
                             <div className="flex items-baseline gap-1">
-                              <span className={`text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              <span className={`text-2xl sm:text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {formatCurrency(displayPrice)}
                               </span>
                               <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -625,7 +623,7 @@ export default function ForOrganizers() {
       </section>
 
       {/* FAQ Section */}
-      <section className={`py-20 ${isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] to-[#0d1221]' : 'bg-white'}`}>
+      <section className={`py-20 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
         <div className="px-6 lg:px-12 max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -647,13 +645,13 @@ export default function ForOrganizers() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
-                className={`p-6 rounded-2xl backdrop-blur-sm ${
+                className={`p-6 rounded-2xl ${
                   isDarkMode
-                    ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15'
-                    : 'bg-gray-50 border border-gray-200'
+                    ? 'bg-black border border-white/10'
+                    : 'bg-white border border-gray-300'
                 }`}
               >
-                <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`text-base sm:text-lg font-semibold mb-2 sm:mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   {faq.question}
                 </h3>
                 <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -666,11 +664,7 @@ export default function ForOrganizers() {
       </section>
 
       {/* Final CTA Section */}
-      <section className="py-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-700 rounded-full blur-3xl"></div>
-        </div>
+      <section className={`py-24 relative overflow-hidden ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
 
         <div className="relative z-10 px-6 lg:px-12 max-w-4xl mx-auto text-center">
           <motion.h2
@@ -678,7 +672,7 @@ export default function ForOrganizers() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-6 text-white drop-shadow-lg"
+            className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 sm:mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'} drop-shadow-lg`}
           >
             {content.cta?.title || 'Ready to Get Started?'}
           </motion.h2>
@@ -688,7 +682,7 @@ export default function ForOrganizers() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="text-lg md:text-xl mb-10 text-white/90"
+            className={`text-base sm:text-lg md:text-xl mb-8 sm:mb-10 ${isDarkMode ? 'text-white/90' : 'text-gray-700'}`}
           >
             {content.cta?.subtitle || 'Join thousands of organizers who trust K&M Events to power their events'}
           </motion.p>
@@ -702,13 +696,13 @@ export default function ForOrganizers() {
           >
             <Link
               to="/create-event"
-              className="px-10 py-5 bg-white hover:bg-gray-100 text-blue-600 rounded-xl text-lg font-bold shadow-2xl hover:scale-105 transition-all duration-300"
+              className={`px-8 sm:px-10 py-4 sm:py-5 rounded-xl text-base sm:text-lg font-bold shadow-2xl hover:scale-105 transition-all duration-300 ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
             >
               {content.cta?.buttonText1 || 'Submit Your Event Now'}
             </Link>
             <Link
               to="/contact"
-              className="px-10 py-5 border-2 border-white rounded-xl text-lg font-semibold text-white hover:bg-white/10 backdrop-blur-sm transition-all duration-300"
+              className={`px-10 py-5 border-2 rounded-xl text-lg font-semibold transition-all duration-300 ${isDarkMode ? 'border-white text-white hover:bg-white/10' : 'border-blue-600 text-blue-600 hover:bg-blue-50'}`}
             >
               {content.cta?.buttonText2 || 'Talk to Sales'}
             </Link>

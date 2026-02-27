@@ -371,7 +371,7 @@ export const createBooking = async (req, res) => {
 
       sendBookingConfirmationEmail({
         recipientEmail: populatedBooking.user.email,
-        recipientName: populatedBooking.user.name,
+        recipientName: populatedBooking.user.name || "Guest",
         eventName: populatedBooking.event.title,
         eventDate: populatedBooking.event.date,
         eventTime: eventTime,

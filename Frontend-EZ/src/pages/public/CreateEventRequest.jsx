@@ -48,6 +48,7 @@ export default function CreateEventRequest() {
     date: '',
     location: '',
     locationDetails: '',
+    mapLink: '',
     price: 0,
     totalTickets: '',
     availableTickets: '',
@@ -301,6 +302,10 @@ export default function CreateEventRequest() {
       setMessage({ type: 'error', text: 'Event location is required' })
       return false
     }
+    if (!formData.mapLink.trim()) {
+      setMessage({ type: 'error', text: 'Map link is required' })
+      return false
+    }
     if (formData.category === 'Other' && !formData.customCategory.trim()) {
       setMessage({ type: 'error', text: 'Please specify a custom category' })
       return false
@@ -367,6 +372,7 @@ export default function CreateEventRequest() {
           date: '',
           location: '',
           locationDetails: '',
+          mapLink: '',
           price: 0,
           totalTickets: '',
           availableTickets: '',
@@ -655,6 +661,20 @@ export default function CreateEventRequest() {
                   className={`w-full px-4 py-2.5 border-2 rounded-lg transition ${isDarkMode ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'} focus:outline-none`}
                   placeholder="Venue name, hall/floor, full address..."
                 />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>Map Link *</label>
+                <input
+                  type="url"
+                  name="mapLink"
+                  value={formData.mapLink}
+                  onChange={handleInputChange}
+                  required
+                  className={`w-full px-4 py-2.5 border-2 rounded-lg transition ${isDarkMode ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'} focus:outline-none`}
+                  placeholder="Paste a Google/Apple/OpenStreetMap link"
+                />
+                <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Used for the location map icon on the event page.</p>
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">

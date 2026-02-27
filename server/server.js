@@ -7,6 +7,7 @@ import session from "express-session";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import passport from "./config/passport.js";
+import User from "./models/User.js";
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -35,8 +36,21 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env"), override: true });
 
-// Connect Database
-connectDB();
+const ensureLocalSuperAdmin = async () => {
+  const email = "admin@local";
+  const user = await User.findOne({ email }).select("_id role");
+
+  if (!user) {
+    console.warn(`Super admin bootstrap skipped. User not found for ${email}.`);
+    return;
+  }
+
+  if (user.role !== "super_admin") {
+    user.role = "super_admin";
+    await user.save();
+    console.log(`Updated ${email} to super_admin.`);
+  }
+};
 
 const app = express();
 
@@ -124,17 +138,25 @@ app.get("/", (req, res) => {
    SERVER START
    =========================== */
 const PORT = process.env.PORT || 5000;
+let server;
 
-const server = app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  await connectDB();
+  await ensureLocalSuperAdmin();
+
+  server = app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+  });
+};
+
+startServer();
 
 /* ===========================
    GRACEFUL SHUTDOWN
    =========================== */
 process.on("SIGTERM", () => {
   console.log("SIGTERM received. Shutting down...");
-  server.close(() => {
+  server?.close(() => {
     console.log("Server closed.");
     process.exit(0);
   });
@@ -142,7 +164,7 @@ process.on("SIGTERM", () => {
 
 process.on("SIGINT", () => {
   console.log("SIGINT received. Shutting down...");
-  server.close(() => {
+  server?.close(() => {
     console.log("Server closed.");
     process.exit(0);
   });

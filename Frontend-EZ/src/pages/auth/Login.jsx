@@ -39,6 +39,7 @@ export default function Login() {
           const res = await API.post(endpoint, { email, password });
           
           // Login successful
+          console.log('Login API Response:', res.data);
           login({
             name: res.data.name,
             email: res.data.email,
@@ -52,7 +53,11 @@ export default function Login() {
 
           // Redirect based on role
           const role = String(res.data.role || "").toLowerCase();
-          if (role === "super_admin") navigate("/super-admin");
+          console.log('Normalized role for navigation:', role);
+          if (role === "super_admin") {
+            console.log('Navigating to /super-admin');
+            navigate("/super-admin");
+          }
           else if (role === "event_admin") navigate("/event-admin");
           else if (role === "staff_admin") navigate("/staff-admin");
           else if (role === "admin") navigate("/admin");
@@ -211,19 +216,19 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <div className="text-sm">
-                  <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Don't have an account? </span>
-                  <Link to="/signup" className={`font-semibold transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}>
-                    Sign up
-                  </Link>
-                </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 gap-3 sm:gap-0">
                 <Link
                   to="/forgot-password"
                   className={`text-sm font-semibold transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}
                 >
                   Forgot password?
                 </Link>
+                <div className="text-sm">
+                  <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Don't have an account? </span>
+                  <Link to="/signup" className={`font-semibold transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}>
+                    Sign up
+                  </Link>
+                </div>
               </div>
 
               <motion.button 

@@ -13,7 +13,7 @@ export default function LoadingSpinner({ message = 'Loading...', size = 'md' }) 
   const spinnerColor = isDarkMode ? 'border-red-500' : 'border-indigo-600';
 
   return (
-    <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
       <div className="text-center">
         <div className={`animate-spin rounded-full ${sizeClasses[size]} ${spinnerColor} border-b-2 mx-auto`}></div>
         {message && (

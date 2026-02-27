@@ -16,6 +16,8 @@ export default function BookingSuccess() {
   const [loading, setLoading] = useState(!booking)
   const [error, setError] = useState('')
   const [downloading, setDownloading] = useState(false)
+  // MOBILE OPTIMIZED
+  const [isMobile, setIsMobile] = useState(false)
   const ticketRef = useRef(null)
 
   useEffect(() => {
@@ -57,6 +59,15 @@ export default function BookingSuccess() {
       return () => clearTimeout(timer)
     }
   }, [booking])
+
+  useEffect(() => {
+    // MOBILE OPTIMIZED
+    const mediaQuery = window.matchMedia('(max-width: 768px)')
+    const updateMatch = () => setIsMobile(mediaQuery.matches)
+    updateMatch()
+    mediaQuery.addEventListener('change', updateMatch)
+    return () => mediaQuery.removeEventListener('change', updateMatch)
+  }, [])
 
   const handleDownloadPdf = async () => {
     if (!booking) return
@@ -103,7 +114,7 @@ export default function BookingSuccess() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen py-12 px-4 flex items-center justify-center ${
+      <div className={`min-h-screen py-8 sm:py-10 lg:py-12 px-4 flex items-center justify-center overflow-x-hidden ${
         isDarkMode 
           ? 'bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19]'
           : 'bg-gradient-to-br from-indigo-50 via-white to-purple-50'
@@ -117,7 +128,7 @@ export default function BookingSuccess() {
 
   if (!booking) {
     return (
-      <div className={`min-h-screen py-12 px-4 flex items-center justify-center ${
+      <div className={`min-h-screen py-8 sm:py-10 lg:py-12 px-4 flex items-center justify-center overflow-x-hidden ${
         isDarkMode
           ? 'bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19]'
           : 'bg-gradient-to-br from-indigo-50 via-white to-purple-50'
@@ -127,15 +138,16 @@ export default function BookingSuccess() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center max-w-md"
         >
-          <div className={`text-2xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          {/* // MOBILE OPTIMIZED */}
+          <div className={`text-2xl sm:text-3xl md:text-4xl leading-tight font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             {error || 'No booking found'}
           </div>
-          <p className={`mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`mb-6 text-sm sm:text-base md:text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             It looks like you haven't booked any tickets yet.
           </p>
           <Link 
             to="/events" 
-            className={`inline-block px-6 py-3 rounded-xl font-bold transition-all ${
+            className={`w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all active:scale-95 ${
               isDarkMode
                 ? 'bg-red-600 text-white hover:bg-red-700'
                 : 'bg-indigo-600 text-white hover:bg-indigo-700'
@@ -149,7 +161,7 @@ export default function BookingSuccess() {
   }
 
   return (
-    <div className={`min-h-screen py-12 px-4 transition-colors duration-300 ${
+    <div className={`min-h-screen py-8 sm:py-10 lg:py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300 overflow-x-hidden ${
       isDarkMode
         ? 'bg-[#0B0F19]'
         : 'bg-gray-50'
@@ -160,7 +172,7 @@ export default function BookingSuccess() {
           initial={{ opacity: 0, x: 100 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 100 }}
-          className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 bg-green-600 text-white`}
+          className={`fixed top-4 left-4 right-4 sm:top-6 sm:right-6 sm:left-auto z-50 px-4 sm:px-6 py-3 sm:py-4 rounded-2xl shadow-2xl flex items-center gap-3 bg-green-600 text-white`}
         >
           <div className="bg-white/20 rounded-full p-1">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -169,7 +181,7 @@ export default function BookingSuccess() {
           </div>
           <div>
             <div className="font-bold">Booking Confirmed!</div>
-            <div className="text-sm opacity-90">Your tickets are ready</div>
+            <div className="text-xs sm:text-sm opacity-90">Your tickets are ready</div>
           </div>
         </motion.div>
       )}
@@ -182,8 +194,8 @@ export default function BookingSuccess() {
           className="text-center mb-12"
         >
           <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            animate={isMobile ? undefined : { scale: [1, 1.1, 1] }}
+            transition={isMobile ? undefined : { duration: 2, repeat: Infinity }}
             className={`inline-flex items-center justify-center w-24 h-24 rounded-full mb-6 shadow-2xl bg-green-600 text-white`}
           >
             <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
@@ -191,7 +203,8 @@ export default function BookingSuccess() {
             </svg>
           </motion.div>
 
-          <h1 className={`text-4xl md:text-5xl font-extrabold mb-4 ${
+          {/* // MOBILE OPTIMIZED */}
+          <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl leading-tight font-extrabold mb-4 ${
             isDarkMode
               ? 'text-blue-400'
               : 'text-blue-600'
@@ -199,7 +212,7 @@ export default function BookingSuccess() {
             Booking Confirmed!
           </h1>
 
-          <p className={`text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-sm sm:text-base md:text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Your tickets have been successfully generated. Check your email for booking details and get ready for an amazing experience!
           </p>
         </motion.div>
@@ -209,7 +222,7 @@ export default function BookingSuccess() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mb-12"
+          className="mb-8 sm:mb-10 lg:mb-12"
         >
           <Ticket ref={ticketRef} booking={booking} />
         </motion.div>
@@ -226,7 +239,8 @@ export default function BookingSuccess() {
           }`}
         >
           {/* Header */}
-          <div className={`px-6 py-5 flex justify-between items-center ${
+          {/* // MOBILE OPTIMIZED */}
+          <div className={`px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 ${
             isDarkMode
               ? 'bg-blue-600'
               : 'bg-blue-600'
@@ -243,7 +257,7 @@ export default function BookingSuccess() {
           </div>
 
           {/* Content */}
-          <div className={`p-8 space-y-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className={`p-4 sm:p-6 lg:p-8 space-y-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             {/* Tickets */}
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
@@ -275,8 +289,8 @@ export default function BookingSuccess() {
             {/* Total */}
             <div className={`border-t-2 border-dashed pt-4 mt-4 ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
               <div className="flex justify-between items-center">
-                <span className={`font-bold text-xl ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Total Paid</span>
-                <span className={`font-extrabold text-3xl ${
+                <span className={`font-bold text-lg sm:text-xl ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Total Paid</span>
+                <span className={`font-extrabold text-2xl sm:text-3xl ${
                   isDarkMode
                     ? 'text-blue-400'
                     : 'text-blue-600'
@@ -299,8 +313,9 @@ export default function BookingSuccess() {
               : 'bg-white border-blue-100'
           }`}
         >
-          <div className="p-8">
-            <h3 className={`font-bold text-lg mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          {/* // MOBILE OPTIMIZED */}
+          <div className="p-4 sm:p-6 lg:p-8">
+            <h3 className={`font-bold text-base sm:text-lg mb-6 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               <svg className={`w-5 h-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM15 7a1 1 0 11-2 0 1 1 0 012 0zm2 2a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
               </svg>
@@ -308,7 +323,7 @@ export default function BookingSuccess() {
             </h3>
             <div className="space-y-4">
               {/* Date */}
-              <motion.div whileHover={{ x: 4 }} className="flex items-start gap-4">
+              <motion.div whileHover={isMobile ? undefined : { x: 4 }} className="flex items-start gap-4">
                 <svg className={`w-5 h-5 mt-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v2h16V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V7z" clipRule="evenodd" />
                 </svg>
@@ -328,7 +343,7 @@ export default function BookingSuccess() {
               </motion.div>
 
               {/* Location */}
-              <motion.div whileHover={{ x: 4 }} className="flex items-start gap-4">
+              <motion.div whileHover={isMobile ? undefined : { x: 4 }} className="flex items-start gap-4">
                 <svg className={`w-5 h-5 mt-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                 </svg>
@@ -340,7 +355,7 @@ export default function BookingSuccess() {
 
               {/* Seats */}
               {booking.seats && booking.seats.length > 0 && (
-                <motion.div whileHover={{ x: 4 }} className="flex items-start gap-4">
+                <motion.div whileHover={isMobile ? undefined : { x: 4 }} className="flex items-start gap-4">
                   <svg className={`w-5 h-5 mt-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 00-6 0V9h6z" />
                   </svg>
@@ -362,10 +377,10 @@ export default function BookingSuccess() {
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <motion.button
-            whileHover={{ scale: 1.02 }}
+            whileHover={isMobile ? undefined : { scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleDownloadPdf}
-            className={`w-full sm:w-auto px-8 py-4 font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-white ${
+            className={`w-full sm:w-auto min-h-[44px] px-6 sm:px-8 py-4 font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-white active:scale-95 ${
               isDarkMode
                 ? 'bg-blue-600 hover:bg-blue-700'
                 : 'bg-blue-600 hover:bg-blue-700'
@@ -379,13 +394,13 @@ export default function BookingSuccess() {
           </motion.button>
 
           <motion.div
-            whileHover={{ scale: 1.02 }}
+            whileHover={isMobile ? undefined : { scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="w-full sm:w-auto"
           >
             <Link
               to="/"
-              className={`w-full sm:w-auto px-8 py-4 font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-white ${
+              className={`w-full sm:w-auto min-h-[44px] px-6 sm:px-8 py-4 font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-white active:scale-95 ${
                 isDarkMode
                   ? 'bg-gray-600 hover:bg-gray-700'
                   : 'bg-gray-600 hover:bg-gray-700'

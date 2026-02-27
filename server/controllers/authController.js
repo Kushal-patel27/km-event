@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import User, { ADMIN_ROLE_SET } from "../models/User.js";
 import SecurityEvent from "../models/SecurityEvent.js";
+import SystemConfig from "../models/SystemConfig.js";
 import { sendPasswordResetOtpEmail } from "../utils/emailService.js";
 
 const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || "15m";
@@ -28,6 +29,19 @@ const ACCESS_COOKIE_OPTIONS = {
 };
 
 const OTP_LENGTH = 6;
+
+/**
+ * Get the minimum password length from system config
+ */
+const getMinPasswordLength = async () => {
+  try {
+    const config = await SystemConfig.findById('system_config');
+    return config?.security?.passwordMinLength || 8;
+  } catch (error) {
+    console.error('Error fetching min password length:', error);
+    return 8; // Default to 8 if config fetch fails
+  }
+};
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute between sends
 const OTP_REQUEST_WINDOW_MS = 60 * 60 * 1000; // 1 hour window for request limit
@@ -150,6 +164,12 @@ export const registerUser = async (req, res) => {
   if (!JWT_SECRET) return res.status(500).json({ message: "Missing JWT_SECRET" });
 
   try {
+    const minLength = await getMinPasswordLength();
+    
+    if (!password || password.length < minLength) {
+      return res.status(400).json({ message: `Password must be at least ${minLength} characters` });
+    }
+
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
@@ -400,6 +420,11 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: "Both current and new password are required" });
     }
 
+    const minLength = await getMinPasswordLength();
+    if (newPassword.length < minLength) {
+      return res.status(400).json({ message: `Password must be at least ${minLength} characters` });
+    }
+
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -424,8 +449,10 @@ export const setPassword = async (req, res) => {
     if (!newPassword) {
       return res.status(400).json({ message: "New password is required" });
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: "Password must be at least 8 characters" });
+    
+    const minLength = await getMinPasswordLength();
+    if (newPassword.length < minLength) {
+      return res.status(400).json({ message: `Password must be at least ${minLength} characters` });
     }
 
     const user = await User.findById(req.user._id);
@@ -627,8 +654,9 @@ export const resetPasswordWithToken = async (req, res) => {
     return res.status(400).json({ message: "Email, reset token, and new password are required" });
   }
 
-  if (newPassword.length < 8) {
-    return res.status(400).json({ message: "Password must be at least 8 characters" });
+  const minLength = await getMinPasswordLength();
+  if (newPassword.length < minLength) {
+    return res.status(400).json({ message: `Password must be at least ${minLength} characters` });
   }
 
   const invalidMessage = "Invalid or expired reset request.";

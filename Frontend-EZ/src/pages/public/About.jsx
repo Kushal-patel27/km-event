@@ -71,7 +71,7 @@ export default function About() {
         : 'bg-white text-gray-900'
     }`}>
       {/* ================= HERO SECTION ================= */}
-      <section className={`relative py-24 md:py-32 px-4 sm:px-6 lg:px-12 transition-colors ${
+      <section className={`relative py-16 sm:py-20 md:py-24 lg:py-32 px-4 sm:px-6 lg:px-12 transition-colors ${
         isDarkMode ? 'bg-black' : 'bg-gradient-to-b from-gray-50 to-white'
       }`}>
         <div className="max-w-4xl mx-auto">
@@ -81,14 +81,14 @@ export default function About() {
             transition={{ duration: 0.6 }}
             className="text-center"
           >
-            <h1 className={`text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold mb-4 sm:mb-6 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               About <span className="bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent">K&M Events</span>
             </h1>
             <motion.p 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className={`text-xl md:text-2xl drop-shadow-md ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}
+              className={`text-base sm:text-lg md:text-xl lg:text-2xl drop-shadow-md ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
             >
               Your gateway to unforgettable live experiences
             </motion.p>
@@ -102,21 +102,21 @@ export default function About() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
+        className={`py-16 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
           isDarkMode ? 'bg-black' : 'bg-gray-50'
         }`}
       >
         <div className="max-w-4xl mx-auto">
-          <div className={`p-8 md:p-12 rounded-2xl transition-all duration-300 ${
+          <div className={`p-4 sm:p-6 md:p-8 lg:p-12 rounded-xl sm:rounded-2xl transition-all duration-300 ${
             isDarkMode
-              ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/12 hover:to-white/8 hover:border-red-500/40'
+              ? 'bg-black border border-red-600/30 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20'
               : 'bg-white border border-gray-200 shadow-lg'
           }`}>
-            <h2 className={`text-3xl md:text-4xl font-extrabold mb-6 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Our Mission</h2>
-            <p className={`text-lg leading-relaxed mb-5 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+            <h2 className={`text-2xl sm:text-3xl md:text-4xl font-extrabold mb-4 sm:mb-6 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Our Mission</h2>
+            <p className={`text-sm sm:text-base md:text-lg leading-relaxed mb-4 sm:mb-5 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
               {aboutData?.mission || 'At K&M Events, we believe that live experiences bring people together and create unforgettable memories.'}
             </p>
-            <p className={`text-lg leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className={`text-sm sm:text-base md:text-lg leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               {aboutData?.description || 'We connect passionate event organizers with enthusiastic attendees through a seamless, secure, and innovative ticketing platform that celebrates the magic of live entertainment.'}
             </p>
           </div>
@@ -129,34 +129,34 @@ export default function About() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
+        className={`py-16 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
           isDarkMode ? 'bg-black' : 'bg-white'
         }`}
       >
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className={`text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>What We Offer</h2>
-            <p className={`text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <div className="text-center mb-10 sm:mb-12 md:mb-16">
+            <h2 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>What We Offer</h2>
+            <p className={`text-sm sm:text-base md:text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               Industry-leading features designed to make your event experience seamless and enjoyable
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {/* Card 1 */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0 }}
-              className={`group p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 ${
+              className={`group p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl transition-all duration-300 hover:-translate-y-2 ${
                 isDarkMode
-                  ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/12 hover:to-white/8 hover:border-red-500/40'
+                  ? 'bg-black border border-red-600/30 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20'
                   : 'bg-white border border-gray-200 shadow-md hover:shadow-lg'
               }`}
             >
-              <div className="text-5xl mb-5 group-hover:scale-110 transition-transform">🎟️</div>
-              <h3 className={`text-xl font-bold mb-4 transition-colors ${isDarkMode ? 'text-white group-hover:text-red-400' : 'text-gray-900 group-hover:text-red-500'}`}>QR Tickets</h3>
-              <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>
+              <div className="text-4xl sm:text-5xl mb-4 sm:mb-5 group-hover:scale-110 transition-transform">🎟️</div>
+              <h3 className={`text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 transition-colors ${isDarkMode ? 'text-white group-hover:text-red-400' : 'text-gray-900 group-hover:text-red-500'}`}>QR Tickets</h3>
+              <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>
                 Digital tickets with QR codes for instant verification. No printing needed, fully eco-friendly and secure.
               </p>
             </motion.div>
@@ -169,13 +169,13 @@ export default function About() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className={`group p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 ${
                 isDarkMode
-                  ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/12 hover:to-white/8 hover:border-red-500/40'
+                  ? 'bg-black border border-red-600/30 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20'
                   : 'bg-white border border-gray-200 shadow-md hover:shadow-lg'
               }`}
             >
-              <div className="text-5xl mb-5 group-hover:scale-110 transition-transform">💺</div>
-              <h3 className={`text-xl font-bold mb-4 transition-colors ${isDarkMode ? 'text-white group-hover:text-red-400' : 'text-gray-900 group-hover:text-red-500'}`}>Seat Selection</h3>
-              <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>
+              <div className="text-4xl sm:text-5xl mb-4 sm:mb-5 group-hover:scale-110 transition-transform">💺</div>
+              <h3 className={`text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 transition-colors ${isDarkMode ? 'text-white group-hover:text-red-400' : 'text-gray-900 group-hover:text-red-500'}`}>Seat Selection</h3>
+              <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>
                 Real-time interactive seat maps so you can choose your perfect spot before booking.
               </p>
             </motion.div>
@@ -188,13 +188,13 @@ export default function About() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className={`group p-8 rounded-2xl transition-all duration-300 hover:-translate-y-2 ${
                 isDarkMode
-                  ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/12 hover:to-white/8 hover:border-red-500/40'
+                  ? 'bg-black border border-red-600/30 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20'
                   : 'bg-white border border-gray-200 shadow-md hover:shadow-lg'
               }`}
             >
-              <div className="text-5xl mb-5 group-hover:scale-110 transition-transform">🔒</div>
-              <h3 className={`text-xl font-bold mb-4 transition-colors ${isDarkMode ? 'text-white group-hover:text-red-400' : 'text-gray-900 group-hover:text-red-500'}`}>Secure Booking</h3>
-              <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>
+              <div className="text-4xl sm:text-5xl mb-4 sm:mb-5 group-hover:scale-110 transition-transform">🔒</div>
+              <h3 className={`text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 transition-colors ${isDarkMode ? 'text-white group-hover:text-red-400' : 'text-gray-900 group-hover:text-red-500'}`}>Secure Booking</h3>
+              <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed`}>
                 Safe and secure payment processing with full protection for your personal information.
               </p>
             </motion.div>
@@ -208,19 +208,19 @@ export default function About() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
+        className={`py-16 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
           isDarkMode ? 'bg-black' : 'bg-gray-50'
         }`}
       >
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className={`text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Why Choose K&M Events?</h2>
-            <p className={`text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <div className="text-center mb-10 sm:mb-12 md:mb-16">
+            <h2 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Why Choose K&M Events?</h2>
+            <p className={`text-sm sm:text-base md:text-lg max-w-2xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               We're committed to providing the best event booking experience
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
             {[
               { icon: '⚡', title: 'Instant Booking', desc: 'Book your tickets in seconds with our intuitive interface' },
               { icon: '🌍', title: 'Wide Selection', desc: 'Access concerts, comedy shows, festivals, workshops, and more' },
@@ -235,16 +235,16 @@ export default function About() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.08 }}
-                className={`group flex gap-6 p-7 rounded-2xl transition-all duration-300 hover:-translate-x-1 ${
+                className={`group flex gap-4 sm:gap-6 p-4 sm:p-6 md:p-7 rounded-xl sm:rounded-2xl transition-all duration-300 hover:-translate-x-1 ${
                   isDarkMode
-                    ? 'bg-gradient-to-r from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/12 hover:to-white/8 hover:border-red-500/40'
+                    ? 'bg-black border border-red-600/30 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20'
                     : 'bg-white border border-gray-200 shadow-md hover:shadow-lg'
                 }`}
               >
-                <div className="text-4xl flex-shrink-0 group-hover:scale-125 transition-transform">{item.icon}</div>
+                <div className="text-3xl sm:text-4xl flex-shrink-0 group-hover:scale-125 transition-transform">{item.icon}</div>
                 <div className="flex-1">
-                  <h3 className={`text-lg font-bold mb-2 transition-colors ${isDarkMode ? 'text-white group-hover:text-red-400' : 'text-gray-900 group-hover:text-red-500'}`}>{item.title}</h3>
-                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} text-sm`}>{item.desc}</p>
+                  <h3 className={`text-sm sm:text-base md:text-lg font-bold mb-1 sm:mb-2 transition-colors ${isDarkMode ? 'text-white group-hover:text-red-400' : 'text-gray-900 group-hover:text-red-500'}`}>{item.title}</h3>
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} text-xs sm:text-sm`}>{item.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -258,17 +258,17 @@ export default function About() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
-        className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
+        className={`py-16 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-12 transition-colors ${
           isDarkMode ? 'bg-black' : 'bg-white'
         }`}
       >
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className={`text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Our Impact</h2>
-            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Join millions of happy customers worldwide</p>
+          <div className="text-center mb-10 sm:mb-12 md:mb-16">
+            <h2 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold mb-3 sm:mb-4 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Our Impact</h2>
+            <p className={`text-sm sm:text-base md:text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Join millions of happy customers worldwide</p>
           </div>
           
-          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
             {[
               { number: `${(stats.activeUsers / 1000).toFixed(0)}K+`, label: 'Active Users' },
               { number: `${stats.eventsListed}+`, label: 'Events Listed' },
@@ -281,16 +281,16 @@ export default function About() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
-                className={`group p-8 rounded-2xl transition-all duration-300 text-center hover:-translate-y-2 ${
+                className={`group p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl transition-all duration-300 text-center hover:-translate-y-2 ${
                   isDarkMode
-                    ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:from-white/12 hover:to-white/8 hover:border-red-500/50'
+                    ? 'bg-black border border-red-600/30 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20'
                     : 'bg-white border border-gray-200 shadow-md hover:shadow-lg'
                 }`}
               >
-                <div className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-400 mb-3 group-hover:from-red-400 group-hover:to-red-300">
+                <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-400 mb-2 sm:mb-3 group-hover:from-red-400 group-hover:to-red-300">
                   {stat.number}
                 </div>
-                <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'} font-semibold`}>{stat.label}</p>
+                <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} font-semibold`}>{stat.label}</p>
               </motion.div>
             ))}
           </div>
@@ -303,7 +303,7 @@ export default function About() {
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.7 }}
-        className="py-28 px-4 sm:px-6 lg:px-12 bg-gradient-to-r from-red-600 via-red-500 to-red-600 relative overflow-hidden"
+        className="py-20 sm:py-24 md:py-28 px-4 sm:px-6 lg:px-12 bg-gradient-to-r from-red-600 via-red-500 to-red-600 relative overflow-hidden"
       >
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-0 left-0 w-96 h-96 bg-red-400 rounded-full blur-3xl"></div>
@@ -316,7 +316,7 @@ export default function About() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 text-white drop-shadow-lg"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold mb-4 sm:mb-6 text-white drop-shadow-lg"
           >
             Ready to Experience Live Events?
           </motion.h2>
@@ -326,7 +326,7 @@ export default function About() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-white/90 text-lg md:text-xl mb-10 drop-shadow-md"
+            className="text-white/90 text-sm sm:text-base md:text-lg lg:text-xl mb-8 sm:mb-10 drop-shadow-md"
           >
             Join thousands of happy customers booking their favorite events today.
           </motion.p>
@@ -339,7 +339,7 @@ export default function About() {
           >
             <a 
               href="/events"
-              className="inline-block px-12 py-5 bg-black hover:bg-gray-900 text-white rounded-xl text-lg font-bold shadow-2xl hover:scale-110 hover:shadow-2xl transition-all duration-300"
+              className="inline-block px-8 sm:px-10 md:px-12 py-3.5 sm:py-4 md:py-5 bg-black hover:bg-gray-900 text-white rounded-xl text-base sm:text-lg font-bold shadow-2xl hover:scale-110 hover:shadow-2xl transition-all duration-300"
             >
               Start Exploring Events
             </a>

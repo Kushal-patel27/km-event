@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import StaffAdminLayout from '../../components/layout/StaffAdminLayout'
 import { useAuth } from '../../context/AuthContext'
 import API from '../../services/api'
@@ -8,6 +8,7 @@ export default function StaffAdminSettings() {
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [minPasswordLength, setMinPasswordLength] = useState(8)
   
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -19,6 +20,19 @@ export default function StaffAdminSettings() {
     newPassword: '',
     confirmPassword: ''
   })
+
+  // Fetch minimum password length from config
+  useEffect(() => {
+    const fetchMinLength = async () => {
+      try {
+        const res = await API.get('/config/public')
+        setMinPasswordLength(res.data?.security?.passwordMinLength || 8)
+      } catch (err) {
+        setMinPasswordLength(8) // Default to 8 if fetch fails
+      }
+    }
+    fetchMinLength()
+  }, [])
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault()
@@ -46,8 +60,8 @@ export default function StaffAdminSettings() {
       return
     }
 
-    if (passwordData.newPassword.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (passwordData.newPassword.length < minPasswordLength) {
+      setError(`Password must be at least ${minPasswordLength} characters`)
       return
     }
 

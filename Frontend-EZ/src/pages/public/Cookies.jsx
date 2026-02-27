@@ -121,13 +121,13 @@ export default function Cookies() {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
-      isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-slate-50 via-white to-indigo-50'
+      isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-sky-50 via-white to-indigo-50'
     }`}>
       {/* Hero Section */}
       <div className={`py-16 px-6 ${
         isDarkMode 
           ? 'bg-black' 
-          : 'bg-gradient-to-r from-indigo-600 to-purple-600'
+          : 'bg-blue-600'
       }`}>
         <div className="max-w-4xl mx-auto text-center">
           <motion.div

@@ -9,53 +9,46 @@ export const joinWaitlist = async (req, res) => {
     const { eventId, ticketType, quantity = 1 } = req.body;
     const userId = req.user.id;
 
+    console.log('Join waitlist request:', { userId, eventId, ticketType, quantity });
+
     if (!eventId || !ticketType) {
-      return res.status(400).json({ message: 'Missing required fields: eventId, ticketType' });
+      console.log('Missing required fields:', { eventId: !!eventId, ticketType: !!ticketType });
+      return res.status(400).json({ 
+        message: 'Missing required fields: eventId, ticketType',
+        received: { eventId: eventId || 'missing', ticketType: ticketType || 'missing' }
+      });
     }
 
     // Validate event exists
     const event = await Event.findById(eventId);
     if (!event) {
+      console.log('Event not found:', eventId);
       return res.status(404).json({ message: 'Event not found' });
     }
+
+    console.log('Event found:', { 
+      eventId: event._id, 
+      title: event.title,
+      ticketTypes: event.ticketTypes?.map(t => t.name) || []
+    });
 
     // Check if event has passed
     if (new Date(event.date) < new Date()) {
       return res.status(400).json({ message: 'Cannot join waitlist for past events' });
     }
 
-    // Check if user already on waitlist for this event/ticket type
-    const existingWaitlist = await Waitlist.findOne({
-      user: userId,
-      event: eventId,
-      ticketType: ticketType,
-      status: { $in: ['waiting', 'notified'] }
-    });
-
-    if (existingWaitlist) {
-      return res.status(400).json({ 
-        message: 'You are already on the waitlist for this ticket type',
-        waitlistEntry: existingWaitlist
-      });
-    }
-
-    // Check if user already has a booking for this event
-    const existingBooking = await Booking.findOne({
-      user: userId,
-      event: eventId,
-      status: { $in: ['confirmed', 'pending'] }
-    });
-
-    if (existingBooking) {
-      return res.status(400).json({ 
-        message: 'You already have a booking for this event'
-      });
-    }
-
     // Validate ticket type exists
-    const ticket = event.ticketTypes.find(t => t.name === ticketType);
+    const ticket = event.ticketTypes?.find(t => t.name === ticketType);
     if (!ticket) {
-      return res.status(400).json({ message: 'Invalid ticket type' });
+      console.log('Invalid ticket type:', { 
+        requested: ticketType,
+        available: event.ticketTypes?.map(t => t.name) || []
+      });
+      return res.status(400).json({ 
+        message: 'Invalid ticket type',
+        requestedTicketType: ticketType,
+        availableTicketTypes: event.ticketTypes?.map(t => t.name) || []
+      });
     }
 
     // Create waitlist entry
@@ -75,6 +68,12 @@ export const joinWaitlist = async (req, res) => {
     await waitlistEntry.save();
     const position = waitlistEntry.position || 1;
 
+    // Populate event details for response
+    await waitlistEntry.populate({
+      path: 'event',
+      select: 'title date location image category price ticketTypes status'
+    });
+
     // Send confirmation email asynchronously (non-blocking)
     Waitlist.findById(waitlistEntry._id)
       .populate('user', 'name email')
@@ -90,6 +89,7 @@ export const joinWaitlist = async (req, res) => {
       .catch(err => console.error('Populate error:', err));
 
     res.status(201).json({
+      success: true,
       message: 'Successfully joined waitlist',
       waitlistEntry: {
         ...waitlistEntry.toObject(),
@@ -143,12 +143,23 @@ export const getMyWaitlist = async (req, res) => {
     }
 
     const waitlistEntries = await Waitlist.find(query)
-      .populate('event', 'title date location image category price')
+      .populate({
+        path: 'event',
+        select: 'title date location image category price ticketTypes status totalTickets availableTickets',
+        populate: {
+          path: 'organizer',
+          select: 'name email'
+        }
+      })
+      .populate('user', 'name email')
       .sort({ createdAt: -1 });
+
+    // Filter out entries where event was deleted
+    const validEntries = waitlistEntries.filter(entry => entry.event);
 
     // Get current position for each waiting entry
     const entriesWithPosition = await Promise.all(
-      waitlistEntries.map(async (entry) => {
+      validEntries.map(async (entry) => {
         let currentPosition = null;
         if (entry.status === 'waiting' && entry.event) {
           currentPosition = await Waitlist.getUserPosition(
@@ -164,7 +175,11 @@ export const getMyWaitlist = async (req, res) => {
       })
     );
 
-    res.json({ waitlist: entriesWithPosition });
+    res.json({ 
+      success: true,
+      waitlist: entriesWithPosition,
+      count: entriesWithPosition.length
+    });
   } catch (error) {
     console.error('Get my waitlist error:', error);
     res.status(500).json({ message: 'Failed to get waitlist', error: error.message });

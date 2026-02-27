@@ -362,7 +362,7 @@ export const getEventDetails = async (req, res) => {
  */
 export const createEvent = async (req, res) => {
   try {
-    const { title, description, location, locationDetails, image, category, price, date, totalTickets, status, ticketTypes } = req.body;
+    const { title, description, location, locationDetails, mapLink, image, category, price, date, totalTickets, status, ticketTypes } = req.body;
 
     // Validate required fields
     if (!title || !date || !totalTickets) {
@@ -379,6 +379,7 @@ export const createEvent = async (req, res) => {
       description: description || "",
       location: location || "",
       locationDetails: locationDetails || "",
+      mapLink: mapLink || "",
       image: image || "",
       category: category || "General",
       price: Number(price) || 0,
@@ -454,6 +455,7 @@ export const updateEvent = async (req, res) => {
       "title",
       "location",
       "locationDetails",
+      "mapLink",
       "price",
       "category",
       "image",
@@ -594,7 +596,12 @@ export const updateBookingStatus = async (req, res) => {
 
     const previousStatus = booking.status;
     booking.status = status;
-    await booking.save();
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { status, updatedAt: new Date() },
+      { new: true }
+    ).populate("event");
 
     if (CANCELLATION_STATUSES.has(status) && !CANCELLATION_STATUSES.has(previousStatus)) {
       await restoreTicketsAndNotifyWaitlist(booking);
@@ -602,7 +609,7 @@ export const updateBookingStatus = async (req, res) => {
 
     res.json({
       message: "Booking status updated",
-      booking,
+      booking: updatedBooking,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

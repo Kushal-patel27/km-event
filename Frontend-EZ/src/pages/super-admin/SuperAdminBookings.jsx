@@ -15,7 +15,7 @@ export default function SuperAdminBookings() {
   const [showRefundModal, setShowRefundModal] = useState(false)
   const [refundReason, setRefundReason] = useState('')
 
-  const statuses = ['confirmed', 'pending', 'cancelled', 'refunded']
+  const statuses = ['confirmed', 'pending', 'cancelled']
 
   useEffect(() => {
     fetchBookings()

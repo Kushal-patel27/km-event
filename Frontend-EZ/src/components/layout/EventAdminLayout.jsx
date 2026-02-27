@@ -25,16 +25,16 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2 md:gap-3 min-w-0">
-              <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0">
+              <Link to="/" className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <Logo dark={false} size="4xl" key="event-admin-logo" />
               </Link>
               <div className="hidden md:block border-l border-gray-200 h-6" />
-              <h1 className="text-base md:text-lg font-semibold truncate">Event Admin</h1>
+              <h1 className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold truncate">Event Admin</h1>
             </div>
-            <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
               <NavigationButtons
                 homeTo="/event-admin"
                 homeLabel="Dashboard"
@@ -42,10 +42,10 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
                 size="sm"
               />
               <div className="hidden sm:flex flex-col items-end text-right">
-                <div className="text-sm font-medium">{user?.name || 'Event Admin'}</div>
-                <div className="text-xs text-gray-500">{user?.email}</div>
+                <div className="text-xs sm:text-sm font-medium">{user?.name || 'Event Admin'}</div>
+                <div className="text-[10px] sm:text-xs text-gray-500">{user?.email}</div>
               </div>
-              <button onClick={handleLogout} className="px-2 md:px-4 py-2 text-xs md:text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white flex-shrink-0">
+              <button onClick={handleLogout} className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white flex-shrink-0">
                 <span className="hidden sm:inline">Logout</span>
                 <span className="sm:hidden">Exit</span>
               </button>
@@ -54,10 +54,10 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pb-6 sm:pb-8">
         {/* Mobile Navigation */}
-        <div className="md:hidden mt-4 bg-white border border-gray-200 rounded-xl p-2">
-          <nav className="flex gap-2 overflow-x-auto">
+        <div className="md:hidden mt-3 sm:mt-4 bg-white border border-gray-200 rounded-xl p-1.5 sm:p-2">
+          <nav className="flex gap-1 sm:gap-2 overflow-x-auto">
             {nav.map(item => {
               const isActive = item.exact 
                 ? location.pathname === item.to 
@@ -66,7 +66,7 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                  className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
                     isActive 
                       ? 'bg-indigo-600 text-white' 
                       : 'text-gray-700 hover:bg-gray-100'
@@ -79,9 +79,9 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
           </nav>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4 sm:gap-6 mt-4 sm:mt-6">
           {/* Sidebar */}
-          <aside className="bg-white border border-gray-200 rounded-xl p-3 h-fit hidden md:block self-start md:sticky md:top-20 max-h-[calc(100vh-6rem)] overflow-auto">
+          <aside className="bg-white border border-gray-200 rounded-xl p-2 sm:p-3 h-fit hidden md:block self-start md:sticky md:top-20 max-h-[calc(100vh-6rem)] overflow-auto">
             {/* Navigation */}
             <div className="p-0">
               <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-x-visible">{nav.map(item => {
@@ -108,8 +108,8 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
           </aside>
 
           <main>
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl sm:text-2xl font-bold">{title}</h1>
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">{title}</h1>
             </div>
             <div className="space-y-6 pb-6">
               {children}

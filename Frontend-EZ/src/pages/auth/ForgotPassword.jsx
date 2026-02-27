@@ -34,6 +34,14 @@ export default function ForgotPassword() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
 
+  // Prevent body scroll on this page
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
+
   useEffect(() => {
     if (timer <= 0) return;
     const interval = setInterval(() => {
@@ -128,46 +136,54 @@ export default function ForgotPassword() {
   const formTitle = STEP_COPY[step];
 
   return (
-    <div className={`flex items-center justify-center py-10 px-4 ${
-      isDarkMode ? "bg-gray-900" : "bg-gray-50"
+    <div className={`h-screen flex items-center justify-center px-4 transition-colors overflow-hidden ${
+      isDarkMode ? "bg-black" : "bg-gray-50"
     }`}>
       <div
-        className={`max-w-md w-full p-6 rounded-lg shadow-md border transition-colors ${
-          isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+        className={`w-full max-w-md max-h-[calc(100vh-32px)] overflow-y-auto rounded-xl shadow-xl border p-4 sm:p-5 transition-colors ${
+          isDarkMode ? "bg-black border-white/10" : "bg-white border-gray-200"
         }`}
       >
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className={`text-2xl font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="min-w-0 flex-1">
+            <h1 className={`text-xl sm:text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
               Forgot Password
             </h1>
-            <p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>{formTitle}</p>
+            <p className={`text-xs sm:text-sm mt-0.5 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>{formTitle}</p>
           </div>
-          <div className={`text-xs font-semibold px-3 py-1 rounded-full ${
+          <div className={`text-xs font-semibold px-2.5 py-0.5 rounded-full flex-shrink-0 ml-2 ${
             step === "done"
-              ? "bg-green-100 text-green-700"
-              : "bg-indigo-100 text-indigo-700"
+              ? isDarkMode ? "bg-green-900/30 text-green-300 border border-green-700" : "bg-green-100 text-green-700"
+              : isDarkMode ? "bg-indigo-900/30 text-indigo-300 border border-indigo-700" : "bg-indigo-100 text-indigo-700"
           }`}>
             {step.toUpperCase()}
           </div>
         </div>
 
         {status && (
-          <div className={`mb-3 text-sm ${isDarkMode ? "text-green-300" : "text-green-700"}`}>
+          <div className={`mb-2.5 p-2 rounded-lg text-xs sm:text-sm ${
+            isDarkMode 
+              ? "bg-green-900/20 border border-green-700 text-green-300" 
+              : "bg-green-50 border border-green-200 text-green-700"
+          }`}>
             {status}
           </div>
         )}
         {error && (
-          <div className={`mb-3 text-sm ${isDarkMode ? "text-red-300" : "text-red-600"}`}>
+          <div className={`mb-2.5 p-2 rounded-lg text-xs sm:text-sm ${
+            isDarkMode 
+              ? "bg-red-900/20 border border-red-700 text-red-300" 
+              : "bg-red-50 border border-red-200 text-red-600"
+          }`}>
             {error}
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={
+        <form className="space-y-2.5" onSubmit={
           step === "email" ? handleSendOtp : step === "otp" ? handleVerifyOtp : handleResetPassword
         }>
           <div>
-            <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+            <label className={`block text-xs sm:text-sm font-semibold mb-1.5 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
               Email Address
             </label>
             <input
@@ -177,18 +193,18 @@ export default function ForgotPassword() {
               onChange={handleChange("email")}
               disabled={step !== "email"}
               placeholder="you@example.com"
-              className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
+              className={`w-full px-3 py-2 rounded-lg border-2 transition-all outline-none focus:ring-2 focus:ring-offset-0 text-sm ${
                 isDarkMode
-                  ? "bg-white/10 border-white/20 text-white placeholder-gray-400 disabled:opacity-60"
-                  : "bg-white border-blue-200 text-gray-900 placeholder-gray-500 disabled:bg-gray-100"
+                  ? "bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:opacity-50 disabled:bg-gray-900"
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:bg-gray-100"
               }`}
             />
           </div>
 
           {(step === "otp" || step === "reset" || step === "done") && (
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className={`block text-sm font-semibold ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={`block text-xs sm:text-sm font-semibold ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                   Verification Code
                 </label>
                 {step === "otp" && (
@@ -196,8 +212,14 @@ export default function ForgotPassword() {
                     type="button"
                     onClick={handleResend}
                     disabled={!canResend || loading}
-                    className={`text-xs font-semibold ${
-                      canResend ? "text-blue-600 hover:text-blue-700" : "text-gray-400"
+                    className={`text-xs font-semibold transition-colors ${
+                      canResend 
+                        ? isDarkMode 
+                          ? "text-indigo-400 hover:text-indigo-300" 
+                          : "text-indigo-600 hover:text-indigo-700"
+                        : isDarkMode 
+                          ? "text-gray-600 cursor-not-allowed" 
+                          : "text-gray-400 cursor-not-allowed"
                     }`}
                   >
                     {canResend ? "Resend code" : `Resend in ${timer}s`}
@@ -211,19 +233,19 @@ export default function ForgotPassword() {
                 onChange={handleChange("otp")}
                 disabled={step !== "otp"}
                 placeholder="123456"
-                className={`w-full px-4 py-3 rounded-lg border tracking-widest text-center text-lg font-bold transition-all outline-none ${
+                className={`w-full px-3 py-2 rounded-lg border-2 tracking-widest text-center text-base font-bold transition-all outline-none focus:ring-2 focus:ring-offset-0 ${
                   isDarkMode
-                    ? "bg-white/10 border-white/20 text-white placeholder-gray-500 disabled:opacity-60"
-                    : "bg-white border-blue-200 text-gray-900 placeholder-gray-500 disabled:bg-gray-100"
+                    ? "bg-gray-800 border-gray-700 text-white placeholder-gray-600 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:opacity-50 disabled:bg-gray-900"
+                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:bg-gray-100"
                 }`}
               />
             </div>
           )}
 
           {(step === "reset" || step === "done") && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <label className={`block text-xs sm:text-sm font-semibold mb-1.5 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                   New Password
                 </label>
                 <input
@@ -233,15 +255,15 @@ export default function ForgotPassword() {
                   onChange={handleChange("newPassword")}
                   disabled={step === "done"}
                   placeholder="At least 8 characters"
-                  className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
+                  className={`w-full px-3 py-2 rounded-lg border-2 transition-all outline-none focus:ring-2 focus:ring-offset-0 text-sm ${
                     isDarkMode
-                      ? "bg-white/10 border-white/20 text-white placeholder-gray-500 disabled:opacity-60"
-                      : "bg-white border-blue-200 text-gray-900 placeholder-gray-500 disabled:bg-gray-100"
+                      ? "bg-gray-800 border-gray-700 text-white placeholder-gray-600 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:opacity-50 disabled:bg-gray-900"
+                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:bg-gray-100"
                   }`}
                 />
               </div>
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <label className={`block text-xs sm:text-sm font-semibold mb-1.5 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                   Confirm Password
                 </label>
                 <input
@@ -251,10 +273,10 @@ export default function ForgotPassword() {
                   onChange={handleChange("confirmPassword")}
                   disabled={step === "done"}
                   placeholder="Repeat your password"
-                  className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
+                  className={`w-full px-3 py-2 rounded-lg border-2 transition-all outline-none focus:ring-2 focus:ring-offset-0 text-sm ${
                     isDarkMode
-                      ? "bg-white/10 border-white/20 text-white placeholder-gray-500 disabled:opacity-60"
-                      : "bg-white border-blue-200 text-gray-900 placeholder-gray-500 disabled:bg-gray-100"
+                      ? "bg-gray-800 border-gray-700 text-white placeholder-gray-600 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:opacity-50 disabled:bg-gray-900"
+                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500/20 disabled:bg-gray-100"
                   }`}
                 />
               </div>
@@ -267,11 +289,13 @@ export default function ForgotPassword() {
             type={step === "done" ? "button" : "submit"}
             onClick={step === "done" ? () => navigate("/login") : undefined}
             disabled={loading}
-            className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-lg ${
+            className={`w-full py-2 rounded-lg font-bold text-white transition-all shadow-lg text-sm ${
               step === "done"
                 ? "bg-green-600 hover:bg-green-700"
-                : "bg-blue-700 hover:bg-blue-800"
-            } ${loading ? "opacity-80" : ""}`}
+                : isDarkMode
+                  ? "bg-indigo-600 hover:bg-indigo-700"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+            } ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
           >
             {step === "email" && (loading ? "Sending..." : "Send code")}
             {step === "otp" && (loading ? "Verifying..." : "Verify code")}
@@ -280,11 +304,11 @@ export default function ForgotPassword() {
           </motion.button>
         </form>
 
-        <p className={`text-center mt-4 text-xs ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+        <p className={`text-center mt-3 text-xs sm:text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
           Remembered your password?{" "}
           <Link
             to="/login"
-            className={`${isDarkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-700 hover:text-blue-800"}`}
+            className={`font-semibold ${isDarkMode ? "text-indigo-400 hover:text-indigo-300" : "text-indigo-600 hover:text-indigo-700"} transition-colors`}
           >
             Go back to login
           </Link>

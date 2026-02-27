@@ -28,9 +28,23 @@ export default function SetPassword() {
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState("email");
   const [timer, setTimer] = useState(0);
+  const [minPasswordLength, setMinPasswordLength] = useState(8);
 
   const isAuthenticated = Boolean(user?.token);
   const canResend = useMemo(() => timer === 0 && step === "otp", [timer, step]);
+
+  // Fetch minimum password length from config
+  useEffect(() => {
+    const fetchMinLength = async () => {
+      try {
+        const res = await API.get('/config/public');
+        setMinPasswordLength(res.data?.security?.passwordMinLength || 8);
+      } catch (err) {
+        setMinPasswordLength(8); // Default to 8 if fetch fails
+      }
+    };
+    fetchMinLength();
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated && user?.hasPassword) {
@@ -54,8 +68,8 @@ export default function SetPassword() {
     setError("");
     setStatus("");
 
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
+    if (newPassword.length < minPasswordLength) {
+      setError(`Password must be at least ${minPasswordLength} characters`);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -138,8 +152,8 @@ export default function SetPassword() {
     setError("");
     setStatus("");
 
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
+    if (newPassword.length < minPasswordLength) {
+      setError(`Password must be at least ${minPasswordLength} characters`);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -168,7 +182,7 @@ export default function SetPassword() {
 
   return (
     <div className={`flex items-center justify-center py-10 px-4 ${
-      isDarkMode ? "bg-gray-900" : "bg-gray-50"
+      isDarkMode ? "bg-black" : "bg-gray-50"
     }`}>
       <div className={`max-w-md w-full p-6 rounded-lg shadow-md border ${
         isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
@@ -204,7 +218,7 @@ export default function SetPassword() {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                placeholder={`At least ${minPasswordLength} characters`}
                 className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                   isDarkMode
                     ? "bg-white/10 border-white/20 text-white placeholder-gray-500"
@@ -310,7 +324,7 @@ export default function SetPassword() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     disabled={step === "done"}
-                    placeholder="At least 8 characters"
+                    placeholder={`At least ${minPasswordLength} characters`}
                     className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                       isDarkMode
                         ? "bg-white/10 border-white/20 text-white placeholder-gray-500 disabled:opacity-60"

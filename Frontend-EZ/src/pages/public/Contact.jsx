@@ -93,11 +93,11 @@ export default function Contact() {
   return (
     <div className={`min-h-screen transition-colors ${
       isDarkMode 
-        ? 'bg-gradient-to-b from-[#0B0F19] via-[#0d1221] to-[#0B0F19] text-white' 
+        ? 'bg-black text-white' 
         : 'bg-white text-gray-900'
     }`}>
       {/* ================= HERO SECTION ================= */}
-      <section className={`relative py-24 md:py-32 px-4 sm:px-6 lg:px-12 transition-colors ${isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] to-[#0d1221]' : 'bg-gradient-to-b from-gray-50 to-white'}`}>
+      <section className={`relative py-24 md:py-32 px-4 sm:px-6 lg:px-12 transition-colors ${isDarkMode ? 'bg-black' : 'bg-gradient-to-b from-gray-50 to-white'}`}>
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -121,7 +121,7 @@ export default function Contact() {
       </section>
 
       {/* ================= CONTACT CONTENT ================= */}
-      <section className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${isDarkMode ? 'bg-gradient-to-b from-[#0d1221] to-[#0B0F19]' : 'bg-gray-50'}`}>
+      <section className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
         <div className="max-w-6xl mx-auto">
           {/* Tab Navigation - Only show for logged in users */}
         {user && (
@@ -188,9 +188,9 @@ export default function Contact() {
               transition={{ duration: 0.6 }}
               className="space-y-8"
             >
-              <div className={`p-8 md:p-10 rounded-2xl backdrop-blur-sm hover:border-red-500/40 transition-all duration-300 ${
+              <div className={`p-8 md:p-10 rounded-2xl transition-all duration-300 ${
                 isDarkMode
-                  ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 hover:from-white/12 hover:to-white/8'
+                  ? 'bg-black border border-white/15'
                   : 'bg-gradient-to-br from-gray-50 to-white border border-gray-200 hover:shadow-lg'
               }`}>
                 <h2 className={`text-3xl font-extrabold mb-8 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Contact Information</h2>
@@ -225,8 +225,7 @@ export default function Contact() {
                     <div className="text-4xl group-hover:scale-110 transition-transform">📱</div>
                     <div className="flex-1">
                       <h3 className={`font-bold text-lg mb-2 group-hover:text-red-400 transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Phone</h3>
-                      <p className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>+1 (555) 123-4567</p>
-                      <p className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>+1 (555) 987-6543</p>
+                      <p className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>+91 95686 98796</p>
                     </div>
                   </motion.div>
 
@@ -242,8 +241,8 @@ export default function Contact() {
                     <div className="text-4xl group-hover:scale-110 transition-transform">📍</div>
                     <div className="flex-1">
                       <h3 className={`font-bold text-lg mb-2 group-hover:text-red-400 transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Office Address</h3>
-                      <p className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>123 Event Street</p>
-                      <p className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>New York, NY 10001</p>
+                      <p className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>101, Maker Chambers IV</p>
+                      <p className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Nariman Point, Mumbai 400021</p>
                     </div>
                   </motion.div>
 
@@ -268,9 +267,9 @@ export default function Contact() {
               </div>
 
               {/* Social Media */}
-              <div className={`p-8 md:p-10 rounded-2xl backdrop-blur-sm hover:border-red-500/40 transition-all duration-300 ${
+              <div className={`p-8 md:p-10 rounded-2xl transition-all duration-300 ${
                 isDarkMode
-                  ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 hover:from-white/12 hover:to-white/8'
+                  ? 'bg-black border border-white/15'
                   : 'bg-gradient-to-br from-gray-50 to-white border border-gray-200 hover:shadow-lg'
               }`}>
                 <h3 className={`text-2xl font-extrabold mb-8 drop-shadow-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Follow Us</h3>
@@ -291,7 +290,9 @@ export default function Contact() {
                     whileHover={{ scale: 1.1 }}
                     className="w-14 h-14 bg-gradient-to-br from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 rounded-lg flex items-center justify-center transition text-xl font-bold text-white shadow-lg hover:shadow-red-500/50"
                   >
-                    📷
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
                   </motion.button>
                   <motion.button 
                     whileHover={{ scale: 1.1 }}
@@ -309,11 +310,11 @@ export default function Contact() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className={`p-8 md:p-10 rounded-xl backdrop-blur-sm ${
+              className={`p-8 md:p-10 rounded-xl ${
                 isDarkMode
-                  ? 'bg-gradient-to-br from-white/12 to-white/5 border border-white/20 hover:border-white/30'
+                  ? 'bg-black border border-white/20'
                   : 'bg-white border border-gray-200 shadow-lg'
-              }`}
+              }`}>
             >
               <h2 className={`text-2xl font-bold mb-8 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Send us a Message</h2>
               
@@ -614,8 +615,7 @@ export default function Contact() {
                     <div className="text-3xl">📱</div>
                     <div>
                       <h3 className={`font-bold text-lg mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Phone</h3>
-                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>+1 (555) 123-4567</p>
-                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>+1 (555) 987-6543</p>
+                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>+91 95686 98796</p>
                     </div>
                   </div>
 
@@ -624,8 +624,8 @@ export default function Contact() {
                     <div className="text-3xl">📍</div>
                     <div>
                       <h3 className={`font-bold text-lg mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Office Address</h3>
-                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>123 Event Street</p>
-                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>New York, NY 10001</p>
+                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>101, Maker Chambers IV</p>
+                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Nariman Point, Mumbai 400021</p>
                     </div>
                   </div>
 
@@ -808,7 +808,7 @@ export default function Contact() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${isDarkMode ? 'bg-gradient-to-b from-[#0B0F19] to-[#0d1221]' : 'bg-white'}`}
+          className={`py-24 px-4 sm:px-6 lg:px-12 transition-colors ${isDarkMode ? 'bg-black' : 'bg-white'}`}
         >
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
@@ -840,7 +840,7 @@ export default function Contact() {
                   whileHover={{ borderColor: 'rgba(239, 68, 68, 0.5)' }}
                   className={`group p-6 rounded-2xl cursor-pointer transition-all duration-300 overflow-hidden ${
                     isDarkMode
-                      ? 'bg-gradient-to-br from-white/8 to-white/3 border border-white/15 backdrop-blur-sm hover:border-red-500/40'
+                      ? 'bg-black border border-white/15'
                       : 'bg-gray-50 border border-gray-200 hover:border-red-500/40 hover:shadow-md'
                   }`}
                 >
@@ -848,7 +848,7 @@ export default function Contact() {
                     {faq.q}
                     <span className="text-red-500 group-open:rotate-180 transition-transform">▼</span>
                   </summary>
-                  <div className={`px-0 py-4 text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <div className={`px-0 py-4 text-base ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                     {faq.a}
                   </div>
                 </motion.details>

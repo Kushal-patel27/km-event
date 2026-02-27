@@ -11,7 +11,7 @@ import { ensureEmailConfigured, sendEventApprovalEmail, sendEventRejectionEmail 
 export const createEventRequest = async (req, res) => {
   try {
     const { 
-      title, description, category, date, location, locationDetails, 
+      title, description, category, date, location, locationDetails, mapLink,
       totalTickets, availableTickets, price, ticketTypes, 
       planSelected, billingCycle, image, 
       organizerPhone, organizerCompany 
@@ -206,6 +206,7 @@ export const createEventRequest = async (req, res) => {
       date: parsedDate,
       location,
       locationDetails: locationDetails || '',
+      mapLink: mapLink || '',
       totalTickets: totalTicketsNum,
       availableTickets: availableTicketsNum,
       price: Number(price) || 0,
@@ -342,6 +343,7 @@ export const approveEventRequest = async (req, res) => {
       date: eventRequest.date,
       location: eventRequest.location,
       locationDetails: eventRequest.locationDetails || '',
+      mapLink: eventRequest.mapLink || '',
       price: eventRequest.price || 0,
       totalTickets: eventRequest.totalTickets,
       availableTickets: eventRequest.availableTickets,
