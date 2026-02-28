@@ -40,6 +40,7 @@ export default function AdminLayout({ title = 'Admin', children }){
         { to: '/admin/organizer-subscriptions', label: 'Organizer Subscriptions', icon: '👨‍💼', roles: ['super_admin','admin'] },
         { to: '/admin/commission-analytics', label: 'Commission Analytics', icon: '📈', roles: ['super_admin','admin'] },
         { to: '/admin/event-admin-payouts', label: 'Event Admin Payouts', icon: '🏦', roles: ['super_admin','admin'] },
+        { to: '/admin/coupons', label: 'Discount Coupons', icon: '🎟️', roles: ['super_admin','admin'] },
       ]
     }
   ]

@@ -30,6 +30,8 @@ import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import organizersPageRoutes from "./routes/organizersPageRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import waitlistRoutes from "./routes/waitlistRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import couponRoutes from "./routes/couponRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,6 +117,8 @@ app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/organizers-page", organizersPageRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/waitlist", waitlistRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/coupons", couponRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/scanner", scannerRoutes);
 app.use("/api/hp-scanner", highPerformanceScannerRoutes);
@@ -126,6 +130,14 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/about", aboutRoutes);
 app.use("/api/faq", faqRoutes);
 app.use("/api/help", helpRoutes);
+
+// Safety net for OAuth callbacks accidentally hitting backend root domain
+app.get("/auth/callback", (req, res) => {
+  const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
+  const params = new URLSearchParams(req.query).toString();
+  const target = `${frontendURL}/auth/callback${params ? `?${params}` : ""}`;
+  return res.redirect(target);
+});
 
 /* ===========================
    HEALTH CHECK
@@ -142,11 +154,13 @@ if (process.env.NODE_ENV === "production") {
   const frontendBuildPath = path.join(__dirname, "../Frontend-EZ/dist");
   app.use(express.static(frontendBuildPath));
 
+  console.log("Frontend path:", frontendBuildPath);
+
   // Catch-all route: serve index.html for any non-API request
-  // This MUST come AFTER all API routes
-app.use((req, res) => {
-  res.sendFile(path.join(frontendBuildPath, "index.html"));
-});
+  // Negative lookahead regex excludes /api/* routes from SPA fallback
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(frontendBuildPath, "index.html"));
+  });
 }
 
 /* ===========================

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import API from '../../services/api'
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout'
+import { useDarkMode } from '../../context/DarkModeContext'
 
 export default function SuperAdminUsers() {
+  const { isDarkMode } = useDarkMode()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')

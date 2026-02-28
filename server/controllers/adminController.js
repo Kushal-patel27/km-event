@@ -4,6 +4,8 @@ import User, { ADMIN_ROLE_SET } from "../models/User.js";
 import Event from "../models/Event.js";
 import Booking from "../models/Booking.js";
 import Contact from "../models/Contact.js";
+import Commission from "../models/Commission.js";
+import OrganizerSubscription from "../models/OrganizerSubscription.js";
 import { sendReplyEmail } from "../utils/emailService.js";
 import { notifyNextInLine } from "./waitlistController.js";
 import { generateCSV, generateExcel, generatePDF, formatDate, formatCurrency, formatStatus } from "../utils/exportUtils.js";
@@ -595,23 +597,128 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     const previousStatus = booking.status;
-    booking.status = status;
+    const eventId = booking.event._id || booking.event;
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
 
+    const quantity = Number(booking.quantity) || 0;
+    const wasActive = !["cancelled", "refunded"].includes(previousStatus);
+    const isNowActive = !["cancelled", "refunded"].includes(status);
+
+    // Handle ticket availability changes
+    if (wasActive && !isNowActive) {
+      // Booking is being cancelled/refunded - restore tickets
+      console.log(`[ADMIN] Restoring ${quantity} tickets for booking ${booking.bookingId}`);
+      await restoreTicketsAndNotifyWaitlist(booking);
+    } else if (!wasActive && isNowActive) {
+      // Booking is being reactivated from cancelled/refunded - reduce tickets
+      console.log(`[ADMIN] Reducing ${quantity} tickets for booking ${booking.bookingId}`);
+      
+      if (Array.isArray(event.ticketTypes) && event.ticketTypes.length > 0 && booking.ticketType?.name) {
+        const ticketType = event.ticketTypes.find(t => t.name === booking.ticketType.name);
+        if (ticketType) {
+          if (ticketType.available < quantity) {
+            return res.status(400).json({ 
+              message: `Not enough tickets available. Only ${ticketType.available} ${ticketType.name} tickets remaining.` 
+            });
+          }
+          ticketType.available = Math.max(0, ticketType.available - quantity);
+        }
+
+        const aggregatedAvailable = event.ticketTypes.reduce((sum, t) => sum + (t?.available ?? 0), 0);
+        const aggregatedTotal = event.ticketTypes.reduce((sum, t) => sum + (t?.quantity ?? 0), 0);
+        event.availableTickets = Math.max(0, aggregatedAvailable);
+        event.totalTickets = Math.max(0, aggregatedTotal);
+      } else if (typeof event.availableTickets === "number") {
+        if (event.availableTickets < quantity) {
+          return res.status(400).json({ 
+            message: `Not enough tickets available. Only ${event.availableTickets} tickets remaining.` 
+          });
+        }
+        event.availableTickets = Math.max(0, event.availableTickets - quantity);
+      }
+      
+      await event.save();
+    }
+
+    // Handle commission updates
+    if (!wasActive && isNowActive) {
+      // Booking reactivated - create/restore commission
+      console.log(`[ADMIN] Creating/restoring commission for booking ${booking.bookingId}`);
+      
+      let commission = await Commission.findOne({ booking: booking._id });
+      
+      if (commission) {
+        // Commission exists - just update status
+        commission.status = "pending";
+        commission.updatedAt = new Date();
+        await commission.save();
+        console.log(`[ADMIN] Commission restored for booking ${booking.bookingId}`);
+      } else {
+        // Create new commission
+        try {
+          const organizerSubscription = await OrganizerSubscription.findOne({ organizer: event.organizer });
+          const defaultCommissionPercentage = 30;
+          const commissionPercentage = organizerSubscription?.currentCommissionPercentage ?? defaultCommissionPercentage;
+          
+          const price = booking.ticketType?.price || booking.totalAmount / quantity;
+          const subtotal = booking.totalAmount;
+          const commissionAmount = (subtotal * commissionPercentage) / 100;
+          const organizerAmount = subtotal - commissionAmount;
+
+          commission = new Commission({
+            booking: booking._id,
+            event: eventId,
+            organizer: event.organizer,
+            ticketPrice: price,
+            quantity: quantity,
+            subtotal: subtotal,
+            commissionPercentage: commissionPercentage,
+            commissionAmount: commissionAmount,
+            organizerAmount: organizerAmount,
+            platformAmount: commissionAmount,
+            status: "pending"
+          });
+          
+          await commission.save();
+          console.log(`[ADMIN] Commission created for booking ${booking.bookingId}`);
+        } catch (commErr) {
+          console.error('[ADMIN] Error creating commission:', commErr);
+        }
+      }
+    } else if (wasActive && !isNowActive) {
+      // Booking cancelled/refunded - update commission status
+      console.log(`[ADMIN] Marking commission as cancelled for booking ${booking.bookingId}`);
+      
+      const commission = await Commission.findOne({ booking: booking._id });
+      if (commission && commission.status === "pending") {
+        // Only mark as cancelled if it hasn't been paid out yet
+        commission.status = "processed"; // Mark as processed so it won't be included in payouts
+        commission.notes = `Booking ${status} - Commission voided`;
+        commission.updatedAt = new Date();
+        await commission.save();
+        console.log(`[ADMIN] Commission marked as processed (voided) for booking ${booking.bookingId}`);
+      }
+    }
+
+    // Update booking status
     const updatedBooking = await Booking.findByIdAndUpdate(
       bookingId,
       { status, updatedAt: new Date() },
       { new: true }
     ).populate("event");
 
-    if (CANCELLATION_STATUSES.has(status) && !CANCELLATION_STATUSES.has(previousStatus)) {
-      await restoreTicketsAndNotifyWaitlist(booking);
-    }
-
     res.json({
-      message: "Booking status updated",
+      message: "Booking status updated successfully. Tickets and commission have been adjusted.",
       booking: updatedBooking,
+      ticketsAdjusted: wasActive !== isNowActive,
+      commissionUpdated: true
     });
   } catch (error) {
+    console.error('[ADMIN] Error updating booking status:', error);
     res.status(500).json({ message: error.message });
   }
 };

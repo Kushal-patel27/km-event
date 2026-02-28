@@ -138,6 +138,30 @@ export default function MyEventRequests() {
           ))}
         </div>
 
+        {/* Info Banner for Pending Requests */}
+        {pendingCount > 0 && (filter === 'ALL' || filter === 'PENDING') && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-6 p-4 rounded-lg border ${
+              isDarkMode 
+                ? 'bg-blue-900/20 border-blue-700 text-blue-200' 
+                : 'bg-blue-50 border-blue-200 text-blue-800'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className="text-xl">ℹ️</div>
+              <div className="flex-1">
+                <h4 className="font-semibold mb-1">Pending Approval</h4>
+                <p className="text-sm opacity-90">
+                  Your event request{pendingCount > 1 ? 's are' : ' is'} pending admin review. 
+                  Once approved, you'll receive <strong>Event Admin access</strong> and can manage your event from the dashboard.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Requests List */}
         {filteredRequests.length === 0 ? (
           <motion.div

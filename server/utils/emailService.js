@@ -24,8 +24,58 @@ const transporter = (emailUser && emailPass)
         user: emailUser,
         pass: emailPass,
       },
+      // Connection timeout settings for production (Render, etc)
+      connectionTimeout: 10000, // 10 seconds
+      socketTimeout: 10000,      // 10 seconds
+      // Use TLS for better compatibility
+      secure: true,
+      requireTLS: false,
+      // Connection pooling for better performance
+      pool: {
+        maxConnections: 5,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5,
+      },
+      // Logger for debugging
+      logger: process.env.NODE_ENV === "production" ? false : true,
+      debug: process.env.NODE_ENV === "production" ? false : true,
     })
   : null;
+
+// Retry logic for email sending with exponential backoff
+async function sendMailWithRetry(transporter, mailOptions, maxRetries = 3) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[EMAIL] Sending email (attempt ${attempt}/${maxRetries})...`);
+      const result = await transporter.sendMail(mailOptions);
+      console.log(`[EMAIL] Email sent successfully on attempt ${attempt}:`, result.messageId);
+      return result;
+    } catch (error) {
+      lastError = error;
+      console.error(`[EMAIL] Attempt ${attempt} failed:`, error.message);
+      
+      // Don't retry if it's not a connection/timeout error
+      if (!error.code || !['ETIMEDOUT', 'ECONNREFUSED', 'EHOSTUNREACH', 'ESOCKETTIMEDOUT'].includes(error.code)) {
+        throw error;
+      }
+      
+      // If this is the last attempt, throw the error
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Exponential backoff: wait before retrying
+      const waitTime = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+      console.log(`[EMAIL] Retrying in ${waitTime}ms...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+  
+  throw lastError;
+}
 
 function ensureTransporter() {
   if (!transporter) {
@@ -65,17 +115,18 @@ export const sendReplyEmail = async (recipientEmail, name, subject, reply) => {
       `,
     };
 
-    await ensureTransporter().sendMail(mailOptions);
-    console.log(`Email sent to ${recipientEmail}`);
+    await sendMailWithRetry(ensureTransporter(), mailOptions);
+    console.log(`[EMAIL] Reply email sent to ${recipientEmail}`);
     return true;
   } catch (error) {
-    console.error("Email send failed:", error);
+    console.error("[EMAIL] Reply email send failed:", error.message);
     return false;
   }
 };
 
 export const sendPasswordResetOtpEmail = async ({ recipientEmail, recipientName, otp, expiresInMinutes }) => {
   try {
+    console.log(`[EMAIL] Sending password reset OTP to ${recipientEmail}`);
     const mailOptions = {
       from: emailSender,
       to: recipientEmail,
@@ -139,11 +190,11 @@ export const sendPasswordResetOtpEmail = async ({ recipientEmail, recipientName,
       `,
     };
 
-    await ensureTransporter().sendMail(mailOptions);
-    console.log(`Sent password reset OTP to ${recipientEmail}`);
+    await sendMailWithRetry(ensureTransporter(), mailOptions);
+    console.log(`[EMAIL] Password reset OTP sent to ${recipientEmail}`);
     return true;
   } catch (error) {
-    console.error("Failed to send password reset OTP:", error.message);
+    console.error("[EMAIL] Failed to send password reset OTP:", error.message);
     return false;
   }
 };
@@ -577,11 +628,13 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
       attachments
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log(`Booking confirmation email sent to ${recipientEmail} with ${pdfBuffers.length} PDF ticket(s)`);
+    await sendMailWithRetry(ensureTransporter(), mailOptions);
+    console.log(`[BOOKING] Confirmation email sent successfully to ${recipientEmail} with ${pdfBuffers.length} PDF ticket(s)`);
     return true;
   } catch (error) {
-    console.error("Booking confirmation email failed:", error);
+    console.error("[BOOKING] Confirmation email failed:", error.message);
+    console.error("[BOOKING] Error code:", error.code);
+    // Still return false but log the error properly for debugging
     return false;
   }
 };
@@ -661,11 +714,11 @@ export const sendEventApprovalEmail = async ({ recipientEmail, organizerName, ev
       `
     };
 
-    await ensureTransporter().sendMail(mailOptions);
-    console.log(`Event approval email sent to ${recipientEmail}`);
+    await sendMailWithRetry(ensureTransporter(), mailOptions);
+    console.log(`[EMAIL] Event approval email sent to ${recipientEmail}`);
     return true;
   } catch (error) {
-    console.error("Event approval email failed:", error);
+    console.error("[EMAIL] Event approval email failed:", error.message);
     return false;
   }
 };
@@ -724,11 +777,11 @@ export const sendEventRejectionEmail = async ({ recipientEmail, organizerName, e
       `
     };
 
-    await ensureTransporter().sendMail(mailOptions);
-    console.log(`Event rejection email sent to ${recipientEmail}`);
+    await sendMailWithRetry(ensureTransporter(), mailOptions);
+    console.log(`[EMAIL] Event rejection email sent to ${recipientEmail}`);
     return true;
   } catch (error) {
-    console.error("Event rejection email failed:", error);
+    console.error("[EMAIL] Event rejection email failed:", error.message);
     return false;
   }
 };
@@ -794,10 +847,11 @@ export const sendNotificationEmail = async ({ to, subject, title, htmlContent, m
   };
 
   try {
-    await ensureTransporter().sendMail(mailOptions);
+    await sendMailWithRetry(ensureTransporter(), mailOptions);
+    console.log("[EMAIL] Notification email sent successfully");
     return true;
   } catch (error) {
-    console.error("Notification email failed", error);
+    console.error("[EMAIL] Notification email failed:", error.message);
     return false;
   }
 };
