@@ -12,7 +12,7 @@ export function useDarkMode() {
 }
 
 export function DarkModeProvider({ children, forceDark = false }) {
-  const [isDarkMode, setIsDarkMode] = useState(forceDark ? true : false)
+  const [isDarkMode, setIsDarkMode] = useState(true)
   const location = useLocation()
 
   const isAdminRoute = (() => {
@@ -29,7 +29,7 @@ export function DarkModeProvider({ children, forceDark = false }) {
         return
       }
       const stored = localStorage.getItem('theme')
-      const enableDark = stored === 'dark' ? true : false
+      const enableDark = stored === 'light' ? false : true
       setIsDarkMode(enableDark)
       if (enableDark) {
         document.documentElement.classList.add('dark')

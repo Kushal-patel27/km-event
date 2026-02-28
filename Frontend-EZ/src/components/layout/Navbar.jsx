@@ -43,6 +43,11 @@ export default function Navbar(){
     fetchWaitlistCount()
   }, [user, location.pathname])
 
+  // Close mobile menu when navigating (but keep search open)
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
   const adminHome = useMemo(() => {
     if(!user?.isAdmin) return null
     if(user.role === 'super_admin') return '/super-admin'
@@ -380,7 +385,7 @@ export default function Navbar(){
         {/* Mobile Search Overlay - Expands when search icon clicked */}
         {mobileSearchOpen && (
           <div className="md:hidden px-4 py-3 border-t border-gray-200 dark:border-gray-800">
-            <form onSubmit={(e) => { handleSearch(e); setMobileSearchOpen(false); }} className="group">
+            <form onSubmit={handleSearch} className="group">
               <div className="relative">
                 {/* Search input container */}
                 <div className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl backdrop-blur-lg border transition-all duration-300 ${
@@ -418,7 +423,13 @@ export default function Navbar(){
                   {/* Close button */}
                   <button
                     type="button"
-                    onClick={() => setMobileSearchOpen(false)}
+                    onClick={() => {
+                      setSearchQuery('')
+                      setMobileSearchOpen(false)
+                      if (location.pathname === '/events') {
+                        navigate('/events', { replace: true })
+                      }
+                    }}
                     className={`p-1.5 rounded-lg transition-all flex-shrink-0 ${
                       isHomePage
                         ? 'hover:bg-white/10 text-gray-400 hover:text-red-300'

@@ -314,7 +314,7 @@ export default function Contact() {
                 isDarkMode
                   ? 'bg-black border border-white/20'
                   : 'bg-white border border-gray-200 shadow-lg'
-              }`}>
+              }`}
             >
               <h2 className={`text-2xl font-bold mb-8 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Send us a Message</h2>
               
