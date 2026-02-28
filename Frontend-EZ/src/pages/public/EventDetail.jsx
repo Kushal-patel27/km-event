@@ -376,7 +376,7 @@ export default function EventDetail() {
                   {waitlistStatus && waitlistStatus.status === 'notified' && (
                     <button
                       onClick={() => navigate(`/book/${eventId}`)}
-                      className="px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
+                      className="px-6 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
                     >
                       Book Now
                     </button>
