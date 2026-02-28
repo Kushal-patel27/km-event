@@ -5,6 +5,8 @@ import API from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { useDarkMode } from '../../context/DarkModeContext'
 import formatINR from '../../utils/currency'
+import RazorpayButton from '../../components/payment/RazorpayButton'
+import PaymentStatus from '../../components/payment/PaymentStatus'
 
 // Fallback categories in case API fails
 const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference', 'Other']
@@ -39,6 +41,12 @@ export default function CreateEventRequest() {
   const [monthlyLimit, setMonthlyLimit] = useState(null)
   const [limitReached, setLimitReached] = useState(false)
   const [mySubscription, setMySubscription] = useState(null)
+  
+  // Payment state
+  const [showPayment, setShowPayment] = useState(false)
+  const [selectedPlanForPayment, setSelectedPlanForPayment] = useState(null)
+  const [paymentStatus, setPaymentStatus] = useState(null)
+  const [apiPlansData, setApiPlansData] = useState([])
 
   const [formData, setFormData] = useState({
     title: '',
@@ -56,13 +64,18 @@ export default function CreateEventRequest() {
     organizerPhone: user?.phone || '',
     organizerCompany: '',
     image: '',
-    planSelected: ''
+    planSelected: 'Standard'
   })
   useEffect(() => {
-    fetchPlans()
-    fetchCategories()
-    fetchMyRequests()
-    fetchMySubscription()
+    const initializePage = async () => {
+      await Promise.all([
+        fetchPlans(),
+        fetchCategories(),
+        fetchMyRequests(),
+        fetchMySubscription()
+      ])
+    }
+    initializePage()
 
     const intervalId = setInterval(() => {
       fetchPlans({ silent: true })
@@ -136,6 +149,8 @@ export default function CreateEventRequest() {
             : []
 
       if (apiPlans.length > 0) {
+        // Store original API plans data for payment
+        setApiPlansData(apiPlans)
         // Convert API plans to the format needed for the form
         const plansObj = {}
         apiPlans.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)).forEach(plan => {
@@ -203,7 +218,8 @@ export default function CreateEventRequest() {
       })
       if (data?.data) {
         setMySubscription(data.data)
-        if (data.data?.plan?.name) {
+        if (data.data?.plan?.name && data.data?.status === 'active') {
+          // Only auto-select if subscription is active
           setFormData(prev => ({
             ...prev,
             planSelected: data.data.plan.name
@@ -335,7 +351,35 @@ export default function CreateEventRequest() {
     setMessage(null)
     setUpgradeCta(null)
 
-    if (limitReached && monthlyLimit !== null) {
+    // Check if payment is required first (allow upgrade even if current limit reached)
+    if (!apiPlansData || apiPlansData.length === 0) {
+      setMessage({ type: 'error', text: 'Unable to load plan information. Please refresh the page.' })
+      setLoading(false)
+      return
+    }
+    
+    const selectedPlan = apiPlansData.find(p => p.name === formData.planSelected)
+    if (!selectedPlan) {
+      setMessage({ type: 'error', text: 'Selected plan not found. Please try again.' })
+      setLoading(false)
+      return
+    }
+    
+    const hasActiveSubscription = mySubscription?.status === 'active' && mySubscription?.plan?.name === formData.planSelected
+    const needsPayment = selectedPlan?.monthlyFee > 0 && !hasActiveSubscription
+    const isUpgrading = mySubscription?.plan?.name !== formData.planSelected
+
+    // If upgrading to a different plan via payment, allow it even if current limit reached
+    if (needsPayment) {
+      // Show payment UI
+      setSelectedPlanForPayment(selectedPlan)
+      setShowPayment(true)
+      setLoading(false)
+      return
+    }
+
+    // Only check limit if staying on same plan (not upgrading)
+    if (limitReached && monthlyLimit !== null && !isUpgrading) {
       setMessage({
         type: 'error',
         text: `Monthly event limit reached (${monthlyLimit}). Please upgrade your plan to create more events.`
@@ -348,12 +392,22 @@ export default function CreateEventRequest() {
       return
     }
 
+    // If no payment needed, submit directly
+    await submitEventRequest()
+  }
+
+  const submitEventRequest = async (overridePlanName = null) => {
+    setLoading(true)
     try {
       const resolvedCategory = formData.category === 'Other'
         ? formData.customCategory.trim() || 'Other'
         : formData.category
 
-      const enforcedPlanName = mySubscription?.plan?.name || formData.planSelected
+      // Use override plan name first (from payment), then subscription, then form selection
+      const enforcedPlanName = overridePlanName || mySubscription?.plan?.name || formData.planSelected
+      
+      console.log('Submitting event request with plan:', enforcedPlanName)
+      
       const { data } = await API.post('/event-requests/create-request', {
         ...formData,
         planSelected: enforcedPlanName,
@@ -361,7 +415,10 @@ export default function CreateEventRequest() {
       }, {
         headers: { Authorization: `Bearer ${user?.token || localStorage.getItem('token')}` }
       })
-      setMessage({ type: 'success', text: 'Request submitted! Redirecting to your status page...' })
+      setMessage({ 
+        type: 'success', 
+        text: 'Request submitted! Your event is pending admin approval. You\'ll receive event admin access once approved.' 
+      })
       await fetchMyRequests()
       setTimeout(() => {
         setFormData({
@@ -403,6 +460,85 @@ export default function CreateEventRequest() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle successful subscription payment
+  const handlePaymentSuccess = async (paymentData) => {
+    try {
+      setLoading(true)
+      
+      // Subscription is automatically activated by the backend payment controller
+      // Get the plan name from the selected plan for payment
+      const upgradedPlanName = selectedPlanForPayment?.name
+      
+      console.log('Payment successful for plan:', upgradedPlanName)
+      
+      // Refresh subscription data
+      await fetchMySubscription()
+      
+      // Show success message briefly
+      setMessage({ 
+        type: 'success', 
+        text: `${upgradedPlanName} plan activated! Submitting your event request for admin approval...` 
+      })
+      
+      // Wait a moment for backend to process
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      
+      // Submit the event request with the upgraded plan name
+      await submitEventRequest(upgradedPlanName)
+      
+      // Hide payment UI and reset states
+      setShowPayment(false)
+      setSelectedPlanForPayment(null)
+      setPaymentStatus(null)
+    } catch (error) {
+      console.error('Event request submission failed after payment:', error)
+      setPaymentStatus({
+        status: 'failed',
+        message: 'Subscription activated but event request submission failed. Please try creating the event again from My Requests page.',
+        transactionId: paymentData?.data?.paymentId || 'N/A',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handle payment failure
+  const handlePaymentFailure = (error) => {
+    console.error('Subscription payment failed:', error)
+    setLoading(false)
+    setPaymentStatus({
+      status: 'failed',
+      message: 'Payment Failed',
+      error: error?.message || 'An error occurred during payment',
+    })
+    setShowPayment(false)
+    setSelectedPlanForPayment(null)
+  }
+
+  // If payment status is shown, display it
+  if (paymentStatus) {
+    return (
+      <div className={`min-h-screen py-12 px-4 ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
+        <PaymentStatus
+          status={paymentStatus.status}
+          message={paymentStatus.message}
+          transactionId={paymentStatus.transactionId}
+          amount={selectedPlanForPayment?.monthlyFee}
+          details={{ 
+            planName: selectedPlanForPayment?.name,
+            type: 'Subscription'
+          }}
+          redirectUrl="/create-event"
+          redirectText="Back to Create Event"
+          onRetry={() => {
+            setPaymentStatus(null)
+            setShowPayment(true)
+          }}
+        />
+      </div>
+    )
   }
 
   return (
@@ -448,7 +584,41 @@ export default function CreateEventRequest() {
               {upgradeCta && message.type === 'error' && (
                 <button
                   type="button"
-                  onClick={() => navigate(upgradeCta.url)}
+                  onClick={() => {
+                    // If it's "Upgrade Plan" and we're on step 2, trigger payment flow
+                    if (upgradeCta.label === 'Upgrade Plan' && step === 2) {
+                      const selectedPlan = apiPlansData.find(p => p.name === formData.planSelected)
+                      const isUpgradingPlan = formData.planSelected !== mySubscription?.plan?.name
+                      const isPaidPlan = selectedPlan?.monthlyFee > 0
+                      
+                      if (!isUpgradingPlan) {
+                        setMessage({ 
+                          type: 'error', 
+                          text: 'Please select a different paid plan above to upgrade.' 
+                        })
+                        setUpgradeCta(null)
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      } else if (!isPaidPlan) {
+                        setMessage({ 
+                          type: 'error', 
+                          text: 'Please select a paid plan (not Free) to upgrade.' 
+                        })
+                        setUpgradeCta(null)
+                      } else {
+                        // Trigger payment flow
+                        setSelectedPlanForPayment(selectedPlan)
+                        setShowPayment(true)
+                        setMessage(null)
+                        setUpgradeCta(null)
+                        setTimeout(() => {
+                          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+                        }, 100)
+                      }
+                    } else {
+                      // For other CTAs (like Contact Support), navigate normally
+                      navigate(upgradeCta.url)
+                    }
+                  }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
                 >
                   {upgradeCta.label}
@@ -782,7 +952,16 @@ export default function CreateEventRequest() {
               <div className="flex gap-4 pt-6">
                 <button
                   type="button"
-                  onClick={() => validateStep1() && setStep(2)}
+                  onClick={() => {
+                    if (validateStep1()) {
+                      // Reset payment states when moving to step 2
+                      setShowPayment(false)
+                      setSelectedPlanForPayment(null)
+                      setPaymentStatus(null)
+                      setMessage(null)
+                      setStep(2)
+                    }
+                  }}
                   className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition transform hover:scale-105"
                 >
                   Next: Select Plan →
@@ -801,35 +980,59 @@ export default function CreateEventRequest() {
             <form onSubmit={handleSubmit} className="space-y-8">
               <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Choose Your Plan</h2>
               
+              {plansLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className={`animate-spin rounded-full h-12 w-12 border-b-2 ${isDarkMode ? 'border-blue-400' : 'border-blue-600'}`}></div>
+                  <span className={`ml-4 text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Loading plans...</span>
+                </div>
+              ) : (
               <div className="grid md:grid-cols-2 gap-6">
                 {Object.entries(plans).map(([name, { features, displayName, mostPopular }]) => {
                   const assignedPlanName = mySubscription?.plan?.name
-                  const isLocked = assignedPlanName && name !== assignedPlanName
+                  const hasActiveSubscription = mySubscription?.status === 'active'
+                  const isFreePlan = assignedPlanName === 'Free'
+                  const isCurrentPlan = assignedPlanName === name
+                  
+                  // Only lock if user has an active PAID subscription to a different plan
+                  // Allow selection if: no subscription, Free plan, or selecting current plan
+                  const isLocked = hasActiveSubscription && !isFreePlan && name !== assignedPlanName
+                  
                   return (
                   <motion.div
                     key={name}
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={{ scale: isLocked ? 1 : 1.05 }}
                     onClick={() => {
                       if (!isLocked) {
                         setFormData(prev => ({ ...prev, planSelected: name }))
+                        setMessage(null)
                       }
                     }}
                     className={`p-8 rounded-xl border-2 transition ${
                       formData.planSelected === name
                         ? isDarkMode ? 'border-blue-500 bg-blue-900/20' : 'border-blue-600 bg-blue-50'
                         : isDarkMode ? 'border-gray-700 bg-black' : 'border-gray-200 bg-white'
-                    } ${isLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                    } ${isLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-blue-400'}`}
                   >
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{displayName || name}</h3>
+                        {isCurrentPlan && (
+                          <span className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-green-500/20 text-green-300' : 'bg-green-100 text-green-700'}`}>
+                            Current Plan
+                          </span>
+                        )}
                         {mostPopular && (
                           <span className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-amber-500/20 text-amber-200' : 'bg-amber-100 text-amber-700'}`}>
                             Most Popular
                           </span>
                         )}
+                        {isLocked && (
+                          <span className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'}`}>
+                            Locked
+                          </span>
+                        )}
                       </div>
-                      {formData.planSelected === name && (
+                      {formData.planSelected === name && !isLocked && (
                         <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
                           <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -839,7 +1042,20 @@ export default function CreateEventRequest() {
                     </div>
                     
                     <div className="mb-6">
-                      {/* Plan fees handled at subscription level, not displayed here */}
+                      {/* Show monthly fee if available */}
+                      {apiPlansData.find(p => p.name === name)?.monthlyFee !== undefined && (
+                        <div className={`text-center py-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <div className={`text-3xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                            {apiPlansData.find(p => p.name === name)?.monthlyFee === 0 
+                              ? 'Free' 
+                              : formatINR(apiPlansData.find(p => p.name === name)?.monthlyFee)
+                            }
+                          </div>
+                          {apiPlansData.find(p => p.name === name)?.monthlyFee > 0 && (
+                            <div className="text-sm text-gray-500">per month</div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <ul className="space-y-3">
@@ -856,6 +1072,7 @@ export default function CreateEventRequest() {
                   )
                 })}
               </div>
+              )}
 
               {mySubscription?.plan?.name && (
                 <div className={`p-4 rounded-lg border ${
@@ -864,7 +1081,17 @@ export default function CreateEventRequest() {
                     : 'bg-gray-50 border-gray-200 text-gray-700'
                 }`}>
                   <div className="text-sm font-semibold">
-                    Your current plan is <span className="font-bold">{mySubscription.plan.name}</span>. To change plans, please contact support or upgrade on the pricing page.
+                    {mySubscription.plan.name === 'Free' ? (
+                      <>
+                        Your current plan is <span className="font-bold">Free</span>. 
+                        Select a paid plan below to upgrade and unlock more features. Payment will be processed after you click Submit.
+                      </>
+                    ) : (
+                      <>
+                        Your current plan is <span className="font-bold">{mySubscription.plan.name}</span>. 
+                        To change plans, please contact support or visit the pricing page.
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -881,14 +1108,53 @@ export default function CreateEventRequest() {
                 }`}>
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div className="text-sm font-semibold">
-                      {limitReached
-                        ? `You have reached ${monthlyUsage}/${monthlyLimit} events this month.`
-                        : `You have used ${monthlyUsage}/${monthlyLimit} events this month.`}
+                      {limitReached ? (
+                        <>
+                          You have reached {monthlyUsage}/{monthlyLimit} events this month.
+                          {formData.planSelected !== mySubscription?.plan?.name ? (
+                            <span className={`block mt-1 ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                              ✓ Selected {formData.planSelected} plan - Click "Upgrade Plan" or "Submit" below to proceed with payment.
+                            </span>
+                          ) : (
+                            ' Please select and upgrade to a different plan above.'
+                          )}
+                        </>
+                      ) : (
+                        `You have used ${monthlyUsage}/${monthlyLimit} events this month.`
+                      )}
                     </div>
                     {limitReached && (
                       <button
                         type="button"
-                        onClick={() => navigate('/for-organizers')}
+                        onClick={() => {
+                          // Check if user has selected a paid plan different from current
+                          const selectedPlan = apiPlansData.find(p => p.name === formData.planSelected)
+                          const isUpgradingPlan = formData.planSelected !== mySubscription?.plan?.name
+                          const isPaidPlan = selectedPlan?.monthlyFee > 0
+                          
+                          if (!isUpgradingPlan) {
+                            setMessage({ 
+                              type: 'error', 
+                              text: 'Please select a different paid plan above to upgrade.' 
+                            })
+                            // Scroll to plans section
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                          } else if (!isPaidPlan) {
+                            setMessage({ 
+                              type: 'error', 
+                              text: 'Please select a paid plan (not Free) to upgrade.' 
+                            })
+                          } else {
+                            // Selected a different paid plan - trigger payment flow
+                            setSelectedPlanForPayment(selectedPlan)
+                            setShowPayment(true)
+                            setMessage(null)
+                            // Scroll to payment section
+                            setTimeout(() => {
+                              window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+                            }, 100)
+                          }
+                        }}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
                       >
                         Upgrade Plan
@@ -898,22 +1164,122 @@ export default function CreateEventRequest() {
                 </div>
               )}
 
+            {/* Payment Section */}
+            {showPayment && selectedPlanForPayment && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className={`p-6 rounded-xl border-2 ${
+                  isDarkMode
+                    ? 'bg-black border-blue-500'
+                    : 'bg-blue-50 border-blue-300'
+                }`}
+              >
+                <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Complete Subscription Payment
+                </h3>
+                {mySubscription?.plan?.name && mySubscription.plan.name !== selectedPlanForPayment.name && (
+                  <div className={`mb-4 p-3 rounded-lg ${
+                    isDarkMode 
+                      ? 'bg-blue-900/30 border border-blue-700 text-blue-200' 
+                      : 'bg-blue-100 border border-blue-300 text-blue-800'
+                  }`}>
+                    <p className="text-sm font-medium">
+                      ✨ Upgrading from <strong>{mySubscription.plan.name}</strong> to <strong>{selectedPlanForPayment.name}</strong>
+                    </p>
+                    <p className="text-xs mt-1 opacity-90">
+                      Your new plan limits will be available immediately after payment.
+                    </p>
+                  </div>
+                )}
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Plan:</span>
+                    <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {selectedPlanForPayment.displayName || selectedPlanForPayment.name}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Monthly Fee:</span>
+                    <span className={`font-semibold text-xl ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                      {formatINR(selectedPlanForPayment.monthlyFee)}
+                    </span>
+                  </div>
+                  {plans[selectedPlanForPayment.name]?.features && (
+                    <div className={`pt-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-300'}`}>
+                      <p className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Plan Features:
+                      </p>
+                      <ul className="space-y-1">
+                        {plans[selectedPlanForPayment.name].features.slice(0, 3).map((feature, idx) => (
+                          <li key={idx} className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            • {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                <RazorpayButton
+                  amount={selectedPlanForPayment.monthlyFee}
+                  paymentType="subscription"
+                  referenceId={selectedPlanForPayment._id}
+                  metadata={{
+                    planId: selectedPlanForPayment._id,
+                    planName: selectedPlanForPayment.name,
+                    planDisplayName: selectedPlanForPayment.displayName,
+                    monthlyFee: selectedPlanForPayment.monthlyFee,
+                    eventTitle: formData.title,
+                  }}
+                  onSuccess={handlePaymentSuccess}
+                  onFailure={handlePaymentFailure}
+                  buttonText="Pay Now"
+                  buttonClassName="w-full"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPayment(false)
+                    setSelectedPlanForPayment(null)
+                    setMessage(null)
+                  }}
+                  className={`w-full mt-3 px-6 py-3 font-semibold rounded-lg transition border-2 ${
+                    isDarkMode
+                      ? 'border-gray-600 text-gray-300 hover:bg-black'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Cancel Payment
+                </button>
+              </motion.div>
+            )}
+
+            {!showPayment && (
             <div className="flex gap-4">
               <button
                 type="button"
-                onClick={() => setStep(1)}
+                onClick={() => {
+                  // Reset payment states when going back
+                  setShowPayment(false)
+                  setSelectedPlanForPayment(null)
+                  setPaymentStatus(null)
+                  setMessage(null)
+                  setStep(1)
+                }}
                 className={`flex-1 px-6 py-3 font-semibold rounded-lg transition border-2 ${isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-black' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
               >
                 ← Back
               </button>
               <button
                 type="submit"
-                disabled={loading || limitReached}
-                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-lg transition transform hover:scale-105"
+                disabled={loading || limitReached || !formData.planSelected}
+                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition transform hover:scale-105 disabled:transform-none"
               >
-                {loading ? 'Submitting...' : 'Submit Event Request'}
+                {loading ? 'Processing...' : 'Submit Event Request'}
               </button>
             </div>
+            )}
             </form>
           </motion.div>
         )}

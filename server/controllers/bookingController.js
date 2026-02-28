@@ -10,6 +10,7 @@ import { generateTicketPDF } from "../utils/generateTicketPDF.js";
 import { notifyNextInLine } from "./waitlistController.js";
 import OrganizerSubscription from "../models/OrganizerSubscription.js";
 import Commission from "../models/Commission.js";
+import Coupon from "../models/Coupon.js";
 import generateUniqueBookingId from "../utils/generateBookingId.js";
 
 function generateUniqueTicketId() {
@@ -24,7 +25,7 @@ function generateUniqueTicketId() {
 }
 
 export const createBooking = async (req, res) => {
-  const { eventId, quantity, ticketTypeId, seats } = req.body;
+  const { eventId, quantity, ticketTypeId, seats, coupon } = req.body;
 
   try {
     // Ensure user is authenticated
@@ -183,6 +184,51 @@ export const createBooking = async (req, res) => {
     // Generate unique Booking ID
     const bookingId = await generateUniqueBookingId();
 
+    // ==================== HANDLE COUPON ====================
+    let finalAmount = totalAmount;
+    let discountAmount = 0;
+    let couponData = null;
+
+    if (coupon && coupon.couponId) {
+      try {
+        const couponRecord = await Coupon.findById(coupon.couponId);
+        
+        if (couponRecord && couponRecord.canBeUsed()) {
+          // Check if coupon applies to this event
+          if (
+            couponRecord.applicableEventIds &&
+            couponRecord.applicableEventIds.length > 0 &&
+            !couponRecord.applicableEventIds.includes(eventId)
+          ) {
+            console.warn(`[COUPON] Coupon ${coupon.code} not applicable to event ${eventId}`);
+          } else {
+            // Calculate discount
+            discountAmount = couponRecord.calculateDiscount(totalAmount);
+            finalAmount = Math.max(0, totalAmount - discountAmount);
+
+            // Increment coupon usage
+            couponRecord.usageCount = (couponRecord.usageCount || 0) + 1;
+            await couponRecord.save();
+
+            // Track coupon in booking
+            couponData = {
+              couponId: couponRecord._id,
+              code: couponRecord.code,
+              discountType: couponRecord.discountType,
+              discountValue: couponRecord.discountValue,
+              discountAmount: discountAmount,
+              appliedAt: new Date()
+            };
+
+            console.log(`[COUPON] Applied ${couponRecord.code} - Discount: ₹${discountAmount}, Final Amount: ₹${finalAmount}`);
+          }
+        }
+      } catch (couponError) {
+        console.error('[COUPON ERROR]', couponError.message);
+        // Don't fail booking if coupon application fails
+      }
+    }
+
     const bookingData = {
       bookingId,
       user: req.user._id,
@@ -191,7 +237,11 @@ export const createBooking = async (req, res) => {
       userPhone: req.body.phone || '',
       event: eventId,
       quantity: requestedQuantity,
-      totalAmount,
+      totalAmount: finalAmount, // Use final amount after discount
+      originalAmount: totalAmount, // Keep original amount for reference
+      discountAmount: discountAmount,
+      finalAmount: finalAmount,
+      ...(couponData && { coupon: couponData }),
       ticketIds,
       paymentStatus: "completed",
       ...(ticketTypeData && { ticketType: ticketTypeData })
@@ -281,7 +331,9 @@ export const createBooking = async (req, res) => {
       const organizerSubscription = await OrganizerSubscription.findOne({ organizer: event.organizer });
       const defaultCommissionPercentage = 30;
       const commissionPercentage = organizerSubscription?.currentCommissionPercentage ?? defaultCommissionPercentage;
-      const subtotal = quantity * price;
+      
+      // Use final amount (after any coupon discount) for commission calculation
+      const subtotal = finalAmount;
       const commissionAmount = (subtotal * commissionPercentage) / 100;
       const organizerAmount = subtotal - commissionAmount;
 

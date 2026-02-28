@@ -91,7 +91,8 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     const backendURL = import.meta.env.VITE_API_URL || "";
-    window.location.href = `${backendURL}/api/auth/google`;
+    const redirect = encodeURIComponent(window.location.origin);
+    window.location.href = `${backendURL}/api/auth/google?redirect=${redirect}`;
   };
 
   return (

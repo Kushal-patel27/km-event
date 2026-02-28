@@ -29,6 +29,55 @@ import rateLimit from "express-rate-limit";
 
 const router = express.Router();
 
+const toBase64Url = (value) =>
+  Buffer.from(value, "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+
+const fromBase64Url = (value = "") => {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4 || 4)) % 4);
+  return Buffer.from(padded, "base64").toString("utf8");
+};
+
+const getDefaultFrontendUrl = () => process.env.FRONTEND_URL || "http://localhost:5173";
+
+const isAllowedFrontendOrigin = (urlString) => {
+  try {
+    const parsed = new URL(urlString);
+    const configured = (process.env.ALLOWED_OAUTH_REDIRECT_ORIGINS || "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+    const allowedOrigins = new Set([
+      ...configured,
+      getDefaultFrontendUrl(),
+      "http://localhost:5173",
+    ]);
+    return allowedOrigins.has(parsed.origin) || allowedOrigins.has(urlString);
+  } catch {
+    return false;
+  }
+};
+
+const resolveFrontendUrlFromState = (state) => {
+  const fallback = getDefaultFrontendUrl();
+  if (!state) return fallback;
+  try {
+    const decoded = fromBase64Url(state);
+    const parsed = JSON.parse(decoded);
+    const redirectOrigin = parsed?.redirectOrigin;
+    if (redirectOrigin && isAllowedFrontendOrigin(redirectOrigin)) {
+      return redirectOrigin;
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const otpRequestLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 5,
@@ -84,7 +133,17 @@ router.delete("/admin/users/:adminId", protect, requireSuperAdmin, deleteAdminUs
 // Google OAuth routes
 router.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  (req, res, next) => {
+    const redirectOrigin = req.query.redirect || getDefaultFrontendUrl();
+    const safeRedirectOrigin = isAllowedFrontendOrigin(redirectOrigin)
+      ? redirectOrigin
+      : getDefaultFrontendUrl();
+    const state = toBase64Url(JSON.stringify({ redirectOrigin: safeRedirectOrigin }));
+    return passport.authenticate("google", {
+      scope: ["profile", "email"],
+      state,
+    })(req, res, next);
+  }
 );
 
 router.get(
@@ -100,7 +159,7 @@ router.get(
     });
 
     // Redirect to frontend with token
-    const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendURL = resolveFrontendUrlFromState(req.query.state);
     res.redirect(`${frontendURL}/auth/callback?token=${token}&name=${encodeURIComponent(req.user.name)}&email=${encodeURIComponent(req.user.email)}&role=${req.user.role}`);
   }
 );

@@ -213,44 +213,158 @@ export default function SuperAdminBookings() {
       {selectedBooking && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
             <div className="min-h-screen flex items-center justify-center p-4">
-              <div className="bg-white rounded-lg max-w-md w-full my-8">
+              <div className="bg-white rounded-lg max-w-2xl w-full my-8">
                 <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 border-b pb-4">
                   <h3 className="text-2xl font-bold text-gray-900">Booking Details</h3>
                   <button
                     onClick={() => setSelectedBooking(null)}
-                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                    className="text-gray-400 hover:text-gray-600 text-3xl font-light leading-none"
                   >
                     ×
                   </button>
                 </div>
 
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <p className="text-gray-600 text-sm">User</p>
-                    <p className="font-semibold text-gray-900">{selectedBooking.user?.name}</p>
-                    <p className="text-sm text-gray-600">{selectedBooking.user?.email}</p>
+                <div className="space-y-6 mb-6">
+                  {/* Booking ID */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-gray-600 text-sm mb-1 font-medium">Booking ID</p>
+                    <p className="font-mono text-lg font-bold text-blue-600">
+                      {selectedBooking.bookingId || selectedBooking._id?.substring(0, 12) || 'N/A'}
+                    </p>
                   </div>
+
+                  {/* User Info */}
                   <div>
-                    <p className="text-gray-600 text-sm">Event</p>
-                    <p className="font-semibold text-gray-900">{selectedBooking.event?.title}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-600 text-sm">Amount</p>
-                      <p className="font-semibold text-gray-900">{formatCurrency(getAmount(selectedBooking))}</p>
+                    <p className="text-gray-800 text-sm font-bold mb-2">Customer Information</p>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Name</p>
+                        <p className="font-semibold text-gray-900">{selectedBooking.userName || selectedBooking.user?.name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Email</p>
+                        <p className="font-semibold text-gray-900">{selectedBooking.userEmail || selectedBooking.user?.email || 'N/A'}</p>
+                      </div>
+                      {selectedBooking.userPhone && selectedBooking.userPhone !== '-' && (
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Phone</p>
+                          <p className="font-semibold text-gray-900">{selectedBooking.userPhone}</p>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <p className="text-gray-600 text-sm">Booking Date</p>
-                      <p className="font-semibold text-gray-900">
-                        {new Date(selectedBooking.createdAt).toLocaleDateString()}
+                  </div>
+
+                  {/* Event Info */}
+                  <div>
+                    <p className="text-gray-800 text-sm font-bold mb-2">Event</p>
+                    <p className="font-semibold text-gray-900 text-base">{selectedBooking.event?.title || 'N/A'}</p>
+                  </div>
+
+                  {/* Booking & Pricing Info */}
+                  <div>
+                    <p className="text-gray-800 text-sm font-bold mb-3">Booking Information</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-600 font-medium">Quantity</p>
+                        <p className="text-2xl font-bold text-blue-600">{selectedBooking.quantity || 0}</p>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded-lg">
+                        <p className="text-xs text-gray-600 font-medium">Total Amount</p>
+                        <p className="text-lg font-bold text-green-600">{formatCurrency(getAmount(selectedBooking))}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Coupon Information */}
+                  {selectedBooking.coupon && selectedBooking.coupon.code && (
+                    <div className="border-t pt-4 bg-amber-50 rounded-lg p-4 border border-amber-200">
+                      <p className="text-gray-800 text-sm font-bold mb-3 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+                        </svg>
+                        Coupon Applied
                       </p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Code</p>
+                          <p className="font-bold text-amber-700">{selectedBooking.coupon.code}</p>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Discount Type</p>
+                          <p className="font-semibold text-gray-900 capitalize">{selectedBooking.coupon.discountType}</p>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Discount Value</p>
+                          <p className="font-semibold text-gray-900">{selectedBooking.coupon.discountValue}{selectedBooking.coupon.discountType === 'percentage' ? '%' : '₹'}</p>
+                        </div>
+                        {selectedBooking.coupon.discountAmount > 0 && (
+                          <div className="bg-white p-2 rounded col-span-2 md:col-span-1">
+                            <p className="text-xs text-gray-600 font-medium">Amount Off</p>
+                            <p className="font-bold text-red-600">-{formatCurrency(selectedBooking.coupon.discountAmount)}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  )}
+
+                  {/* Discount Summary */}
+                  {selectedBooking.discountAmount > 0 && (
+                    <div className="border-t pt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">Original Amount</p>
+                          <p className="text-lg font-bold text-gray-900">{formatCurrency(selectedBooking.originalAmount || getAmount(selectedBooking))}</p>
+                        </div>
+                        <div className="bg-red-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">Discount</p>
+                          <p className="text-lg font-bold text-red-600">-{formatCurrency(selectedBooking.discountAmount)}</p>
+                        </div>
+                        <div className="bg-green-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">Final Amount</p>
+                          <p className="text-lg font-bold text-green-600">{formatCurrency(selectedBooking.finalAmount || getAmount(selectedBooking))}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Commission Information */}
+                  {selectedBooking.commission && selectedBooking.commission.commissionAmount > 0 && (
+                    <div className="border-t pt-4 bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                      <p className="text-gray-800 text-sm font-bold mb-3 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M8.433 7.418c.155.03.299.076.438.114a.75.75 0 00.212-1.488 16.561 16.561 0 00-.63-.165.75.75 0 00-.188 1.485c.218.032.42.068.615.108a.75.75 0 00.216-1.486zM14.707 2.793a.75.75 0 00-1.06 1.06L15.939 6.97a.75.75 0 001.06-1.06L14.708 2.793zM18.22 7.713a.75.75 0 00-1.06-1.06l-3.154 3.154a.75.75 0 001.06 1.06l3.154-3.154zM9.06 12.533a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                        </svg>
+                        Commission Breakdown
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Commission %</p>
+                          <p className="font-bold text-indigo-700">{selectedBooking.commission.commissionPercentage || 0}%</p>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Commission Amount</p>
+                          <p className="font-semibold text-gray-900">{formatCurrency(selectedBooking.commission.commissionAmount || 0)}</p>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Organizer Gets</p>
+                          <p className="font-bold text-green-600">{formatCurrency(selectedBooking.commission.organizerAmount || 0)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Booking Date */}
+                  <div className="border-t pt-4">
+                    <p className="text-gray-600 text-sm font-medium mb-1">Booking Date & Time</p>
+                    <p className="font-semibold text-gray-900">
+                      {new Date(selectedBooking.createdAt).toLocaleString()}
+                    </p>
                   </div>
                 </div>
 
                 <div className="mb-6">
-                  <p className="text-gray-600 text-sm mb-2">Change Status</p>
+                  <p className="text-gray-600 text-sm mb-2 font-medium">Change Status</p>
                   <div className="grid grid-cols-2 gap-2">
                     {statuses.map((status) => (
                       <button
@@ -268,21 +382,23 @@ export default function SuperAdminBookings() {
                   </div>
                 </div>
 
-                {selectedBooking.status !== 'refunded' && (
-                  <button
-                    onClick={() => setShowRefundModal(true)}
-                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium mb-3"
-                  >
-                    Refund Booking
-                  </button>
-                )}
+                <div className="flex gap-3 border-t pt-4">
+                  {selectedBooking.status !== 'refunded' && (
+                    <button
+                      onClick={() => setShowRefundModal(true)}
+                      className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition"
+                    >
+                      Refund Booking
+                    </button>
+                  )}
 
-                <button
-                  onClick={() => setSelectedBooking(null)}
-                  className="w-full px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                >
-                  Close
-                </button>
+                  <button
+                    onClick={() => setSelectedBooking(null)}
+                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-bold transition"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -105,9 +105,14 @@ export default function AdminBookings() {
       setError('')
       const res = await API.put(`/admin/bookings/${bookingId}/status`, { status: newStatus })
       console.log('Status updated successfully:', res.data)
-      setBookings(prev =>
-        prev.map(b => b._id === bookingId ? { ...b, status: newStatus } : b)
-      )
+      
+      // Refetch bookings to reflect updated seat counts, revenue, and commission
+      if (searchMode === 'search' && searchTerm) {
+        await handleSearch()
+      } else {
+        await fetchBookings()
+      }
+      
       setSelectedBooking(null)
     } catch (err) {
       console.error('Status update error:', err)
@@ -221,8 +226,7 @@ export default function AdminBookings() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Booking Management</h2>
+      <div className="flex items-center justify-end mb-6">
         <button
           onClick={() => setShowExportModal(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
@@ -496,9 +500,8 @@ export default function AdminBookings() {
 
       {/* Booking Details Modal */}
       {selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
-          <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg max-w-2xl w-full my-8 shadow-xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-2xl w-full shadow-xl my-8">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6 border-b pb-4">
                   <h3 className="text-2xl font-bold text-gray-900">Booking Details</h3>
@@ -525,43 +528,17 @@ export default function AdminBookings() {
                     </p>
                   </div>
 
-                  {/* Event Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-600 text-sm font-medium mb-1">Event</p>
-                      <p className="font-semibold text-gray-900 text-base">
-                        {selectedBooking.eventTitle || selectedBooking.event?.title || 'N/A'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm font-medium mb-1">Event Date</p>
-                      <p className="font-semibold text-gray-900 text-base">
-                        {selectedBooking.event?.date ? new Date(selectedBooking.event.date).toLocaleDateString() : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Location */}
-                  {selectedBooking.event?.location && (
-                    <div>
-                      <p className="text-gray-600 text-sm font-medium mb-1">Location</p>
-                      <p className="font-semibold text-gray-900">{selectedBooking.event.location}</p>
-                    </div>
-                  )}
-
                   {/* Customer Info */}
-                  <div className="border-t pt-4">
-                    <p className="text-gray-800 text-sm font-bold mb-3">Customer Information</p>
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-600 font-medium">Name</p>
-                          <p className="font-semibold text-gray-900">{selectedBooking.userName || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-medium">Email</p>
-                          <p className="font-semibold text-gray-900">{selectedBooking.userEmail || 'N/A'}</p>
-                        </div>
+                  <div>
+                    <p className="text-gray-800 text-sm font-bold mb-2">Customer Information</p>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Name</p>
+                        <p className="font-semibold text-gray-900">{selectedBooking.userName || selectedBooking.user?.name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Email</p>
+                        <p className="font-semibold text-gray-900">{selectedBooking.userEmail || selectedBooking.user?.email || 'N/A'}</p>
                       </div>
                       {selectedBooking.userPhone && selectedBooking.userPhone !== '-' && (
                         <div>
@@ -572,10 +549,31 @@ export default function AdminBookings() {
                     </div>
                   </div>
 
-                  {/* Ticket & Pricing Info */}
-                  <div className="border-t pt-4">
+                  {/* Event Info */}
+                  <div>
+                    <p className="text-gray-800 text-sm font-bold mb-2">Event</p>
+                    <p className="font-semibold text-gray-900 text-base">
+                      {selectedBooking.eventTitle || selectedBooking.event?.title || 'N/A'}
+                    </p>
+                    {selectedBooking.event?.date && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        {new Date(selectedBooking.event.date).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Location */}
+                  {selectedBooking.event?.location && (
+                    <div>
+                      <p className="text-gray-800 text-sm font-bold mb-2">Location</p>
+                      <p className="font-semibold text-gray-900">{selectedBooking.event.location}</p>
+                    </div>
+                  )}
+
+                  {/* Booking Info */}
+                  <div>
                     <p className="text-gray-800 text-sm font-bold mb-3">Booking Information</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="bg-blue-50 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 font-medium">Quantity</p>
                         <p className="text-2xl font-bold text-blue-600">{selectedBooking.quantity || 0}</p>
@@ -585,13 +583,91 @@ export default function AdminBookings() {
                         <p className="text-lg font-bold text-green-600">{formatINR(selectedBooking.totalAmount || 0)}</p>
                       </div>
                       {selectedBooking.ticketType?.name && (
-                        <div className="bg-purple-50 p-3 rounded-lg">
+                        <div className="bg-purple-50 p-3 rounded-lg col-span-2">
                           <p className="text-xs text-gray-600 font-medium">Ticket Type</p>
                           <p className="font-bold text-purple-600">{selectedBooking.ticketType.name}</p>
                         </div>
                       )}
                     </div>
                   </div>
+
+                  {/* Coupon Information */}
+                  {selectedBooking.coupon && selectedBooking.coupon.code && (
+                    <div className="border-t pt-4 bg-amber-50 rounded-lg p-4 border border-amber-200">
+                      <p className="text-gray-800 text-sm font-bold mb-3 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+                        </svg>
+                        Coupon Applied
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Code</p>
+                          <p className="font-bold text-amber-700">{selectedBooking.coupon.code}</p>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Discount Type</p>
+                          <p className="font-semibold text-gray-900 capitalize">{selectedBooking.coupon.discountType}</p>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Discount Value</p>
+                          <p className="font-semibold text-gray-900">{selectedBooking.coupon.discountValue}{selectedBooking.coupon.discountType === 'percentage' ? '%' : '₹'}</p>
+                        </div>
+                        {selectedBooking.coupon.discountAmount > 0 && (
+                          <div className="bg-white p-2 rounded col-span-2 md:col-span-1">
+                            <p className="text-xs text-gray-600 font-medium">Amount Off</p>
+                            <p className="font-bold text-red-600">-{formatINR(selectedBooking.coupon.discountAmount)}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Discount Summary */}
+                  {selectedBooking.discountAmount > 0 && (
+                    <div className="border-t pt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">Original Amount</p>
+                          <p className="text-lg font-bold text-gray-900">{formatINR(selectedBooking.originalAmount || selectedBooking.totalAmount)}</p>
+                        </div>
+                        <div className="bg-red-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">Discount</p>
+                          <p className="text-lg font-bold text-red-600">-{formatINR(selectedBooking.discountAmount)}</p>
+                        </div>
+                        <div className="bg-green-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-600 font-medium">Final Amount</p>
+                          <p className="text-lg font-bold text-green-600">{formatINR(selectedBooking.finalAmount || selectedBooking.totalAmount)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Commission Information */}
+                  {selectedBooking.commission && selectedBooking.commission.commissionAmount > 0 && (
+                    <div className="border-t pt-4 bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                      <p className="text-gray-800 text-sm font-bold mb-3 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M8.433 7.418c.155.03.299.076.438.114a.75.75 0 00.212-1.488 16.561 16.561 0 00-.63-.165.75.75 0 00-.188 1.485c.218.032.42.068.615.108a.75.75 0 00.216-1.486zM14.707 2.793a.75.75 0 00-1.06 1.06L15.939 6.97a.75.75 0 001.06-1.06L14.708 2.793zM18.22 7.713a.75.75 0 00-1.06-1.06l-3.154 3.154a.75.75 0 001.06 1.06l3.154-3.154zM9.06 12.533a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                        </svg>
+                        Commission Breakdown
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Commission %</p>
+                          <p className="font-bold text-indigo-700">{selectedBooking.commission.commissionPercentage || 0}%</p>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Commission Amount</p>
+                          <p className="font-semibold text-gray-900">{formatINR(selectedBooking.commission.commissionAmount || 0)}</p>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <p className="text-xs text-gray-600 font-medium">Organizer Gets</p>
+                          <p className="font-bold text-green-600">{formatINR(selectedBooking.commission.organizerAmount || 0)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Ticket IDs */}
                   {selectedBooking.ticketIds && selectedBooking.ticketIds.length > 0 && (
@@ -715,7 +791,6 @@ export default function AdminBookings() {
                 </div>
               </div>
             </div>
-          </div>
         </div>
       )}
 

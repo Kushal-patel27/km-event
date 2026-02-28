@@ -7,6 +7,9 @@ import { seatsAvailable, generateSeatLayout } from '../../utils/bookings'
 import SeatPicker from '../../components/booking/SeatPicker'
 import formatINR from '../../utils/currency'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import RazorpayButton from '../../components/payment/RazorpayButton'
+import CouponDiscount from '../../components/payment/CouponDiscount'
+import PaymentStatus from '../../components/payment/PaymentStatus'
 
 export default function Booking(){
   const { id } = useParams()
@@ -30,6 +33,12 @@ export default function Booking(){
   const [features, setFeatures] = useState(null)
   const [loadingFeatures, setLoadingFeatures] = useState(true)
   const [maxPerUser, setMaxPerUser] = useState(null)
+  
+  // Payment state
+  const [showPayment, setShowPayment] = useState(false)
+  const [bookingData, setBookingData] = useState(null)
+  const [paymentStatus, setPaymentStatus] = useState(null)
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
 
   const location = useLocation()
 
@@ -155,20 +164,23 @@ export default function Booking(){
   const currentPrice = selectedTicketType ? selectedTicketType.price : (event?.price || 0)
   const subTotal = currentPrice * quantity
   let discountAmount = 0
-  let isOfferValid = true
-  let offerMessage = ''
+  let finalTotal = subTotal
 
+  // Apply promotional offer discount if valid
   if (offer) {
     if (offer.minQty && quantity < offer.minQty) {
-      isOfferValid = false
-      offerMessage = `Offer requires minimum ${offer.minQty} tickets`
+      // Offer not valid for this quantity
     } else {
       discountAmount = subTotal * offer.discount
-      offerMessage = `Code ${offer.code} applied`
     }
   }
 
-  const finalTotal = subTotal - discountAmount
+  // Apply coupon discount
+  if (appliedCoupon && appliedCoupon.discountAmount) {
+    discountAmount += appliedCoupon.discountAmount
+  }
+
+  finalTotal = subTotal - discountAmount
 
   if(loading) return <LoadingSpinner message="Loading booking details..." />
   if(!event) return <div className="text-center p-10">{error || 'Event not found'}</div>
@@ -285,107 +297,97 @@ export default function Booking(){
       return setError('Please verify your ID eligibility for this offer.')
     }
 
-    // If the user is authenticated and has a token, try to create booking on backend
-    const token = (authUser && authUser.token) || storedToken
-    if (token) {
-      try {
-        // Validate required fields before sending
-        if (!event.id) {
-          console.error('[BOOKING] Invalid event ID:', event.id)
-          setError('Error: Invalid event ID. Please reload the page.')
-          setBookingLoading(false)
-          return
-        }
-        
-        if (typeof quantity !== 'number' || quantity < 1) {
-          console.error('[BOOKING] Invalid quantity:', quantity, typeof quantity)
-          setError('Error: Invalid quantity. Please check your selection.')
-          setBookingLoading(false)
-          return
-        }
-        
-        const payload = { 
-          eventId: event.id, 
-          quantity: Number(quantity),
-          ...(selectedTicketType && { ticketTypeId: selectedTicketType._id })
-        }
-        if (hasSeatLayout && selectedSeats.length > 0) payload.seats = selectedSeats.map(Number)
-        
-        // Log payload for debugging
-        console.log('[BOOKING] Sending payload:', payload)
-        console.log('[BOOKING] Event has ticket types:', hasTicketTypes)
-        console.log('[BOOKING] Selected ticket type:', selectedTicketType)
-        
-        const config = { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
-        const res = await API.post('/bookings', payload, config)
-        // backend returns booking in res.data with _id and qrCode; augment with event and user info
-        const serverBooking = {
-          ...res.data,
-          event,
-          user: { name, email, id: authUser?.email || email },
-          date: event.date,
-          originalPrice: subTotal,
-          discount: discountAmount,
-          total: finalTotal,
-        }
-        sessionStorage.removeItem('appliedOffer')
-        navigate('/booking-success', { state: { booking: serverBooking } })
-        return
-      } catch (err) {
-        console.error('Backend booking failed', err)
-        console.error('Response status:', err.response?.status)
-        console.error('Response data:', err.response?.data)
-        
-        const errorMsg = err.response?.data?.message || err.message
-        const feature = err.response?.data?.feature
-        setBookingLoading(false)
-        
-        // If auth error, clear invalid token and redirect to login
-        if (err.response?.status === 401) {
-          localStorage.removeItem('token')
-          setError('Please log in to book tickets')
-          setTimeout(() => navigate('/login', { state: { from: location.pathname } }), 2000)
-          return
-        }
-        
-        // If ticketing feature is disabled
-        if (err.response?.status === 403 && feature === 'ticketing') {
-          setError('Ticketing is currently disabled for this event')
-          setTimeout(() => navigate(`/event/${id}`), 2000)
-          return
-        }
-        
-        // For 400 errors, provide helpful feedback
-        if (err.response?.status === 400) {
-          setError(`${errorMsg || 'Invalid booking data. Please check that you have selected all required fields.'}`)
-          return
-        }
-        
-        // For other errors, show message
-        setError(`Booking failed: ${errorMsg}`)
+    // Prepare booking data for payment
+    const payload = { 
+      eventId: event.id, 
+      quantity: Number(quantity),
+      totalAmount: finalTotal,
+      ...(selectedTicketType && { ticketTypeId: selectedTicketType._id }),
+      ...(appliedCoupon && { coupon: appliedCoupon })
+    }
+    if (hasSeatLayout && selectedSeats.length > 0) payload.seats = selectedSeats.map(Number)
+
+    // Store booking data and show payment
+    setBookingData(payload)
+    setShowPayment(true)
+    setBookingLoading(false)
+  }
+
+  // Handle successful payment
+  const handlePaymentSuccess = async (paymentData) => {
+    try {
+      const token = (authUser && authUser.token) || storedToken
+      if (!token) {
+        setPaymentStatus({
+          status: 'failed',
+          message: 'Authentication required',
+        })
         return
       }
+
+      // Create booking after successful payment
+      const config = { headers: { Authorization: `Bearer ${token}` } }
+      const res = await API.post('/bookings', {
+        ...bookingData,
+        paymentId: paymentData.data.paymentId,
+        paymentStatus: 'completed'
+      }, config)
+
+      // Success - redirect to booking success page
+      const serverBooking = {
+        ...res.data,
+        event,
+        user: { name, email, id: authUser?.email || email },
+        date: event.date,
+        originalPrice: subTotal,
+        discount: discountAmount,
+        total: finalTotal,
+      }
+      
+      sessionStorage.removeItem('appliedOffer')
+      navigate('/booking-success', { state: { booking: serverBooking } })
+    } catch (error) {
+      console.error('Booking creation failed after payment:', error)
+      setPaymentStatus({
+        status: 'failed',
+        message: 'Payment successful but booking creation failed. Please contact support.',
+        transactionId: paymentData.data.paymentId,
+      })
     }
+  }
 
-    // Local fallback for unauthenticated users or if backend fails
-    const booking = { id: Date.now(), eventId: event.id, name, email, quantity, total: finalTotal, originalPrice: subTotal, discount: discountAmount, offerCode: (offer && offer.discount) ? offer.code : null, seats: hasSeatLayout && selectedSeats.length > 0 ? selectedSeats.map(Number) : undefined }
-    const stored = JSON.parse(localStorage.getItem('bookings') || '[]')
-    stored.push(booking)
-    localStorage.setItem('bookings', JSON.stringify(stored))
-    sessionStorage.removeItem('appliedOffer') // Clear offer after use
-
-    // Navigate to success page with booking data for the ticket
-    navigate('/booking-success', { 
-      state: { 
-        booking: {
-          ...booking,
-          event,
-          user: { name, email, id: email },
-          // seats is already in 'booking' (array or undefined), quantity is also there
-          date: event.date
-        } 
-      } 
+  // Handle payment failure
+  const handlePaymentFailure = (error) => {
+    console.error('Payment failed:', error)
+    setPaymentStatus({
+      status: 'failed',
+      message: 'Payment Failed',
+      error: error.message,
     })
+  }
+
+  // If payment status is shown, display it
+  if (paymentStatus) {
+    return (
+      <div className={`min-h-screen py-8 px-4 ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
+        <PaymentStatus
+          status={paymentStatus.status}
+          message={paymentStatus.message}
+          transactionId={paymentStatus.transactionId}
+          amount={bookingData?.totalAmount}
+          details={{ 
+            eventName: event?.title,
+            quantity: bookingData?.quantity 
+          }}
+          redirectUrl={`/event/${id}`}
+          redirectText="Back to Event"
+          onRetry={() => {
+            setPaymentStatus(null)
+            setShowPayment(true)
+          }}
+        />
+      </div>
+    )
   }
 
   return (
@@ -466,7 +468,22 @@ export default function Booking(){
             </div>
           )}
 
-          {/* 5️⃣ Price Summary Card */}
+          {/* 5️⃣ Coupon Discount Section */}
+          {(!hasTicketTypes || selectedTicketType) && (
+            <CouponDiscount
+              eventId={event.id}
+              subtotal={subTotal}
+              isDarkMode={isDarkMode}
+              onCouponApplied={(couponData) => {
+                setAppliedCoupon(couponData)
+              }}
+              onCouponRemoved={() => {
+                setAppliedCoupon(null)
+              }}
+            />
+          )}
+
+          {/* 6️⃣ Price Summary Card */}
           {(!hasTicketTypes || selectedTicketType) && (
             <div className={`rounded-lg p-5 mt-2 ${isDarkMode ? 'bg-black' : 'bg-gray-100'} flex flex-col gap-3 transition-all duration-300 border ${isDarkMode ? 'border-zinc-700' : 'border-gray-300'}`}> 
               <div className="flex items-center justify-between text-base font-medium">
@@ -482,17 +499,91 @@ export default function Booking(){
             </div>
           )}
 
-          {/* 6️⃣ Buttons */}
+          {/* 7️⃣ Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mt-2">
             <Link to={`/event/${event.id}`} className={`flex-1 px-4 py-3 rounded-lg font-medium text-center transition-all duration-200 outline-none ${isDarkMode ? 'bg-zinc-700 text-white hover:bg-zinc-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>← Back to Event</Link>
-            <button type="submit" disabled={bookingLoading||loadingFeatures||(hasTicketTypes&&!selectedTicketType)||features?.ticketing?.enabled===false} className={`flex-1 px-4 py-3 rounded-lg font-semibold text-white shadow-lg transition-all duration-200 outline-none flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${isDarkMode ? 'bg-red-600 hover:bg-red-500 shadow-red-500/30' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-400/40'}`}>
-              {bookingLoading||loadingFeatures ? (<><svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>Processing...</>) : 'Confirm Booking →'}
-            </button>
+            
+            {!showPayment ? (
+              <button type="submit" disabled={bookingLoading||loadingFeatures||(hasTicketTypes&&!selectedTicketType)||features?.ticketing?.enabled===false} className={`flex-1 px-4 py-3 rounded-lg font-semibold text-white shadow-lg transition-all duration-200 outline-none flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${isDarkMode ? 'bg-red-600 hover:bg-red-500 shadow-red-500/30' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-400/40'}`}>
+                {bookingLoading||loadingFeatures ? (<><svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>Processing...</>) : 'Continue to Payment →'}
+              </button>
+            ) : null}
           </div>
         </form>
 
-        {/* 7️⃣ Seat Selection (if any) */}
-        {hasSeatLayout && (
+        {/* Payment Section */}
+        {showPayment && bookingData && (
+          <div className={`rounded-xl shadow-lg overflow-hidden ${isDarkMode ? 'bg-black' : 'bg-white'} p-6 sm:p-8 border ${isDarkMode ? 'border-red-900' : 'border-indigo-200'} animate-fadein`}>
+            <h3 className={`text-xl font-bold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-red-400' : 'text-indigo-700'}`}>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              Complete Payment
+            </h3>
+
+            <div className={`mb-6 p-4 rounded-lg ${isDarkMode ? 'bg-zinc-900/50' : 'bg-gray-50'}`}>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Event:</span>
+                  <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Quantity:</span>
+                  <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{bookingData.quantity} ticket(s)</span>
+                </div>
+                {selectedTicketType && (
+                  <div className="flex justify-between">
+                    <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Ticket Type:</span>
+                    <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedTicketType.name}</span>
+                  </div>
+                )}
+                {selectedSeats.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Seats:</span>
+                    <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedSeats.join(', ')}</span>
+                  </div>
+                )}
+                <div className={`flex justify-between text-lg pt-2 border-t ${isDarkMode ? 'border-zinc-700' : 'border-gray-200'}`}>
+                  <span className={`font-bold ${isDarkMode ? 'text-red-400' : 'text-indigo-700'}`}>Total Amount:</span>
+                  <span className={`font-bold text-xl ${isDarkMode ? 'text-red-400' : 'text-indigo-700'}`}>{formatINR(bookingData.totalAmount)}</span>
+                </div>
+              </div>
+            </div>
+
+            <RazorpayButton
+              amount={bookingData.totalAmount}
+              paymentType="event"
+              referenceId={bookingData.eventId}
+              metadata={{
+                eventId: bookingData.eventId,
+                eventName: event.title,
+                quantity: bookingData.quantity,
+                ticketType: selectedTicketType?.name || 'General',
+                subtotal: subTotal,
+              }}
+              coupon={appliedCoupon}
+              onSuccess={handlePaymentSuccess}
+              onFailure={handlePaymentFailure}
+              buttonText={`Pay ${formatINR(bookingData.totalAmount)}`}
+              className="w-full"
+            />
+
+            <button
+              onClick={() => {
+                setShowPayment(false)
+                setBookingData(null)
+              }}
+              className={`mt-4 w-full px-4 py-3 rounded-lg font-medium text-center transition-all duration-200 ${isDarkMode ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              ← Back to Booking Details
+            </button>
+          </div>
+        )}
+
+        
+        
+        {/* 7️⃣ Seat Selection (if any) - Only show when not in payment mode */}
+        {!showPayment && hasSeatLayout && (
           <div className={`rounded-xl shadow-lg overflow-hidden ${isDarkMode ? 'bg-black' : 'bg-white'} p-4 sm:p-8 mt-4 border ${isDarkMode ? 'border-red-900' : 'border-gray-200'} animate-fadein`}>
             <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-red-400' : 'text-indigo-700'}`}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>Choose Your Seats</h3>
             <div className="mb-4">

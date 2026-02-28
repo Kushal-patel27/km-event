@@ -419,6 +419,7 @@ export default function AdminEvents() {
         description: formData.description,
         location: formData.location,
         locationDetails: formData.locationDetails || '',
+        mapLink: formData.mapLink || '',
         image: formData.image,
         category: formData.category,
         price: basePrice,
@@ -540,8 +541,7 @@ export default function AdminEvents() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Event Management</h2>
+      <div className="flex items-center justify-end mb-6">
         <div className="flex gap-3">
           <button 
             onClick={() => setShowExportModal(true)} 
@@ -895,8 +895,9 @@ export default function AdminEvents() {
                   initial={{
                     title: selectedEvent.event.title,
                     description: selectedEvent.event.description || '',
-                        location: selectedEvent.event.location || '',
-                        locationDetails: selectedEvent.event.locationDetails || '',
+                    location: selectedEvent.event.location || '',
+                    locationDetails: selectedEvent.event.locationDetails || '',
+                    mapLink: selectedEvent.event.mapLink || '',
                     image: selectedEvent.event.image || '',
                     category: selectedEvent.event.category || '',
                     date: selectedEvent.event.date || '',

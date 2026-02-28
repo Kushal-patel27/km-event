@@ -79,6 +79,24 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Commission"
     },
+    // Coupon tracking
+    coupon: {
+      couponId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Coupon"
+      },
+      code: String,
+      discountType: {
+        type: String,
+        enum: ["percentage", "fixed"]
+      },
+      discountValue: Number,
+      discountAmount: { type: Number, default: 0 },
+      appliedAt: { type: Date }
+    },
+    originalAmount: { type: Number }, // Amount before discount
+    discountAmount: { type: Number, default: 0 }, // Total discount applied
+    finalAmount: { type: Number } // Final amount after discount (should equal totalAmount if coupon applied)
   },
   { timestamps: true }
 );

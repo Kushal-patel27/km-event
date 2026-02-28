@@ -55,7 +55,8 @@ export default function Signup() {
   const handleGoogleSignup = () => {
     // Redirect to backend Google OAuth endpoint
     const backendURL = import.meta.env.VITE_API_URL || "";
-    window.location.href = `${backendURL}/api/auth/google`;
+    const redirect = encodeURIComponent(window.location.origin);
+    window.location.href = `${backendURL}/api/auth/google?redirect=${redirect}`;
   };
 
   return (

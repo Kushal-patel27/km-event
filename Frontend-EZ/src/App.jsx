@@ -39,12 +39,14 @@ import FAQManager from './pages/admin/FAQManager'
 import HelpManager from './pages/admin/HelpManager'
 import ForOrganizersContentManager from './pages/admin/ForOrganizersContentManager'
 import AdminFeatureToggles from './pages/admin/AdminFeatureToggles'
+import AdminCouponManager from './pages/admin/AdminCouponManager'
 // Event Admin Pages
 import EventAdminDashboard from './pages/event-admin/EventAdminDashboard'
 import EventAdminEvents from './pages/event-admin/EventAdminEvents'
 import EventAdminBookings from './pages/event-admin/EventAdminBookings'
 import EventAdminLogin from './pages/event-admin/EventAdminLogin'
 import EventAdminFeatures from './pages/event-admin/EventAdminFeatures'
+import EventAdminCouponManager from './pages/event-admin/EventAdminCouponManager'
 // Staff Admin Pages
 import StaffAdminLogin from './pages/staff-admin/StaffAdminLogin'
 import StaffAdminDashboard from './pages/staff-admin/StaffAdminDashboard'
@@ -160,6 +162,7 @@ export default function App(){
               <Route path="/admin/subscriptions" element={<ProtectedAdminRoute><SubscriptionDashboard /></ProtectedAdminRoute>} />
               <Route path="/admin/subscription-setup" element={<ProtectedAdminRoute><SubscriptionSetup /></ProtectedAdminRoute>} />
               <Route path="/admin/event-admin-payouts" element={<ProtectedAdminRoute><EventAdminPayouts /></ProtectedAdminRoute>} />
+              <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminCouponManager /></ProtectedAdminRoute>} />
             
               {/* Event Admin routes */}
             <Route path="/event-admin/login" element={<EventAdminLogin />} />
@@ -167,6 +170,7 @@ export default function App(){
               <Route path="/event-admin/events" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminEvents /></ProtectedAdminRoute>} />
               <Route path="/event-admin/bookings" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminBookings /></ProtectedAdminRoute>} />
             <Route path="/event-admin/:eventId/features" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminFeatures /></ProtectedAdminRoute>} />
+            <Route path="/event-admin/coupons" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminCouponManager /></ProtectedAdminRoute>} />
             <Route path="/staff-admin" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff-admin/login"><StaffAdminDashboard /></ProtectedAdminRoute>} />
             <Route path="/staff-admin/dashboard" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff-admin/login"><StaffAdminDashboard /></ProtectedAdminRoute>} />
             <Route path="/staff-admin/team" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff-admin/login"><StaffAdminTeam /></ProtectedAdminRoute>} />
