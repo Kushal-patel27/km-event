@@ -29,6 +29,11 @@ export default function AuthCallback() {
           return;
         }
 
+        localStorage.setItem("token", token);
+localStorage.setItem("role", role);
+localStorage.setItem("name", name);
+localStorage.setItem("email", email);
+
         // Save user data to auth context
         login({ name, email, token, role });
         setProcessed(true);
