@@ -144,9 +144,9 @@ if (process.env.NODE_ENV === "production") {
 
   // Catch-all route: serve index.html for any non-API request
   // This MUST come AFTER all API routes
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(frontendBuildPath, "index.html"));
-  });
+app.use((req, res) => {
+  res.sendFile(path.join(frontendBuildPath, "index.html"));
+});
 }
 
 /* ===========================
