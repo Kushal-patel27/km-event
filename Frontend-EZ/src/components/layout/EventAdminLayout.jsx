@@ -13,6 +13,7 @@ export default function EventAdminLayout({ title = 'Event Admin', children }) {
     { to: '/event-admin', label: '📊 Dashboard', exact: true },
     { to: '/event-admin/events', label: '🎫 My Events' },
     { to: '/event-admin/bookings', label: '📋 Bookings' },
+    { to: '/event-admin/booking-search', label: '🔍 Search' },
     { to: '/event-admin/coupons', label: '🎟️ Coupons' },
     { to: '/event-admin/revenue', label: '📈 Revenue' },
     { to: '/event-admin/payout', label: '🏦 Payout' },

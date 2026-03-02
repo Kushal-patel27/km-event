@@ -127,6 +127,8 @@ function buildUserResponse(user, token) {
     email: user.email,
     role: user.role,
     lastLoginAt: user.lastLoginAt,
+    assignedEvents: user.assignedEvents || [],
+    assignedGates: user.assignedGates || [],
     token,
   };
 }
@@ -193,6 +195,8 @@ export const registerUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      assignedEvents: user.assignedEvents || [],
+      assignedGates: user.assignedGates || [],
       token,
     });
   } catch (error) {
@@ -231,6 +235,8 @@ export const loginUser = async (req, res) => {
       email: user.email,
       role: user.role,
       lastLoginAt: user.lastLoginAt,
+      assignedEvents: user.assignedEvents || [],
+      assignedGates: user.assignedGates || [],
       token,
     });
   } catch (error) {
@@ -275,6 +281,8 @@ export const loginAdmin = async (req, res) => {
       email: user.email,
       role: user.role,
       lastLoginAt: user.lastLoginAt,
+      assignedEvents: user.assignedEvents || [],
+      assignedGates: user.assignedGates || [],
       token,
     });
   } catch (error) {
@@ -358,6 +366,8 @@ export const refreshSession = async (req, res) => {
       name: req.user.name,
       email: req.user.email,
       role: req.user.role,
+      assignedEvents: req.user.assignedEvents || [],
+      assignedGates: req.user.assignedGates || [],
       token,
     });
   } catch (error) {

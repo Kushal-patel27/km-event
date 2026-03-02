@@ -50,8 +50,16 @@ export default function Navbar(){
 
   const adminHome = useMemo(() => {
     if(!user?.isAdmin) return null
+    
+    // For event_admins, only show admin link if they have approved events
+    if(user.role === 'event_admin') {
+      const hasApprovedEvents = user.assignedEvents && user.assignedEvents.length > 0
+      if(!hasApprovedEvents) return null
+      return '/event-admin'
+    }
+    
+    // Other admin roles (super_admin, staff_admin, admin) always have access
     if(user.role === 'super_admin') return '/super-admin'
-    if(user.role === 'event_admin') return '/event-admin'
     if(user.role === 'staff_admin') return '/staff-admin'
     return '/admin'
   }, [user])
@@ -153,8 +161,8 @@ export default function Navbar(){
                   Waitlist {waitlistCount > 0 && `(${waitlistCount})`}
                 </Link>
               )}
-              {/* Hide My Event Requests entry for normal users */}
-              {user && user.role === 'event_admin' && (
+              {/* Event Request link - only show for event_admins with approved events */}
+              {user && user.role === 'event_admin' && user.assignedEvents && user.assignedEvents.length > 0 && (
                 <Link to="/my-event-requests" className={`shrink-0 text-sm font-semibold tracking-wide px-2 py-1 rounded-md transition whitespace-nowrap ${
                   location.pathname === '/my-event-requests'
                     ? 'text-red-500'
@@ -486,7 +494,7 @@ export default function Navbar(){
                   Waitlist {waitlistCount > 0 && `(${waitlistCount})`}
                 </Link>
               )}
-              {user && user.role === 'event_admin' && (
+              {user && user.role === 'event_admin' && user.assignedEvents && user.assignedEvents.length > 0 && (
                 <Link
                   to="/my-event-requests"
                   onClick={() => setMobileMenuOpen(false)}

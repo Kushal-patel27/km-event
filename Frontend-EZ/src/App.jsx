@@ -44,6 +44,7 @@ import AdminCouponManager from './pages/admin/AdminCouponManager'
 import EventAdminDashboard from './pages/event-admin/EventAdminDashboard'
 import EventAdminEvents from './pages/event-admin/EventAdminEvents'
 import EventAdminBookings from './pages/event-admin/EventAdminBookings'
+import EventAdminBookingSearch from './pages/event-admin/EventAdminBookingSearch'
 import EventAdminLogin from './pages/event-admin/EventAdminLogin'
 import EventAdminFeatures from './pages/event-admin/EventAdminFeatures'
 import EventAdminCouponManager from './pages/event-admin/EventAdminCouponManager'
@@ -169,6 +170,7 @@ export default function App(){
               <Route path="/event-admin" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminDashboard /></ProtectedAdminRoute>} />
               <Route path="/event-admin/events" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminEvents /></ProtectedAdminRoute>} />
               <Route path="/event-admin/bookings" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminBookings /></ProtectedAdminRoute>} />
+              <Route path="/event-admin/booking-search" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminBookingSearch /></ProtectedAdminRoute>} />
             <Route path="/event-admin/:eventId/features" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminFeatures /></ProtectedAdminRoute>} />
             <Route path="/event-admin/coupons" element={<ProtectedAdminRoute allowedRoles={["event_admin"]} redirectTo="/event-admin/login"><EventAdminCouponManager /></ProtectedAdminRoute>} />
             <Route path="/staff-admin" element={<ProtectedAdminRoute allowedRoles={["staff_admin"]} redirectTo="/staff-admin/login"><StaffAdminDashboard /></ProtectedAdminRoute>} />
