@@ -51,18 +51,25 @@ export default function Login() {
             assignedGates: res.data.assignedGates,
           });
 
-          // Redirect based on role
+          // Redirect based on role and login mode
           const role = String(res.data.role || "").toLowerCase();
           console.log('Normalized role for navigation:', role);
-          if (role === "super_admin") {
-            console.log('Navigating to /super-admin');
-            navigate("/super-admin");
+          
+          // If logging in from user side (mode !== "admin"), redirect admin users to home
+          if (mode !== "admin") {
+            navigate("/");
+          } else {
+            // Admin mode: redirect to respective admin panels
+            if (role === "super_admin") {
+              console.log('Navigating to /super-admin');
+              navigate("/super-admin");
+            }
+            else if (role === "event_admin") navigate("/event-admin");
+            else if (role === "staff_admin") navigate("/staff-admin");
+            else if (role === "admin") navigate("/admin");
+            else if (role === "staff") navigate("/staff/scanner");
+            else navigate("/");
           }
-          else if (role === "event_admin") navigate("/event-admin");
-          else if (role === "staff_admin") navigate("/staff-admin");
-          else if (role === "admin") navigate("/admin");
-          else if (role === "staff") navigate("/staff/scanner");
-          else navigate("/");
           
           loginSuccessful = true;
           break;
