@@ -484,7 +484,7 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: idx * 0.1 }}
-                    onClick={() => navigate(`/event/${event.slug || event.id}`)}
+                    onClick={() => navigate(`/events/${event.slug || event.id}`)}
                     className="cursor-pointer"
                   >
                     <EventCard event={event} />
