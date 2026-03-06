@@ -6,7 +6,7 @@ import { getEventImage } from "../../utils/images";
 import { seatsAvailable } from "../../utils/bookings";
 import { useDarkMode } from "../../context/DarkModeContext";
 import { useAuth } from "../../context/AuthContext";
-import LoadingSpinner from "../../components/common/LoadingSpinner";
+import EventDetailSkeleton from "../../components/common/EventDetailSkeleton";
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -134,8 +134,8 @@ export default function EventDetail() {
     }
   };
 
-  if (fetching) return <LoadingSpinner message="Loading event..." />;
-  if (!event) return <div className="min-h-screen bg-black dark:bg-black flex items-center justify-center text-gray-900 dark:text-white">Event not found</div>;
+  if (fetching) return <EventDetailSkeleton isDarkMode={isDarkMode} />;
+  if (!event) return <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>Event not found</div>;
 
   // Check if event has passed
   const eventDate = event.date ? new Date(event.date) : null;

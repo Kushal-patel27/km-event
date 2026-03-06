@@ -889,3 +889,211 @@ export const searchBookingByTicketId = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+/**
+ * Event Admin API: Search booking by Booking ID (only from their events)
+ */
+export const eventAdminSearchBookingByBookingId = async (req, res) => {
+  try {
+    const { bookingId } = req.query;
+    const organizerId = req.user._id;
+
+    if (!bookingId || bookingId.trim() === '') {
+      return res.status(400).json({ message: 'Booking ID is required' });
+    }
+
+    // Find events owned by this event admin
+    const Event = (await import('../models/Event.js')).default;
+    const organizerEvents = await Event.find({ organizer: organizerId }).select('_id');
+    const eventIds = organizerEvents.map(e => e._id);
+
+    // Find booking that belongs to one of the organizer's events
+    const booking = await Booking.findOne({ 
+      bookingId,
+      event: { $in: eventIds }
+    })
+      .populate('user', 'name email phone')
+      .populate('event', 'title date location')
+      .lean();
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found or does not belong to your events' });
+    }
+
+    const formattedBooking = {
+      _id: booking._id,
+      bookingId: booking.bookingId,
+      userName: booking.userName || booking.user?.name || 'N/A',
+      userEmail: booking.userEmail || booking.user?.email || 'N/A',
+      userPhone: booking.userPhone || '-',
+      eventTitle: booking.event?.title || 'N/A',
+      event: {
+        _id: booking.event?._id,
+        title: booking.event?.title || 'N/A',
+        date: booking.event?.date,
+        location: booking.event?.location,
+      },
+      ticketType: booking.ticketType,
+      quantity: booking.quantity,
+      seats: booking.seats || [],
+      ticketIds: booking.ticketIds || [],
+      totalAmount: booking.totalAmount,
+      originalAmount: booking.originalAmount || booking.totalAmount,
+      discountAmount: booking.discountAmount || 0,
+      finalAmount: booking.finalAmount || booking.totalAmount,
+      coupon: booking.coupon || null,
+      paymentStatus: booking.paymentStatus,
+      status: booking.status,
+      date: booking.createdAt,
+      createdAt: booking.createdAt,
+      qrCode: booking.qrCode,
+      qrCodes: booking.qrCodes || [],
+    };
+
+    res.json({
+      booking: formattedBooking,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Event Admin API: Search bookings by email or name (only from their events)
+ */
+export const eventAdminSearchBookingsByUser = async (req, res) => {
+  try {
+    const { search, page = 1, limit = 20 } = req.query;
+    const organizerId = req.user._id;
+
+    if (!search || search.trim() === '') {
+      return res.status(400).json({ message: 'Search term is required' });
+    }
+
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Find events owned by this event admin
+    const Event = (await import('../models/Event.js')).default;
+    const organizerEvents = await Event.find({ organizer: organizerId }).select('_id');
+    const eventIds = organizerEvents.map(e => e._id);
+
+    const filter = {
+      event: { $in: eventIds },
+      $or: [
+        { userEmail: { $regex: search, $options: 'i' } },
+        { userName: { $regex: search, $options: 'i' } },
+      ],
+    };
+
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter)
+        .populate('event', 'title date location')
+        .populate('user', 'name email')
+        .sort({ createdAt: -1 })
+        .limit(limitNum)
+        .skip(skip)
+        .lean(),
+      Booking.countDocuments(filter),
+    ]);
+
+    const formattedBookings = bookings.map((booking) => ({
+      _id: booking._id,
+      bookingId: booking.bookingId,
+      userName: booking.userName,
+      userEmail: booking.userEmail,
+      userPhone: booking.userPhone || '-',
+      eventTitle: booking.event?.title || 'N/A',
+      ticketType: booking.ticketType,
+      quantity: booking.quantity,
+      totalAmount: booking.totalAmount,
+      paymentStatus: booking.paymentStatus,
+      status: booking.status,
+      date: booking.createdAt,
+      ticketIds: booking.ticketIds || [],
+    }));
+
+    res.json({
+      bookings: formattedBookings,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Event Admin API: Search booking by Ticket ID (only from their events)
+ */
+export const eventAdminSearchBookingByTicketId = async (req, res) => {
+  try {
+    const { ticketId } = req.query;
+    const organizerId = req.user._id;
+
+    if (!ticketId || ticketId.trim() === '') {
+      return res.status(400).json({ message: 'Ticket ID is required' });
+    }
+
+    // Find events owned by this event admin
+    const Event = (await import('../models/Event.js')).default;
+    const organizerEvents = await Event.find({ organizer: organizerId }).select('_id');
+    const eventIds = organizerEvents.map(e => e._id);
+
+    // Find booking that belongs to one of the organizer's events
+    const booking = await Booking.findOne({ 
+      ticketIds: ticketId,
+      event: { $in: eventIds }
+    })
+      .populate('user', 'name email phone')
+      .populate('event', 'title date location')
+      .lean();
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found for this ticket ID or does not belong to your events' });
+    }
+
+    const formattedBooking = {
+      _id: booking._id,
+      bookingId: booking.bookingId,
+      userName: booking.userName || booking.user?.name || 'N/A',
+      userEmail: booking.userEmail || booking.user?.email || 'N/A',
+      userPhone: booking.userPhone || '-',
+      eventTitle: booking.event?.title || 'N/A',
+      event: {
+        _id: booking.event?._id,
+        title: booking.event?.title || 'N/A',
+        date: booking.event?.date,
+        location: booking.event?.location,
+      },
+      ticketType: booking.ticketType,
+      quantity: booking.quantity,
+      seats: booking.seats || [],
+      ticketIds: booking.ticketIds || [],
+      totalAmount: booking.totalAmount,
+      originalAmount: booking.originalAmount || booking.totalAmount,
+      discountAmount: booking.discountAmount || 0,
+      finalAmount: booking.finalAmount || booking.totalAmount,
+      coupon: booking.coupon || null,
+      paymentStatus: booking.paymentStatus,
+      status: booking.status,
+      date: booking.createdAt,
+      createdAt: booking.createdAt,
+      qrCode: booking.qrCode,
+      qrCodes: booking.qrCodes || [],
+      foundTicketId: ticketId,
+    };
+
+    res.json({
+      booking: formattedBooking,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+

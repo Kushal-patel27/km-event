@@ -255,7 +255,7 @@ export default function Waitlist() {
                         
                         {entry.status === 'waiting' && entry.event?._id && (
                           <Link
-                            to={`/event/${entry.event._id}`}
+                            to={`/event/${entry.event.slug || entry.event._id}`}
                             className={`flex-1 text-center py-2 rounded-lg transition-colors text-xs sm:text-sm font-medium ${
                               isDarkMode
                                 ? 'bg-black border border-white/10 text-gray-300 hover:bg-black/80 hover:border-red-500/40'

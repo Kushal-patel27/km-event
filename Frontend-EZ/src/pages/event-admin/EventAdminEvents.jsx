@@ -5,6 +5,7 @@ import API from '../../services/api'
 import formatINR from '../../utils/currency'
 import { EventForm } from '../admin/AdminEvents'
 import { Link } from 'react-router-dom'
+import EventPublicToggle from '../../components/events/EventPublicToggle'
 
 export default function EventAdminEvents() {
   const [events, setEvents] = useState([])
@@ -254,6 +255,7 @@ function EventDetails({ event, onBack, onUpdate }) {
         mapLink: formData.mapLink || '',
         image: formData.image,
         category: formData.category,
+        customBranding: formData.customBranding || eventData.customBranding || {},
         price: basePrice,
         date: new Date(formData.date).toISOString(),
         totalTickets: totalCapacity,
@@ -276,21 +278,35 @@ function EventDetails({ event, onBack, onUpdate }) {
 
   // Fetch event features and subscription plan on mount
   useEffect(() => {
+    const toFeatureState = (enabledFeatures = {}) => {
+      const base = {
+        ticketing: { enabled: false },
+        qrCheckIn: { enabled: false },
+        scannerApp: { enabled: false },
+        analytics: { enabled: false },
+        emailSms: { enabled: false },
+        payments: { enabled: false },
+        weatherAlerts: { enabled: false },
+        subAdmins: { enabled: false },
+        reports: { enabled: false }
+      }
+
+      Object.entries(enabledFeatures).forEach(([key, value]) => {
+        base[key] = { ...(value || {}), enabled: true }
+      })
+
+      return base
+    }
+
     const fetchFeatures = async () => {
       try {
         setLoadingFeatures(true)
-        const res = await API.get(`/event-requests/${event._id}/features`)
-        setFeatures(res.data.features || {})
+        const res = await API.get(`/event-requests/${event._id}/enabled-features`)
+        setFeatures(toFeatureState(res.data?.enabledFeatures || {}))
       } catch (err) {
-        // 403 is expected when features endpoint is not accessible (normal for event admins)
-        if (err.response?.status === 403) {
-          // Default to all enabled if access is forbidden
-          setFeatures({ analytics: { enabled: true }, ticketing: { enabled: true }, qrCheckIn: { enabled: true }, scannerApp: { enabled: true }, subAdmins: { enabled: true } })
-        } else {
-          console.error('Failed to fetch features:', err)
-          // Default to all enabled if fetch fails
-          setFeatures({ analytics: { enabled: true }, ticketing: { enabled: true }, qrCheckIn: { enabled: true }, scannerApp: { enabled: true }, subAdmins: { enabled: true } })
-        }
+        console.error('Failed to fetch enabled features:', err)
+        // Safe fallback to keep existing tabs functional
+        setFeatures({ analytics: { enabled: true }, ticketing: { enabled: true }, qrCheckIn: { enabled: true }, scannerApp: { enabled: true }, subAdmins: { enabled: true } })
       } finally {
         setLoadingFeatures(false)
       }
@@ -372,10 +388,23 @@ function EventDetails({ event, onBack, onUpdate }) {
         setShowPlansModal(false)
         // Refresh features after plan update
         try {
-          const featuresRes = await API.get(`/event-requests/${event._id}/features`)
-          if (featuresRes.data.features) {
-            setFeatures(featuresRes.data.features)
+          const featuresRes = await API.get(`/event-requests/${event._id}/enabled-features`)
+          const enabledFeatures = featuresRes.data?.enabledFeatures || {}
+          const refreshed = {
+            ticketing: { enabled: false },
+            qrCheckIn: { enabled: false },
+            scannerApp: { enabled: false },
+            analytics: { enabled: false },
+            emailSms: { enabled: false },
+            payments: { enabled: false },
+            weatherAlerts: { enabled: false },
+            subAdmins: { enabled: false },
+            reports: { enabled: false }
           }
+          Object.entries(enabledFeatures).forEach(([key, value]) => {
+            refreshed[key] = { ...(value || {}), enabled: true }
+          })
+          setFeatures(refreshed)
         } catch (featuresError) {
           console.warn('Skipping feature refresh after upgrade:', featuresError)
         }
@@ -421,6 +450,7 @@ function EventDetails({ event, onBack, onUpdate }) {
     subAdminsEnabled && { id: 'staff', label: '👥 Staff' },
     ticketingEnabled && { id: 'bookings', label: '📋 Bookings' },
     scannerEnabled && { id: 'logs', label: '📝 Entry Logs' },
+    { id: 'sharing', label: '🌐 Public Sharing' },
   ].filter(Boolean)
 
   // Adjust active tab if current tab is disabled
@@ -593,6 +623,17 @@ function EventDetails({ event, onBack, onUpdate }) {
             ) : (
               <FeatureDisabledMessage featureName="Entry Logs & Scanner" featureIcon="📝" onShowPlans={handleShowPlans} />
             )
+          )}
+          {activeTab === 'sharing' && (
+            <div className="space-y-6">
+              <EventPublicToggle 
+                event={eventData} 
+                onUpdate={(updatedEvent) => {
+                  setEventData(updatedEvent);
+                  onUpdate(updatedEvent);
+                }} 
+              />
+            </div>
           )}
         </>
       )}

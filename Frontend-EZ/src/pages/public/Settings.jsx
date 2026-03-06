@@ -165,7 +165,9 @@ export default function Settings(){
   }
 
   return (
-    <div className="bg-black dark:bg-black min-h-screen py-16 px-4 sm:px-6 lg:px-12">
+    <div className={`min-h-screen py-16 px-4 sm:px-6 lg:px-12 transition-colors duration-300 ${
+      isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'
+    }`}>
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -173,17 +175,17 @@ export default function Settings(){
           transition={{ duration: 0.4 }}
           className="mb-10"
         >
-          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white">Settings</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your account, security, and preferences</p>
+          <h1 className={`text-4xl font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Settings</h1>
+          <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Manage your account, security, and preferences</p>
         </motion.div>
 
         {user?.hasPassword === false && (
-          <div className="mb-6 p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-800">
+          <div className="mb-6 p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-400">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="text-sm font-semibold">Set a password to enable email login for your account.</div>
               <Link
                 to="/set-password"
-                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600"
               >
                 Set Password
               </Link>
@@ -193,8 +195,12 @@ export default function Settings(){
 
         {/* Profile */}
         <section className="mb-8">
-          <div className="bg-black dark:bg-black border border-white/10 dark:border-white/10 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Profile</h2>
+          <div className={`rounded-xl p-6 border ${
+            isDarkMode
+              ? 'bg-black border-white/10'
+              : 'bg-white border-gray-200'
+          }`}>
+            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Profile</h2>
 
             {profileMsg && (
               <div className={`mb-4 p-3 rounded-lg text-sm ${profileMsg.type==='success' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800'}`}>
@@ -205,11 +211,11 @@ export default function Settings(){
             <form onSubmit={saveProfile} className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                <input value={profile.name} onChange={e=>setProfile(p=>({...p, name: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
+                <input value={profile.name} onChange={e=>setProfile(p=>({...p, name: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                <input type="email" value={profile.email} onChange={e=>setProfile(p=>({...p, email: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
+                <input type="email" value={profile.email} onChange={e=>setProfile(p=>({...p, email: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div className="sm:col-span-2">
                 <button disabled={profileSaving} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-60">
@@ -222,8 +228,12 @@ export default function Settings(){
 
         {/* Security */}
         <section className="mb-8">
-          <div className="bg-black dark:bg-black border border-white/10 dark:border-white/10 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Security</h2>
+          <div className={`rounded-xl p-6 border ${
+            isDarkMode
+              ? 'bg-black border-white/10'
+              : 'bg-white border-gray-200'
+          }`}>
+            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Security</h2>
 
             {securityMsg && (
               <div className={`mb-4 p-3 rounded-lg text-sm ${securityMsg.type==='success' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800'}`}>
@@ -234,18 +244,22 @@ export default function Settings(){
             <form onSubmit={savePassword} className="grid sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
-                <input type="password" value={security.currentPassword} onChange={e=>setSecurity(s=>({...s, currentPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
+                <input type="password" value={security.currentPassword} onChange={e=>setSecurity(s=>({...s, currentPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
-                <input type="password" value={security.newPassword} onChange={e=>setSecurity(s=>({...s, newPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
+                <input type="password" value={security.newPassword} onChange={e=>setSecurity(s=>({...s, newPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label>
-                <input type="password" value={security.confirmPassword} onChange={e=>setSecurity(s=>({...s, confirmPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100" required />
+                <input type="password" value={security.confirmPassword} onChange={e=>setSecurity(s=>({...s, confirmPassword: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" required />
               </div>
               <div className="sm:col-span-3">
-                <button disabled={securitySaving} className="px-5 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 rounded-lg font-semibold disabled:opacity-60">
+                <button disabled={securitySaving} className={`px-5 py-2 rounded-lg font-semibold disabled:opacity-60 ${
+                  isDarkMode
+                    ? 'bg-gray-900 hover:bg-gray-800 text-white'
+                    : 'bg-gray-800 hover:bg-gray-900 text-white'
+                }`}>
                   {securitySaving ? 'Updating...' : 'Update Password'}
                 </button>
               </div>
@@ -261,7 +275,7 @@ export default function Settings(){
                   type="button"
                   onClick={sendOtpForReset}
                   disabled={sendingOtp}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-60"
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-60"
                 >
                   {sendingOtp ? 'Sending...' : 'Send OTP'}
                 </button>
@@ -276,15 +290,15 @@ export default function Settings(){
               <form onSubmit={resetPasswordWithOtp} className="grid sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OTP code</label>
-                  <input type="text" value={resetOtp} onChange={e=>setResetOtp(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="6-digit code" maxLength={6} required />
+                  <input type="text" value={resetOtp} onChange={e=>setResetOtp(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" placeholder="6-digit code" maxLength={6} required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New password</label>
-                  <input type="password" value={resetNewPassword} onChange={e=>setResetNewPassword(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
+                  <input type="password" value={resetNewPassword} onChange={e=>setResetNewPassword(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm new password</label>
-                  <input type="password" value={resetConfirmPassword} onChange={e=>setResetConfirmPassword(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
+                  <input type="password" value={resetConfirmPassword} onChange={e=>setResetConfirmPassword(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" required />
                 </div>
                 <div className="sm:col-span-3">
                   <button disabled={resettingPassword} className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold disabled:opacity-60">
@@ -298,12 +312,20 @@ export default function Settings(){
 
         {/* Appearance */}
         <section className="mb-8">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 flex items-center justify-between">
+          <div className={`rounded-xl p-6 border flex items-center justify-between ${
+            isDarkMode
+              ? 'bg-black border-white/10'
+              : 'bg-white border-gray-200'
+          }`}>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Appearance</h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Toggle dark mode</p>
+              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Appearance</h2>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Toggle dark mode</p>
             </div>
-            <button onClick={toggleDarkMode} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <button onClick={toggleDarkMode} className={`px-4 py-2 rounded-lg border font-medium ${
+              isDarkMode
+                ? 'border-gray-600 text-gray-100 hover:bg-gray-700'
+                : 'border-gray-300 text-gray-800 hover:bg-gray-100'
+            }`}>
               {isDarkMode ? 'Disable Dark Mode' : 'Enable Dark Mode'}
             </button>
           </div>
@@ -311,26 +333,30 @@ export default function Settings(){
 
         {/* Preferences */}
         <section className="mb-8">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Preferences</h2>
+          <div className={`rounded-xl p-6 border ${
+            isDarkMode
+              ? 'bg-black border-white/10'
+              : 'bg-white border-gray-200'
+          }`}>
+            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Preferences</h2>
             {prefsMsg && <div className="mb-4 p-3 rounded-lg text-sm bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800">{prefsMsg}</div>}
             <div className="space-y-3">
               <label className="flex items-center justify-between py-2">
-                <span className="text-gray-800 dark:text-gray-200">Email updates</span>
+                <span className="text-gray-900 dark:text-gray-200">Email updates</span>
                 <input type="checkbox" checked={prefs.emailUpdates} onChange={e=>savePrefs({...prefs, emailUpdates: e.target.checked})} />
               </label>
               <label className="flex items-center justify-between py-2">
-                <span className="text-gray-800 dark:text-gray-200">Booking reminders</span>
+                <span className="text-gray-900 dark:text-gray-200">Booking reminders</span>
                 <input type="checkbox" checked={prefs.bookingReminders} onChange={e=>savePrefs({...prefs, bookingReminders: e.target.checked})} />
               </label>
               <label className="flex items-center justify-between py-2">
-                <span className="text-gray-800 dark:text-gray-200">Newsletter</span>
+                <span className="text-gray-900 dark:text-gray-200">Newsletter</span>
                 <input type="checkbox" checked={prefs.newsletter} onChange={e=>savePrefs({...prefs, newsletter: e.target.checked})} />
               </label>
               <div className="grid sm:grid-cols-2 gap-4 pt-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Language</label>
-                  <select value={prefs.language} onChange={e=>savePrefs({...prefs, language: e.target.value})} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                  <select value={prefs.language} onChange={e=>savePrefs({...prefs, language: e.target.value})} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
                     <option value="en">English</option>
                     <option value="hi">Hindi</option>
                     <option value="es">Spanish</option>
@@ -338,7 +364,7 @@ export default function Settings(){
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timezone</label>
-                  <select value={prefs.timezone} onChange={e=>savePrefs({...prefs, timezone: e.target.value})} className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                  <select value={prefs.timezone} onChange={e=>savePrefs({...prefs, timezone: e.target.value})} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
                     <option value="UTC">UTC</option>
                     <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
                     <option value="America/New_York">America/New_York</option>
@@ -352,10 +378,18 @@ export default function Settings(){
 
         {/* Privacy & Data */}
         <section className="mb-8">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Privacy & Data</h2>
+          <div className={`rounded-xl p-6 border ${
+            isDarkMode
+              ? 'bg-black border-white/10'
+              : 'bg-white border-gray-200'
+          }`}>
+            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Privacy & Data</h2>
             <div className="flex flex-wrap gap-3">
-              <button onClick={downloadMyData} className="px-5 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 rounded-lg font-semibold">Download my data</button>
+              <button onClick={downloadMyData} className={`px-5 py-2 rounded-lg font-semibold ${
+                isDarkMode
+                  ? 'bg-gray-900 hover:bg-gray-800 text-white'
+                  : 'bg-gray-800 hover:bg-gray-900 text-white'
+              }`}>Download my data</button>
               <button onClick={logoutAllDevices} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold">Logout from all devices</button>
             </div>
           </div>

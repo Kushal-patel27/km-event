@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema(
     preferences: {
       emailUpdates: { type: Boolean, default: true },
       bookingReminders: { type: Boolean, default: true },
-      newsletter: { type: Boolean, default: false },
+      newsletter: { type: Boolean, default: true },
       language: { type: String, default: "en" },
       timezone: { type: String, default: "UTC" },
     },

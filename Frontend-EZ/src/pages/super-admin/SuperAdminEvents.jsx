@@ -5,7 +5,7 @@ import SuperAdminLayout from '../../components/layout/SuperAdminLayout'
 import formatCurrency from '../../utils/currency'
 import { EventForm } from '../admin/AdminEvents'
 
-const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference']
+const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference', 'Other']
 
 const featuresList = [
   { key: 'ticketing', label: 'Ticketing' },

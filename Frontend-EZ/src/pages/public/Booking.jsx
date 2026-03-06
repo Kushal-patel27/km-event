@@ -199,7 +199,7 @@ export default function Booking(){
           <div className="px-6 py-5 text-sm">
             <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Ticket sales are currently disabled for this event. Please contact the organizer for more information.</p>
             <div className="mt-4 flex justify-center">
-              <Link to={`/event/${id}`} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600' : 'bg-indigo-600 text-white hover:bg-indigo-500 border border-indigo-600'}`}>
+              <Link to={`/event/${event?.slug || id}`} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600' : 'bg-indigo-600 text-white hover:bg-indigo-500 border border-indigo-600'}`}>
                 Back to Event
               </Link>
             </div>
@@ -501,7 +501,7 @@ export default function Booking(){
 
           {/* 7️⃣ Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mt-2">
-            <Link to={`/event/${event.id}`} className={`flex-1 px-4 py-3 rounded-lg font-medium text-center transition-all duration-200 outline-none ${isDarkMode ? 'bg-zinc-700 text-white hover:bg-zinc-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>← Back to Event</Link>
+            <Link to={`/event/${event?.slug || event?.id}`} className={`flex-1 px-4 py-3 rounded-lg font-medium text-center transition-all duration-200 outline-none ${isDarkMode ? 'bg-zinc-700 text-white hover:bg-zinc-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>← Back to Event</Link>
             
             {!showPayment ? (
               <button type="submit" disabled={bookingLoading||loadingFeatures||(hasTicketTypes&&!selectedTicketType)||features?.ticketing?.enabled===false} className={`flex-1 px-4 py-3 rounded-lg font-semibold text-white shadow-lg transition-all duration-200 outline-none flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${isDarkMode ? 'bg-red-600 hover:bg-red-500 shadow-red-500/30' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-400/40'}`}>

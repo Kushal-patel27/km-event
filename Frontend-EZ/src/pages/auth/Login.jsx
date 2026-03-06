@@ -85,11 +85,25 @@ export default function Login() {
         throw mode === "admin" ? firstError : lastError;
       }
     } catch (err) {
+      console.error('Login error:', err.response?.data);
       const message = err.response?.data?.message || "Login failed";
-      if (message === "Password login not available for this account") {
-        const encoded = encodeURIComponent(email || "");
-        navigate(`/set-password?email=${encoded}`);
+      const status = err.response?.status;
+      
+      // Handle various password-related errors
+      if (
+        message === "Password login not available for this account use google log in" ||
+        message === "No password set for this account" ||
+        message === "Account created with Google. Please use Google login or set a password." ||
+        message.toLowerCase().includes("no password") ||
+        message.toLowerCase().includes("password not set") ||
+        (status === 400 && message.toLowerCase().includes("password"))
+      ) {
+        setError("This account was created with Google. Please use 'Sign in with Google' below, or set a password first.");
         return;
+      } else if (message === "User not found") {
+        setError("No account found with this email. Please sign up first.");
+      } else if (message === "Invalid credentials" || message === "Invalid password") {
+        setError("Invalid email or password. Please try again.");
       } else {
         setError(message);
       }
@@ -123,7 +137,7 @@ export default function Login() {
               type="button"
               className={`px-4 py-2 text-sm font-medium focus:outline-none ${
                 mode === "user"
-                  ? "bg-indigo-600 text-white"
+                  ? isDarkMode ? "bg-red-600 text-white" : "bg-blue-600 text-white"
                   : isDarkMode
                     ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
                     : "bg-white text-gray-700 hover:bg-gray-50"
@@ -139,7 +153,7 @@ export default function Login() {
                   isDarkMode ? 'border-gray-600' : 'border-gray-200'
                 } ${
                   mode === "admin"
-                    ? "bg-indigo-600 text-white"
+                    ? isDarkMode ? "bg-red-600 text-white" : "bg-blue-600 text-white"
                     : isDarkMode
                       ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
                       : "bg-white text-gray-700 hover:bg-gray-50"
@@ -165,7 +179,15 @@ export default function Login() {
               : "Sign in to manage your bookings and profile."}
           </p>
 
-          {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
+          {error && (
+            <div className={`text-sm p-3 rounded-lg mb-3 ${
+              isDarkMode
+                ? 'bg-red-900/20 text-red-300 border border-red-800'
+                : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              {error}
+            </div>
+          )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -180,7 +202,7 @@ export default function Login() {
                   placeholder="you@example.com"
                   className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                     isDarkMode
-                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
+                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/20'
                       : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                   }`}
                 />
@@ -199,7 +221,7 @@ export default function Login() {
                     placeholder="••••••••"
                     className={`w-full px-4 py-3 pr-12 rounded-lg border transition-all outline-none ${
                       isDarkMode
-                        ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
+                        ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/20'
                         : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                     }`}
                   />
@@ -227,13 +249,13 @@ export default function Login() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 gap-3 sm:gap-0">
                 <Link
                   to="/forgot-password"
-                  className={`text-sm font-semibold transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}
+                  className={`text-sm font-semibold transition ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-blue-700 hover:text-blue-800'}`}
                 >
                   Forgot password?
                 </Link>
                 <div className="text-sm">
                   <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Don't have an account? </span>
-                  <Link to="/signup" className={`font-semibold transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}>
+                  <Link to="/signup" className={`font-semibold transition ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-blue-700 hover:text-blue-800'}`}>
                     Sign up
                   </Link>
                 </div>
@@ -243,7 +265,11 @@ export default function Login() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-lg bg-blue-700 hover:bg-blue-800 shadow-blue-400/30`}
+                className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-lg ${
+                  isDarkMode
+                    ? 'bg-red-700 hover:bg-red-800 shadow-red-400/30'
+                    : 'bg-blue-700 hover:bg-blue-800 shadow-blue-400/30'
+                }`}
               >
                 {mode === "admin" ? "Login as Admin" : "Login"}
               </motion.button>
@@ -270,7 +296,7 @@ export default function Login() {
                   className={`w-full flex items-center justify-center gap-3 px-4 py-3 border rounded-lg font-semibold transition-all ${
                 isDarkMode
                   ? 'bg-black border-gray-800 text-gray-100 hover:border-gray-600'
-                  : 'bg-white border-indigo-200 text-gray-700 hover:bg-indigo-50 hover:border-indigo-300'
+                  : 'bg-white border-blue-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300'
               }`}
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -299,7 +325,7 @@ export default function Login() {
           {/* Footer Note */}
           <p className={`text-center mt-4 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
             By logging in, you agree to our{' '}
-            <Link to="/terms" className={`transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}>
+            <Link to="/terms" className={`transition ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-blue-700 hover:text-blue-800'}`}>
               Terms of Service
             </Link>
           </p>

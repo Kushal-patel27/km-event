@@ -26,19 +26,19 @@ export default function EventAdminBookingSearch() {
 
       let res
       if (searchType === 'bookingId') {
-        res = await API.get(`/bookings/admin/search-booking?bookingId=${encodeURIComponent(searchTerm)}`)
+        res = await API.get(`/event-admin/bookings/search-booking?bookingId=${encodeURIComponent(searchTerm)}`)
         setBooking(res.data.booking)
       } else if (searchType === 'ticketId') {
-        res = await API.get(`/bookings/admin/search-ticket?ticketId=${encodeURIComponent(searchTerm)}`)
+        res = await API.get(`/event-admin/bookings/search-ticket?ticketId=${encodeURIComponent(searchTerm)}`)
         setBooking(res.data.booking)
       } else {
-        res = await API.get(`/bookings/admin/search-user?search=${encodeURIComponent(searchTerm)}&page=1&limit=1`)
+        res = await API.get(`/event-admin/bookings/search-user?search=${encodeURIComponent(searchTerm)}&page=1&limit=1`)
         if (res.data.bookings.length > 0) {
           // Fetch full details for the first result
-          const fullRes = await API.get(`/bookings/admin/search-booking?bookingId=${encodeURIComponent(res.data.bookings[0].bookingId)}`)
+          const fullRes = await API.get(`/event-admin/bookings/search-booking?bookingId=${encodeURIComponent(res.data.bookings[0].bookingId)}`)
           setBooking(fullRes.data.booking)
         } else {
-          setError('No bookings found')
+          setError('No bookings found from your events')
         }
       }
     } catch (err) {

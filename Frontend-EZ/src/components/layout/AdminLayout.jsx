@@ -19,9 +19,11 @@ export default function AdminLayout({ title = 'Admin', children }){
         { to: '/admin', label: 'Dashboard', icon: '📊', roles: ['super_admin','event_admin','staff_admin','admin'] },
         { to: '/admin/team', label: 'Team Management', icon: '👥', roles: ['super_admin','admin'] },
         { to: '/admin/events', label: 'Events', icon: '📅', roles: ['super_admin','event_admin','admin'] },
+        { to: '/admin/templates', label: 'Event Templates', icon: '📋', roles: ['super_admin','admin'] },
         { to: '/admin/bookings', label: 'Bookings', icon: '🎫', roles: ['super_admin','event_admin','staff_admin','admin'] },
         { to: '/admin/booking-search', label: 'Booking Search', icon: '🔍', roles: ['super_admin','event_admin','staff_admin','admin'] },
         { to: '/admin/contacts', label: 'Contacts', icon: '📬', roles: ['super_admin','admin'] },
+        { to: '/admin/email-preferences', label: 'Email Preferences', icon: '📧', roles: ['super_admin','admin'] },
       ]
     },
     {
