@@ -78,7 +78,7 @@ export default function Signup() {
           }`}>
             {/* Header */}
             <div className="text-center mb-6">
-              <h2 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>Create Account</h2>
+              <h2 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-red-400' : 'text-blue-700'}`}>Create Account</h2>
               <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Join us to get started</p>
             </div>
 
@@ -106,7 +106,7 @@ export default function Signup() {
                   placeholder="Kushal Patel"
                   className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                     isDarkMode
-                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
+                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/20'
                       : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                   }`}
                 />
@@ -122,7 +122,7 @@ export default function Signup() {
                   placeholder="you@example.com"
                   className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                     isDarkMode
-                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
+                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/20'
                       : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                   }`}
                 />
@@ -142,7 +142,7 @@ export default function Signup() {
                     placeholder="••••••••"
                     className={`w-full px-4 py-3 pr-12 rounded-lg border transition-all outline-none ${
                       isDarkMode
-                        ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20'
+                        ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/20'
                         : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
                     }`}
                   />
@@ -170,7 +170,7 @@ export default function Signup() {
               <div className="flex items-center justify-between pt-2">
                 <div className="text-sm">
                   <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Already have an account? </span>
-                  <Link to="/login" className={`font-semibold transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}>
+                  <Link to="/login" className={`font-semibold transition ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-blue-700 hover:text-blue-800'}`}>
                     Sign in
                   </Link>
                 </div>
@@ -180,7 +180,11 @@ export default function Signup() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-lg bg-blue-700 hover:bg-blue-800 shadow-blue-400/30`}
+                className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-lg ${
+                  isDarkMode
+                    ? 'bg-red-700 hover:bg-red-800 shadow-red-400/30'
+                    : 'bg-blue-700 hover:bg-blue-800 shadow-blue-400/30'
+                }`}
               >
                 Create Account
               </motion.button>
@@ -205,7 +209,7 @@ export default function Signup() {
               className={`w-full flex items-center justify-center gap-3 px-4 py-3 border rounded-lg font-semibold transition-all ${
                 isDarkMode
                   ? 'bg-black border-gray-800 text-gray-100 hover:border-gray-600'
-                  : 'bg-white border-indigo-200 text-gray-700 hover:bg-indigo-50 hover:border-indigo-300'
+                  : 'bg-white border-blue-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300'
               }`}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -233,7 +237,7 @@ export default function Signup() {
           {/* Footer Note */}
           <p className={`text-center mt-4 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
             By signing up, you agree to our{' '}
-            <Link to="/terms" className={`transition ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'}`}>
+            <Link to="/terms" className={`transition ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-blue-700 hover:text-blue-800'}`}>
               Terms of Service
             </Link>
           </p>

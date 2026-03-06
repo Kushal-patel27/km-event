@@ -512,6 +512,22 @@ export default function Navbar(){
                   Admin
                 </Link>
               )}
+              {/* Staff Scanner Link - Mobile */}
+              {user && user.role === 'staff' && (
+                <Link
+                  to="/staff/hp-scanner"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                    location.pathname === '/staff/hp-scanner' 
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-500 font-semibold' 
+                      : isHomePage 
+                        ? 'text-gray-200 hover:bg-black' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-black'
+                  }`}
+                >
+                  <span>📱 QR Scanner</span>
+                </Link>
+              )}
               {user && (
                 <Link
                   to="/settings"

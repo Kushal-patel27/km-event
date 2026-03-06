@@ -132,7 +132,14 @@ export default function Home() {
     async function loadCategories() {
       try {
         const res = await API.get('/categories/all')
-        const categoriesWithColors = (res.data || []).map((cat, idx) => ({
+        // Backend already places "Other" last, but we ensure it on frontend too
+        const otherCategory = res.data.find(cat => cat.name === 'Other')
+        const otherCategories = res.data.filter(cat => cat.name !== 'Other')
+        const sortedCategories = otherCategory 
+          ? [...otherCategories, otherCategory] 
+          : otherCategories
+        
+        const categoriesWithColors = sortedCategories.map((cat, idx) => ({
           ...cat,
           color: categoryColors[idx % categoryColors.length]
         }))
@@ -477,7 +484,7 @@ export default function Home() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: idx * 0.1 }}
-                    onClick={() => navigate(`/event/${event.id}`)}
+                    onClick={() => navigate(`/event/${event.slug || event.id}`)}
                     className="cursor-pointer"
                   >
                     <EventCard event={event} />

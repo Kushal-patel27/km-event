@@ -22,6 +22,11 @@ import {
   exportEvents,
   exportBookings,
 } from "../controllers/eventAdminController.js";
+import {
+  eventAdminSearchBookingByBookingId,
+  eventAdminSearchBookingsByUser,
+  eventAdminSearchBookingByTicketId,
+} from "../controllers/bookingController.js";
 
 const router = express.Router();
 
@@ -66,5 +71,10 @@ router.get("/events/:eventId/entry-logs", requireEventAccess, getEntryLogs);
 // Subscription Management
 router.get("/events/:eventId/subscription", requireEventAccess, getCurrentSubscription);
 router.post("/events/:eventId/subscription", requireEventAccess, updateSubscription);
+
+// Booking Search (only searches within event admin's events)
+router.get("/bookings/search-booking", eventAdminSearchBookingByBookingId);
+router.get("/bookings/search-ticket", eventAdminSearchBookingByTicketId);
+router.get("/bookings/search-user", eventAdminSearchBookingsByUser);
 
 export default router;

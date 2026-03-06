@@ -7,7 +7,7 @@ import AdminLayout from '../../components/layout/AdminLayout'
 import ExportDataModal from '../../components/admin/ExportDataModal'
 import { AnimatePresence, motion } from 'framer-motion'
 
-const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference']
+const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference', 'Other']
 const CITY_SUGGESTIONS = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Chandigarh']
 
 function toInputDateTime(value) {
@@ -36,6 +36,9 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false, categories = 
     category: '',
     description: '',
     image: '',
+    customPrimaryColor: initial.customBranding?.primaryColor || '#FF0000',
+    customBanner: initial.customBranding?.customBanner || '',
+    customLogo: initial.customBranding?.logo || '',
     ...initial,
     date: toInputDateTime(initial.date) || '',
     ticketTypes: initial.ticketTypes || []
@@ -73,6 +76,11 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false, categories = 
       category: (form.category || '').trim(),
       description: form.description.trim(),
       image: form.image.trim(),
+      customBranding: {
+        primaryColor: (form.customPrimaryColor || '#FF0000').trim(),
+        customBanner: (form.customBanner || '').trim(),
+        logo: (form.customLogo || '').trim()
+      }
     }
     const err = validate(trimmed)
     setErrors(err)
@@ -214,6 +222,42 @@ function EventForm({ initial = {}, onSave, onCancel, busy = false, categories = 
         <div className="text-xs text-gray-500">Use a landscape image for best card display.</div>
       </div>
 
+      <div className="space-y-3 border border-gray-200 rounded-lg p-3">
+        <label className="text-sm font-semibold">Public Page Branding</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Primary Color</label>
+            <input
+              type="color"
+              value={form.customPrimaryColor || '#FF0000'}
+              onChange={e => setForm({ ...form, customPrimaryColor: e.target.value })}
+              className="w-full h-10 p-1 border rounded"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Brand Logo URL</label>
+            <input
+              type="url"
+              value={form.customLogo || ''}
+              onChange={e => setForm({ ...form, customLogo: e.target.value })}
+              placeholder="https://..."
+              className="w-full p-2 border rounded"
+            />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Custom Banner URL</label>
+          <input
+            type="url"
+            value={form.customBanner || ''}
+            onChange={e => setForm({ ...form, customBanner: e.target.value })}
+            placeholder="https://..."
+            className="w-full p-2 border rounded"
+          />
+          <div className="text-xs text-gray-500">If set, this banner is shown on the public shared event page.</div>
+        </div>
+      </div>
+
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onCancel} className="px-3 py-1 border rounded disabled:opacity-50" disabled={busy}>Cancel</button>
         <button className="px-3 py-1 bg-indigo-600 text-white rounded disabled:opacity-50" disabled={busy}>{busy ? 'Saving...' : 'Save event'}</button>
@@ -317,6 +361,7 @@ export default function AdminEvents() {
         mapLink: data.mapLink || '',
         image: data.image,
         category: data.category,
+        customBranding: data.customBranding || {},
         price: basePrice,
         date: new Date(data.date).toISOString(),
         totalTickets: totalCapacity,
@@ -360,6 +405,7 @@ export default function AdminEvents() {
         mapLink: data.mapLink || '',
         image: data.image,
         category: data.category,
+        customBranding: data.customBranding || {},
         price: basePrice,
         date: new Date(data.date).toISOString(),
         totalTickets: totalCapacity,
@@ -422,6 +468,7 @@ export default function AdminEvents() {
         mapLink: formData.mapLink || '',
         image: formData.image,
         category: formData.category,
+        customBranding: formData.customBranding || selectedEvent.event.customBranding || {},
         price: basePrice,
         date: new Date(formData.date).toISOString(),
         totalTickets: totalCapacity,

@@ -52,13 +52,27 @@ export default function EventAdminDashboard() {
       const { data } = await API.get(`/event-requests/${eid}/enabled-features`, {
         headers: { Authorization: `Bearer ${user?.token || localStorage.getItem('token')}` }
       })
-      setEnabledFeatures(data.enabledFeatures)
-      
-      // Also fetch all features for reference
-      const allData = await API.get(`/event-requests/${eid}/features`, {
-        headers: { Authorization: `Bearer ${user?.token || localStorage.getItem('token')}` }
+
+      const enabled = data.enabledFeatures || {}
+      setEnabledFeatures(enabled)
+
+      const baseAll = {
+        ticketing: { enabled: false, description: 'Allow ticket sales and management' },
+        qrCheckIn: { enabled: false, description: 'QR code generation for check-in' },
+        scannerApp: { enabled: false, description: 'Mobile scanner app for entry verification' },
+        analytics: { enabled: false, description: 'Event analytics and reporting' },
+        emailSms: { enabled: false, description: 'Email and SMS notifications' },
+        payments: { enabled: false, description: 'Payment processing and wallet integration' },
+        weatherAlerts: { enabled: false, description: 'Weather alerts and notifications' },
+        subAdmins: { enabled: false, description: 'Add and manage sub-administrators' },
+        reports: { enabled: false, description: 'Generate detailed event reports' }
+      }
+
+      Object.entries(enabled).forEach(([key, value]) => {
+        baseAll[key] = { ...(baseAll[key] || {}), ...(value || {}), enabled: true }
       })
-      setAllFeatures(allData.data.features)
+
+      setAllFeatures(baseAll)
     } catch (err) {
       console.error(err)
     } finally {

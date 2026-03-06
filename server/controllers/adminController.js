@@ -147,6 +147,99 @@ export const getTeamMembers = async (req, res) => {
 };
 
 /**
+ * Get users with enabled email preferences
+ */
+export const getUsersEmailPreferences = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search = "",
+      type = "any",
+      role = "user",
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = {};
+
+    if (role !== "all") {
+      filter.role = role;
+    }
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (type === "emailUpdates") {
+      filter["preferences.emailUpdates"] = true;
+    } else if (type === "bookingReminders") {
+      filter["preferences.bookingReminders"] = true;
+    } else if (type === "newsletter") {
+      filter["preferences.newsletter"] = true;
+    } else {
+      filter.$or = [
+        ...(filter.$or || []),
+        { "preferences.emailUpdates": true },
+        { "preferences.bookingReminders": true },
+        { "preferences.newsletter": true },
+      ];
+    }
+
+    const [users, total, summaryCounts] = await Promise.all([
+      User.find(filter)
+        .select("name email role preferences createdAt updatedAt")
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments(filter),
+      User.aggregate([
+        {
+          $group: {
+            _id: null,
+            emailUpdatesEnabled: {
+              $sum: { $cond: [{ $eq: ["$preferences.emailUpdates", true] }, 1, 0] },
+            },
+            bookingRemindersEnabled: {
+              $sum: { $cond: [{ $eq: ["$preferences.bookingReminders", true] }, 1, 0] },
+            },
+            newsletterEnabled: {
+              $sum: { $cond: [{ $eq: ["$preferences.newsletter", true] }, 1, 0] },
+            },
+          },
+        },
+      ]),
+    ]);
+
+    const summary = summaryCounts[0] || {
+      emailUpdatesEnabled: 0,
+      bookingRemindersEnabled: 0,
+      newsletterEnabled: 0,
+    };
+
+    res.json({
+      users,
+      total,
+      summary,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
  * Create a new event admin or staff admin
  */
 export const createTeamMember = async (req, res) => {

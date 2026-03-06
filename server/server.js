@@ -32,6 +32,7 @@ import categoryRoutes from "./routes/categoryRoutes.js";
 import waitlistRoutes from "./routes/waitlistRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
+import templateRoutes from "./routes/templateRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -119,6 +120,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/waitlist", waitlistRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/coupons", couponRoutes);
+app.use("/api/templates", templateRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/scanner", scannerRoutes);
 app.use("/api/hp-scanner", highPerformanceScannerRoutes);

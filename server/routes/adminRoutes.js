@@ -15,6 +15,7 @@ import {
   updateBookingStatus,
   getContacts,
   replyContact,
+  getUsersEmailPreferences,
   exportEventsData,
   exportBookingsData,
 } from "../controllers/adminController.js";
@@ -48,6 +49,9 @@ router.put("/bookings/:bookingId/status", updateBookingStatus);
 // ============ CONTACTS ============
 router.get("/contacts", getContacts);
 router.put("/contacts/:contactId/reply", replyContact);
+
+// ============ USER EMAIL PREFERENCES ============
+router.get("/email-preferences", getUsersEmailPreferences);
 
 // ============ NOTIFICATIONS / EMAIL BLAST ============
 router.post("/notifications/send", sendNotification);

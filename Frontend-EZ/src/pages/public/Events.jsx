@@ -58,8 +58,12 @@ export default function Events(){
     }
   }, [])
 
-  // Extract unique categories from events
-  const categories = ['All', ...new Set(events.map(e => e.category).filter(Boolean))]
+  // Extract unique categories from events, with "Other" at the end
+  const extractedCategories = [...new Set(events.map(e => e.category).filter(Boolean))]
+  const otherCategory = extractedCategories.find(cat => cat === 'Other')
+  const otherCats = extractedCategories.filter(cat => cat !== 'Other')
+  const sortedCategories = otherCategory ? [...otherCats, otherCategory] : otherCats
+  const categories = ['All', ...sortedCategories]
 
   const filtered = events.filter(e => {
     const q = query.toLowerCase().trim()
@@ -144,7 +148,7 @@ export default function Events(){
         {loading ? (
           <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(8)].map((_, i) => (
-              <SkeletonCard key={i} />
+              <SkeletonCard key={i} isDarkMode={isDarkMode} />
             ))}
           </div>
         ) : filtered.length > 0 ? (

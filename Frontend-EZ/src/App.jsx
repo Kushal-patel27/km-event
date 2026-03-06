@@ -40,6 +40,10 @@ import HelpManager from './pages/admin/HelpManager'
 import ForOrganizersContentManager from './pages/admin/ForOrganizersContentManager'
 import AdminFeatureToggles from './pages/admin/AdminFeatureToggles'
 import AdminCouponManager from './pages/admin/AdminCouponManager'
+import AdminEmailPreferences from './pages/admin/AdminEmailPreferences'
+import EventTemplates from './pages/admin/EventTemplates'
+// Public Event Pages
+import PublicEvent from './pages/public/PublicEvent'
 // Event Admin Pages
 import EventAdminDashboard from './pages/event-admin/EventAdminDashboard'
 import EventAdminEvents from './pages/event-admin/EventAdminEvents'
@@ -120,7 +124,9 @@ export default function App(){
         <main className={isAdminRoute || isEventAdminRoute || isStaffAdminRoute || isStaffRoute ? "flex-1" : "flex-1"}>
             <Routes location={location}>
               <Route path="/" element={<Home />} />
-              <Route path="/event/:id" element={<EventDetail />} />
+              {/* Public Event Pages (slug & short code) */}
+              <Route path="/event/:slug" element={<PublicEvent />} />
+              <Route path="/e/:shortCode" element={<PublicEvent />} />
               <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/events" element={<Events />} />
               <Route path="/about" element={<About />} />
@@ -153,6 +159,7 @@ export default function App(){
               <Route path="/admin/bookings" element={<ProtectedAdminRoute><AdminBookings /></ProtectedAdminRoute>} />
               <Route path="/admin/booking-search" element={<ProtectedAdminRoute><BookingSearchDashboard /></ProtectedAdminRoute>} />
               <Route path="/admin/contacts" element={<ProtectedAdminRoute><AdminContacts /></ProtectedAdminRoute>} />
+              <Route path="/admin/email-preferences" element={<ProtectedAdminRoute><AdminEmailPreferences /></ProtectedAdminRoute>} />
               <Route path="/admin/faq" element={<ProtectedAdminRoute><FAQManager /></ProtectedAdminRoute>} />
               <Route path="/admin/help" element={<ProtectedAdminRoute><HelpManager /></ProtectedAdminRoute>} />
               <Route path="/admin/organizers-content" element={<ProtectedAdminRoute><ForOrganizersContentManager /></ProtectedAdminRoute>} />
@@ -164,6 +171,7 @@ export default function App(){
               <Route path="/admin/subscription-setup" element={<ProtectedAdminRoute><SubscriptionSetup /></ProtectedAdminRoute>} />
               <Route path="/admin/event-admin-payouts" element={<ProtectedAdminRoute><EventAdminPayouts /></ProtectedAdminRoute>} />
               <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminCouponManager /></ProtectedAdminRoute>} />
+              <Route path="/admin/templates" element={<ProtectedAdminRoute><EventTemplates /></ProtectedAdminRoute>} />
             
               {/* Event Admin routes */}
             <Route path="/event-admin/login" element={<EventAdminLogin />} />

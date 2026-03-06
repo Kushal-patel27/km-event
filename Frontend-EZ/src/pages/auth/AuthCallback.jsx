@@ -30,32 +30,36 @@ export default function AuthCallback() {
         }
 
         localStorage.setItem("token", token);
-localStorage.setItem("role", role);
-localStorage.setItem("name", name);
-localStorage.setItem("email", email);
+        localStorage.setItem("role", role);
+        localStorage.setItem("name", name);
+        localStorage.setItem("email", email);
 
-        // Save user data to auth context
-        login({ name, email, token, role });
         setProcessed(true);
 
         try {
-          // Fetch additional user details
+          // Fetch complete user details from backend
           const { data } = await API.get('/auth/me', {
             headers: { Authorization: `Bearer ${token}` }
           });
           
+          // Use complete user data from backend, including assignedEvents, assignedGates, etc.
+          const userData = {
+            ...data,
+            token, // Ensure token is included
+          };
+          
+          // Save complete user data to auth context
+          login(userData);
+          
+          // Check if user needs to set password
           if (data && data.hasPassword === false) {
-            login({ name, email, token, role, hasPassword: false });
             navigate("/set-password", { replace: true });
             return;
           }
-          
-          if (data && data.hasPassword !== undefined) {
-            login({ name, email, token, role, hasPassword: data.hasPassword });
-          }
         } catch (err) {
           console.error("Failed to fetch user details:", err);
-          // Continue with basic auth data
+          // Fallback to basic auth data if /auth/me fails
+          login({ name, email, token, role });
         }
 
         // Redirect to home page or dashboard

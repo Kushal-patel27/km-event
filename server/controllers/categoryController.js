@@ -7,7 +7,15 @@ export const getAllCategories = async (req, res) => {
       .sort({ isDefault: -1, usageCount: -1, name: 1 }) // Default categories first, then by usage
       .select('name isDefault usageCount')
     
-    res.json(categories)
+    // Separate "Other" category and move it to the end
+    const otherCategory = categories.find(cat => cat.name === 'Other')
+    const otherCategories = categories.filter(cat => cat.name !== 'Other')
+    
+    const sortedCategories = otherCategory 
+      ? [...otherCategories, otherCategory] 
+      : otherCategories
+    
+    res.json(sortedCategories)
   } catch (error) {
     console.error('Error fetching categories:', error)
     res.status(500).json({ message: 'Failed to fetch categories' })
@@ -116,7 +124,15 @@ export const getAllCategoriesAdmin = async (req, res) => {
       .sort({ isDefault: -1, usageCount: -1, name: 1 })
       .populate('createdBy', 'name email')
     
-    res.json(categories)
+    // Separate "Other" category and move it to the end
+    const otherCategory = categories.find(cat => cat.name === 'Other')
+    const otherCategories = categories.filter(cat => cat.name !== 'Other')
+    
+    const sortedCategories = otherCategory 
+      ? [...otherCategories, otherCategory] 
+      : otherCategories
+    
+    res.json(sortedCategories)
   } catch (error) {
     console.error('Error fetching categories:', error)
     res.status(500).json({ message: 'Failed to fetch categories' })
