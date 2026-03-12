@@ -184,12 +184,12 @@ export default function SuperAdminBookings() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <p className="text-sm text-gray-600">
                 Showing {bookings.length > 0 ? (page - 1) * limit + 1 : 0} to{' '}
                 {Math.min(page * limit, total)} of {total} bookings
               </p>
-              <div className="space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
@@ -215,7 +215,7 @@ export default function SuperAdminBookings() {
             <div className="min-h-screen flex items-center justify-center p-4">
               <div className="bg-white rounded-lg max-w-2xl w-full my-8">
                 <div className="p-6">
-                <div className="flex items-center justify-between mb-4 border-b pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 border-b pb-4 gap-3">
                   <h3 className="text-2xl font-bold text-gray-900">Booking Details</h3>
                   <button
                     onClick={() => setSelectedBooking(null)}

@@ -3,6 +3,7 @@ import API from '../../services/api'
 import formatINR from '../../utils/currency'
 import AdminLayout from '../../components/layout/AdminLayout'
 import ExportDataModal from '../../components/admin/ExportDataModal'
+import { BOOKINGS_EXPORT_FIELDS } from '../../utils/exportFieldOptions'
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState([])
@@ -152,6 +153,7 @@ export default function AdminBookings() {
       if (filters.status) params.append('status', filters.status)
       if (filters.eventId) params.append('eventId', filters.eventId)
       if (filters.paymentStatus) params.append('paymentStatus', filters.paymentStatus)
+      if (filters.selectedFields?.length) params.append('selectedFields', filters.selectedFields.join(','))
       
       // Call export API
       const response = await API.get(`/admin/export/bookings?${params.toString()}`, {
@@ -226,10 +228,10 @@ export default function AdminBookings() {
         </div>
       )}
 
-      <div className="flex items-center justify-end mb-6">
+      <div className="flex justify-end mb-6">
         <button
           onClick={() => setShowExportModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
+          className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -279,7 +281,7 @@ export default function AdminBookings() {
       )}
 
       {searchMode === 'search' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <span className="text-blue-800 font-medium">
             Showing search results for: <strong>{searchTerm}</strong>
           </span>
@@ -366,42 +368,43 @@ export default function AdminBookings() {
       ) : (
         <>
           {/* Bookings Table */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 mb-6">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px]">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div className="w-full max-w-full overflow-x-auto">
+              <table className="w-full min-w-[1020px] table-auto">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-3 sm:px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Booking ID</th>
-                    <th className="px-3 sm:px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Ticket IDs</th>
-                    <th className="px-3 sm:px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Event</th>
-                    <th className="px-3 sm:px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Customer</th>
-                    <th className="px-3 sm:px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Qty</th>
-                    <th className="px-3 sm:px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Amount</th>
-                    <th className="px-3 sm:px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                    <th className="px-3 sm:px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Date</th>
-                    <th className="px-3 sm:px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Booking ID</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Ticket IDs</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Event</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Customer</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Qty</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Amount</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Booking Status</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Payment Status</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Date</th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {bookings.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan="10" className="px-6 py-8 text-center text-gray-500">
                         No bookings found.
                       </td>
                     </tr>
                   ) : (
                     bookings.map(b => (
                       <tr key={b._id} className="hover:bg-gray-50 transition">
-                        <td className="px-3 sm:px-5 py-4">
-                          <p className="font-mono text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                        <td className="px-3 sm:px-4 py-3 align-top whitespace-nowrap">
+                          <p className="inline-block font-mono text-xs sm:text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
                             {b.bookingId || '—'}
                           </p>
                         </td>
-                        <td className="px-3 sm:px-5 py-4">
+                        <td className="px-3 sm:px-4 py-3 align-top">
                           {b.ticketIds && b.ticketIds.length > 0 ? (
                             <div className="flex flex-col gap-1">
                               {b.ticketIds.slice(0, 2).map((id, idx) => (
-                                <span key={idx} className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-mono font-semibold">
+                                <span key={idx} className="text-[11px] bg-green-100 text-green-800 px-2 py-1 rounded font-mono font-semibold whitespace-nowrap">
                                   {id}
                                 </span>
                               ))}
@@ -415,28 +418,28 @@ export default function AdminBookings() {
                             <span className="text-gray-400 text-sm">—</span>
                           )}
                         </td>
-                        <td className="px-3 sm:px-5 py-4">
-                          <p className="font-semibold text-gray-900 text-sm">{b.eventTitle || '—'}</p>
+                        <td className="px-3 sm:px-4 py-3 align-top min-w-[150px]">
+                          <p className="font-semibold text-gray-900 text-sm break-words">{b.eventTitle || '—'}</p>
                           {b.ticketType?.name && (
                             <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full font-medium">
                               {b.ticketType.name}
                             </span>
                           )}
                         </td>
-                        <td className="px-3 sm:px-5 py-4">
-                          <p className="font-semibold text-gray-900 text-sm">{b.userName || '—'}</p>
-                          <p className="text-xs text-gray-600">{b.userEmail || '—'}</p>
+                        <td className="px-3 sm:px-4 py-3 align-top min-w-[170px]">
+                          <p className="font-semibold text-gray-900 text-sm break-words">{b.userName || '—'}</p>
+                          <p className="text-xs text-gray-600 break-all">{b.userEmail || '—'}</p>
                           {b.userPhone && b.userPhone !== '-' && (
                             <p className="text-xs text-gray-600">{b.userPhone}</p>
                           )}
                         </td>
-                        <td className="px-3 sm:px-5 py-4 text-sm text-gray-600">
+                        <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 align-top whitespace-nowrap">
                           {b.quantity || 1}
                         </td>
-                        <td className="px-3 sm:px-5 py-4 text-sm font-semibold text-gray-900">
+                        <td className="px-3 sm:px-4 py-3 text-sm font-semibold text-gray-900 align-top whitespace-nowrap">
                           {formatINR(b.totalAmount || 0)}
                         </td>
-                        <td className="px-3 sm:px-5 py-4">
+                        <td className="px-3 sm:px-4 py-3 align-top whitespace-nowrap">
                           <span
                             className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                               b.status === 'confirmed'
@@ -451,10 +454,27 @@ export default function AdminBookings() {
                             {b.status || 'pending'}
                           </span>
                         </td>
-                        <td className="px-3 sm:px-5 py-4 text-sm text-gray-600">
+                        <td className="px-3 sm:px-4 py-3 align-top whitespace-nowrap">
+                          <span
+                            className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                              b.paymentStatus === 'completed'
+                                ? 'bg-green-100 text-green-800'
+                                : b.paymentStatus === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : b.paymentStatus === 'failed'
+                                ? 'bg-red-100 text-red-800'
+                                : b.paymentStatus === 'refunded'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {(b.paymentStatus || 'completed')}
+                          </span>
+                        </td>
+                        <td className="px-3 sm:px-4 py-3 text-sm text-gray-600 align-top whitespace-nowrap">
                           {b.date ? new Date(b.date).toLocaleDateString() : '—'}
                         </td>
-                        <td className="px-3 sm:px-5 py-4 text-sm">
+                        <td className="px-3 sm:px-4 py-3 text-sm align-top whitespace-nowrap">
                           <button
                             onClick={() => handleViewDetails(b)}
                             className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition text-xs font-medium"
@@ -477,7 +497,7 @@ export default function AdminBookings() {
                 Showing {bookings.length > 0 ? (page - 1) * limit + 1 : 0} to{' '}
                 {Math.min(page * limit, total)} of {total} bookings
               </p>
-              <div className="space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
@@ -503,7 +523,7 @@ export default function AdminBookings() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-lg max-w-2xl w-full shadow-xl my-8">
               <div className="p-6">
-                <div className="flex items-center justify-between mb-6 border-b pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 border-b pb-4 gap-3">
                   <h3 className="text-2xl font-bold text-gray-900">Booking Details</h3>
                   <button
                     onClick={() => setSelectedBooking(null)}
@@ -573,7 +593,7 @@ export default function AdminBookings() {
                   {/* Booking Info */}
                   <div>
                     <p className="text-gray-800 text-sm font-bold mb-3">Booking Information</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="bg-blue-50 p-3 rounded-lg">
                         <p className="text-xs text-gray-600 font-medium">Quantity</p>
                         <p className="text-2xl font-bold text-blue-600">{selectedBooking.quantity || 0}</p>
@@ -600,7 +620,7 @@ export default function AdminBookings() {
                         </svg>
                         Coupon Applied
                       </p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                         <div className="bg-white p-2 rounded">
                           <p className="text-xs text-gray-600 font-medium">Code</p>
                           <p className="font-bold text-amber-700">{selectedBooking.coupon.code}</p>
@@ -652,7 +672,7 @@ export default function AdminBookings() {
                         </svg>
                         Commission Breakdown
                       </p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                         <div className="bg-white p-2 rounded">
                           <p className="text-xs text-gray-600 font-medium">Commission %</p>
                           <p className="font-bold text-indigo-700">{selectedBooking.commission.commissionPercentage || 0}%</p>
@@ -674,7 +694,7 @@ export default function AdminBookings() {
                     <div className="border-t pt-4">
                       <p className="text-gray-800 text-sm font-bold mb-3">Ticket IDs ({selectedBooking.ticketIds.length})</p>
                       <div className="bg-gray-50 rounded-lg p-3 max-h-32 overflow-y-auto">
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {selectedBooking.ticketIds.map((id, idx) => (
                             <div key={idx} className="text-xs bg-white p-2 rounded border border-gray-200">
                               <span className="text-gray-600">#{idx + 1}</span>
@@ -740,7 +760,7 @@ export default function AdminBookings() {
                   {selectedBooking.qrCodes && selectedBooking.qrCodes.length > 0 && (
                     <div className="border-t pt-4">
                       <p className="text-gray-800 text-sm font-bold mb-3">QR Codes ({selectedBooking.qrCodes.length})</p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {selectedBooking.qrCodes.map((qr, idx) => (
                           <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col items-center">
                             {qr.image && (
@@ -781,7 +801,7 @@ export default function AdminBookings() {
                   )}
                 </div>
 
-                <div className="flex gap-3 border-t pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 border-t pt-4">
                   <button
                     onClick={() => setSelectedBooking(null)}
                     className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-bold transition"
@@ -801,6 +821,7 @@ export default function AdminBookings() {
         onExport={handleExport}
         title="Export Bookings Data"
         filters={exportFilters}
+        fields={BOOKINGS_EXPORT_FIELDS}
       />
     </AdminLayout>
   )

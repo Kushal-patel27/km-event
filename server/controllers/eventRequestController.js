@@ -753,16 +753,12 @@ export const getMyEventRequests = async (req, res) => {
       return res.status(401).json({ message: 'User not authenticated' })
     }
 
-    console.log(`[EVENT REQUESTS] Fetching requests for user: ${organizerId}`)
-
     // Use lean() for read-only data to improve performance
     const requests = await EventRequest.find({ organizerId })
       .lean()
       .select('-__v')
       .sort({ createdAt: -1 })
       .limit(50) // Limit to last 50 requests
-    
-    console.log(`[EVENT REQUESTS] Found ${requests.length} requests for user ${organizerId}`)
     
     res.json({
       requests

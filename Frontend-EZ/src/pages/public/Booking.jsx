@@ -20,6 +20,7 @@ export default function Booking(){
   const [event, setEvent] = useState(null)
   const [name, setName] = useState(authUser?.name || '')
   const [email, setEmail] = useState(authUser?.email || '')
+  const [phone, setPhone] = useState(authUser?.whatsappNumber || '')
   const [quantity, setQuantity] = useState(1)
   const [available, setAvailable] = useState(Infinity)
   const [error, setError] = useState('')
@@ -161,6 +162,9 @@ export default function Booking(){
 
   // Calculate discount
   const hasTicketTypes = event?.ticketTypes && event.ticketTypes.length > 0
+  const backToEventUrl = event?.isPublic && event?.slug
+    ? `/event/${event.slug}`
+    : `/events/${event?.id || id}`
   const currentPrice = selectedTicketType ? selectedTicketType.price : (event?.price || 0)
   const subTotal = currentPrice * quantity
   let discountAmount = 0
@@ -199,7 +203,7 @@ export default function Booking(){
           <div className="px-6 py-5 text-sm">
             <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Ticket sales are currently disabled for this event. Please contact the organizer for more information.</p>
             <div className="mt-4 flex justify-center">
-              <Link to={`/event/${event?.slug || id}`} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600' : 'bg-indigo-600 text-white hover:bg-indigo-500 border border-indigo-600'}`}>
+              <Link to={backToEventUrl} className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600' : 'bg-indigo-600 text-white hover:bg-indigo-500 border border-indigo-600'}`}>
                 Back to Event
               </Link>
             </div>
@@ -264,6 +268,13 @@ export default function Booking(){
       setBookingLoading(false)
       return setError(`Only ${available} seats are available`)
     }
+
+    const normalizedPhone = String(phone || '').replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '')
+    const phoneDigits = normalizedPhone.replace(/\D/g, '')
+    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+      setBookingLoading(false)
+      return setError('Please enter a valid contact number (10-15 digits)')
+    }
     
     
     // If event has seats, require seat selection
@@ -302,6 +313,7 @@ export default function Booking(){
       eventId: event.id, 
       quantity: Number(quantity),
       totalAmount: finalTotal,
+      phone: normalizedPhone,
       ...(selectedTicketType && { ticketTypeId: selectedTicketType._id }),
       ...(appliedCoupon && { coupon: appliedCoupon })
     }
@@ -337,7 +349,7 @@ export default function Booking(){
       const serverBooking = {
         ...res.data,
         event,
-        user: { name, email, id: authUser?.email || email },
+        user: { name, email, phone: bookingData?.phone || phone, id: authUser?.email || email },
         date: event.date,
         originalPrice: subTotal,
         discount: discountAmount,
@@ -379,7 +391,7 @@ export default function Booking(){
             eventName: event?.title,
             quantity: bookingData?.quantity 
           }}
-          redirectUrl={`/event/${id}`}
+          redirectUrl={backToEventUrl}
           redirectText="Back to Event"
           onRetry={() => {
             setPaymentStatus(null)
@@ -414,18 +426,28 @@ export default function Booking(){
 
         {/* 2️⃣ Main Card: User Info, Ticket, Quantity, Summary, Buttons */}
         <form onSubmit={handleSubmit} className={`w-full rounded-xl shadow-sm ${isDarkMode ? 'bg-black' : 'bg-white'} p-4 sm:p-8 flex flex-col gap-6 transition-all duration-300 animate-fadein border ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}> 
+          {appliedCoupon && (
+            <div className={`text-xs italic flex items-center gap-1 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              Locked after coupon applied
+            </div>
+          )}
           {/* 2️⃣ User Information Section */}
           <div className="flex flex-col gap-4">
             <h3 className={`text-base font-semibold ${isDarkMode ? 'text-red-400' : 'text-indigo-600'} mb-1`}>Your Information</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               {/* Floating label input */}
               <div className="relative group">
-                <input required value={name} onChange={e=>setName(e.target.value)} id="name" className={`peer w-full px-4 pt-6 pb-2 rounded-lg text-base font-medium transition-all duration-300 outline-none focus:ring-2 ${isDarkMode ? 'bg-black border border-zinc-700 text-white placeholder-transparent focus:ring-red-500 focus:border-red-500' : 'bg-white border border-gray-300 text-gray-900 placeholder-transparent focus:ring-indigo-500 focus:border-indigo-500'} `} placeholder=" " autoComplete="off" />
+                <input required value={name} onChange={e=>setName(e.target.value)} id="name" disabled={appliedCoupon !== null} className={`peer w-full px-4 pt-6 pb-2 rounded-lg text-base font-medium transition-all duration-300 outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-not-allowed ${isDarkMode ? 'bg-black border border-zinc-700 text-white placeholder-transparent focus:ring-red-500 focus:border-red-500' : 'bg-white border border-gray-300 text-gray-900 placeholder-transparent focus:ring-indigo-500 focus:border-indigo-500'} `} placeholder=" " autoComplete="off" />
                 <label htmlFor="name" className={`absolute left-4 top-2 text-sm font-medium pointer-events-none transition-all duration-300 origin-left peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm ${isDarkMode ? 'text-zinc-400 peer-focus:text-red-400' : 'text-gray-400 peer-focus:text-indigo-400'}`}>Full Name *</label>
               </div>
               <div className="relative group">
-                <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} id="email" className={`peer w-full px-4 pt-6 pb-2 rounded-lg text-base font-medium transition-all duration-300 outline-none focus:ring-2 ${isDarkMode ? 'bg-black border border-zinc-700 text-white placeholder-transparent focus:ring-red-500 focus:border-red-500' : 'bg-white border border-gray-300 text-gray-900 placeholder-transparent focus:ring-indigo-500 focus:border-indigo-500'} `} placeholder=" " autoComplete="off" />
+                <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} id="email" disabled={appliedCoupon !== null} className={`peer w-full px-4 pt-6 pb-2 rounded-lg text-base font-medium transition-all duration-300 outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-not-allowed ${isDarkMode ? 'bg-black border border-zinc-700 text-white placeholder-transparent focus:ring-red-500 focus:border-red-500' : 'bg-white border border-gray-300 text-gray-900 placeholder-transparent focus:ring-indigo-500 focus:border-indigo-500'} `} placeholder=" " autoComplete="off" />
                 <label htmlFor="email" className={`absolute left-4 top-2 text-sm font-medium pointer-events-none transition-all duration-300 origin-left peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm ${isDarkMode ? 'text-zinc-400 peer-focus:text-red-400' : 'text-gray-400 peer-focus:text-indigo-400'}`}>Email Address *</label>
+              </div>
+              <div className="relative group sm:col-span-2">
+                <input required type="tel" value={phone} onChange={e=>setPhone(e.target.value)} id="phone" disabled={appliedCoupon !== null} className={`peer w-full px-4 pt-6 pb-2 rounded-lg text-base font-medium transition-all duration-300 outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-not-allowed ${isDarkMode ? 'bg-black border border-zinc-700 text-white placeholder-transparent focus:ring-red-500 focus:border-red-500' : 'bg-white border border-gray-300 text-gray-900 placeholder-transparent focus:ring-indigo-500 focus:border-indigo-500'} `} placeholder=" " autoComplete="tel" />
+                <label htmlFor="phone" className={`absolute left-4 top-2 text-sm font-medium pointer-events-none transition-all duration-300 origin-left peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm ${isDarkMode ? 'text-zinc-400 peer-focus:text-red-400' : 'text-gray-400 peer-focus:text-indigo-400'}`}>Contact Number *</label>
               </div>
             </div>
           </div>
@@ -436,8 +458,8 @@ export default function Booking(){
               <h3 className={`text-base font-semibold ${isDarkMode ? 'text-red-400' : 'text-indigo-600'} mb-1`}>Ticket Type</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {event.ticketTypes.map((ticketType, idx) => (
-                  <label key={idx} className={`relative flex flex-col gap-2 p-4 rounded-lg cursor-pointer transition-all duration-200 ${isDarkMode ? 'bg-black border border-white/10' : 'bg-gray-50 border border-gray-300'} ${selectedTicketType?.name === ticketType.name ? (isDarkMode ? 'ring-2 ring-red-600 border-red-600 bg-black' : 'ring-2 ring-indigo-500 border-indigo-500 shadow-md bg-indigo-50') : (isDarkMode ? 'hover:border-red-400 hover:bg-black' : 'hover:shadow-sm hover:border-indigo-400')}`}> 
-                    <input type="radio" name="ticketType" checked={selectedTicketType?.name === ticketType.name} onChange={() => setSelectedTicketType(ticketType)} className={`absolute top-3 right-3 w-5 h-5 ${isDarkMode ? 'accent-red-600' : 'accent-indigo-600'}`} required />
+                  <label key={idx} className={`relative flex flex-col gap-2 p-4 rounded-lg transition-all duration-200 ${appliedCoupon ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${isDarkMode ? 'bg-black border border-white/10' : 'bg-gray-50 border border-gray-300'} ${selectedTicketType?.name === ticketType.name ? (isDarkMode ? 'ring-2 ring-red-600 border-red-600 bg-black' : 'ring-2 ring-indigo-500 border-indigo-500 shadow-md bg-indigo-50') : (isDarkMode ? 'hover:border-red-400 hover:bg-black' : 'hover:shadow-sm hover:border-indigo-400')}`}> 
+                    <input type="radio" name="ticketType" checked={selectedTicketType?.name === ticketType.name} onChange={() => !appliedCoupon && setSelectedTicketType(ticketType)} disabled={appliedCoupon !== null} className={`absolute top-3 right-3 w-5 h-5 disabled:cursor-not-allowed ${isDarkMode ? 'accent-red-600' : 'accent-indigo-600'}`} required />
                     <div className="flex flex-col gap-1">
                       <span className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{ticketType.name}</span>
                       {ticketType.description && (<span className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-gray-600'}`}>{ticketType.description}</span>)}
@@ -456,13 +478,13 @@ export default function Booking(){
           {(!hasTicketTypes || selectedTicketType) && (
             <div className="flex flex-col gap-2">
               <h3 className={`text-base font-semibold ${isDarkMode ? 'text-red-400' : 'text-indigo-600'} mb-1`}>Select Tickets</h3>
-              <div className="flex items-center gap-4">
-                <div className={`flex items-center gap-2 ${isDarkMode ? 'bg-black' : 'bg-gray-100'} rounded-lg px-3 py-2 border ${isDarkMode ? 'border-zinc-700' : 'border-gray-300'}`}>
-                  <button type="button" aria-label="Decrease" onClick={()=>setQuantity(q=>Math.max(1, q-1))} disabled={quantity<=1} className={`w-8 h-8 flex items-center justify-center rounded-lg font-bold text-lg transition-all duration-200 focus:outline-none ${quantity<=1 ? 'opacity-40 cursor-not-allowed' : isDarkMode ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>-</button>
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className={`flex items-center gap-2 ${isDarkMode ? 'bg-black' : 'bg-gray-100'} rounded-lg px-3 py-2 border ${isDarkMode ? 'border-zinc-700' : 'border-gray-300'} ${appliedCoupon ? 'opacity-60' : ''}`}>
+                  <button type="button" aria-label="Decrease" onClick={()=>setQuantity(q=>Math.max(1, q-1))} disabled={quantity<=1 || appliedCoupon !== null} className={`w-8 h-8 flex items-center justify-center rounded-lg font-bold text-lg transition-all duration-200 focus:outline-none ${quantity<=1 || appliedCoupon ? 'opacity-40 cursor-not-allowed' : isDarkMode ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>-</button>
                   <span className="w-8 text-center text-lg font-semibold select-none">{quantity}</span>
-                  <button type="button" aria-label="Increase" onClick={()=>setQuantity(q=>{const maxLimit=Number.isFinite(maxPerUser)&&maxPerUser>0?maxPerUser:null;const maxSelectable=available===Infinity?(maxLimit||Infinity):(maxLimit?Math.min(available,maxLimit):available);return Math.min(q+1,maxSelectable)})} disabled={(() => {const maxLimit=Number.isFinite(maxPerUser)&&maxPerUser>0?maxPerUser:null;const maxSelectable=available===Infinity?(maxLimit||Infinity):(maxLimit?Math.min(available,maxLimit):available);return quantity>=maxSelectable})()} className={`w-8 h-8 flex items-center justify-center rounded-lg font-bold text-lg transition-all duration-200 focus:outline-none ${(() => {const maxLimit=Number.isFinite(maxPerUser)&&maxPerUser>0?maxPerUser:null;const maxSelectable=available===Infinity?(maxLimit||Infinity):(maxLimit?Math.min(available,maxLimit):available);return quantity>=maxSelectable})() ? 'opacity-40 cursor-not-allowed' : isDarkMode ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>+</button>
+                  <button type="button" aria-label="Increase" onClick={()=>setQuantity(q=>{const maxLimit=Number.isFinite(maxPerUser)&&maxPerUser>0?maxPerUser:null;const maxSelectable=available===Infinity?(maxLimit||Infinity):(maxLimit?Math.min(available,maxLimit):available);return Math.min(q+1,maxSelectable)})} disabled={appliedCoupon !== null || (() => {const maxLimit=Number.isFinite(maxPerUser)&&maxPerUser>0?maxPerUser:null;const maxSelectable=available===Infinity?(maxLimit||Infinity):(maxLimit?Math.min(available,maxLimit):available);return quantity>=maxSelectable})()} className={`w-8 h-8 flex items-center justify-center rounded-lg font-bold text-lg transition-all duration-200 focus:outline-none ${appliedCoupon || (() => {const maxLimit=Number.isFinite(maxPerUser)&&maxPerUser>0?maxPerUser:null;const maxSelectable=available===Infinity?(maxLimit||Infinity):(maxLimit?Math.min(available,maxLimit):available);return quantity>=maxSelectable})() ? 'opacity-40 cursor-not-allowed' : isDarkMode ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>+</button>
                 </div>
-                <span className={`ml-2 px-3 py-1 rounded-full text-xs font-medium ${isDarkMode ? 'bg-red-900/50 text-red-300' : 'bg-indigo-100 text-indigo-700'}`}>{available===Infinity?'∞':available} Tickets Left</span>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${isDarkMode ? 'bg-red-900/50 text-red-300' : 'bg-indigo-100 text-indigo-700'}`}>{available===Infinity?'∞':available} Tickets Left</span>
               </div>
               {Number.isFinite(maxPerUser)&&maxPerUser>0 && (<span className={`text-xs mt-1 ${isDarkMode?'text-zinc-400':'text-gray-500'}`}>Max per user: {maxPerUser}</span>)}
             </div>
@@ -501,7 +523,7 @@ export default function Booking(){
 
           {/* 7️⃣ Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mt-2">
-            <Link to={`/event/${event?.slug || event?.id}`} className={`flex-1 px-4 py-3 rounded-lg font-medium text-center transition-all duration-200 outline-none ${isDarkMode ? 'bg-zinc-700 text-white hover:bg-zinc-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>← Back to Event</Link>
+            <Link to={backToEventUrl} className={`flex-1 px-4 py-3 rounded-lg font-medium text-center transition-all duration-200 outline-none ${isDarkMode ? 'bg-zinc-700 text-white hover:bg-zinc-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>← Back to Event</Link>
             
             {!showPayment ? (
               <button type="submit" disabled={bookingLoading||loadingFeatures||(hasTicketTypes&&!selectedTicketType)||features?.ticketing?.enabled===false} className={`flex-1 px-4 py-3 rounded-lg font-semibold text-white shadow-lg transition-all duration-200 outline-none flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${isDarkMode ? 'bg-red-600 hover:bg-red-500 shadow-red-500/30' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-400/40'}`}>

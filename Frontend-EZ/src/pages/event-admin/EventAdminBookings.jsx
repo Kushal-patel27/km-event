@@ -3,6 +3,7 @@ import EventAdminLayout from '../../components/layout/EventAdminLayout'
 import ExportDataModal from '../../components/admin/ExportDataModal'
 import API from '../../services/api'
 import formatINR from '../../utils/currency'
+import { BOOKINGS_EXPORT_FIELDS } from '../../utils/exportFieldOptions'
 
 export default function EventAdminBookings(){
   const [events, setEvents] = useState([])
@@ -55,6 +56,7 @@ export default function EventAdminBookings(){
       if (filters.endDate) params.append('endDate', filters.endDate)
       if (filters.status) params.append('status', filters.status)
       if (filters.paymentStatus) params.append('paymentStatus', filters.paymentStatus)
+      if (filters.selectedFields?.length) params.append('selectedFields', filters.selectedFields.join(','))
       
       // Call export API - use event-admin specific endpoint
       const response = await API.get(`/event-admin/export/bookings?${params.toString()}`, {
@@ -456,6 +458,7 @@ export default function EventAdminBookings(){
         onExport={handleExport}
         title="Export Bookings"
         filters={exportFilters}
+        fields={BOOKINGS_EXPORT_FIELDS}
       />
     </EventAdminLayout>
   )

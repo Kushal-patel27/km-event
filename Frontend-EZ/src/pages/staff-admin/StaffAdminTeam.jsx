@@ -121,11 +121,11 @@ export default function StaffAdminTeam() {
       )}
 
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
           <h2 className="text-lg font-bold">Staff Members</h2>
           <button
             onClick={handleAddNew}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+            className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
           >
             + Add Staff Member
           </button>
@@ -183,7 +183,7 @@ export default function StaffAdminTeam() {
                       ) : (
                         <button
                           onClick={() => handleEdit(member)}
-                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 mr-2"
+                          className="mb-2 sm:mb-0 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 mr-0 sm:mr-2"
                         >
                           Edit
                         </button>
@@ -298,7 +298,7 @@ export default function StaffAdminTeam() {
                   })}
                 </div>
               </div>
-              <div className="flex gap-2 pt-4">
+              <div className="flex flex-col sm:flex-row gap-2 pt-4">
                 <button
                   type="submit"
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"

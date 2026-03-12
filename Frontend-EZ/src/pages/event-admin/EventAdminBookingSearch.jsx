@@ -8,9 +8,38 @@ export default function EventAdminBookingSearch() {
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [bookings, setBookings] = useState([])
   const [booking, setBooking] = useState(null)
   const [showQRModal, setShowQRModal] = useState(false)
   const [selectedQRIndex, setSelectedQRIndex] = useState(0)
+
+  const loadBookingDetails = async (item) => {
+    try {
+      setLoading(true)
+      setError('')
+
+      // Prefer booking ID; fallback to first ticket ID for legacy rows without bookingId.
+      if (item?.bookingId) {
+        const fullRes = await API.get(`/event-admin/bookings/search-booking?bookingId=${encodeURIComponent(item.bookingId)}`)
+        setBooking(fullRes.data.booking)
+        return
+      }
+
+      const fallbackTicketId = item?.ticketIds?.[0]
+      if (fallbackTicketId) {
+        const fullRes = await API.get(`/event-admin/bookings/search-ticket?ticketId=${encodeURIComponent(fallbackTicketId)}`)
+        setBooking(fullRes.data.booking)
+        return
+      }
+
+      setError('Unable to load booking details for this row')
+    } catch (err) {
+      console.error('Details load error:', err)
+      setError(err.response?.data?.message || 'Failed to load booking details')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSearch = async (e) => {
     e.preventDefault()
@@ -22,21 +51,20 @@ export default function EventAdminBookingSearch() {
     try {
       setLoading(true)
       setError('')
+      setBookings([])
       setBooking(null)
 
       let res
       if (searchType === 'bookingId') {
         res = await API.get(`/event-admin/bookings/search-booking?bookingId=${encodeURIComponent(searchTerm)}`)
-        setBooking(res.data.booking)
+        setBookings([res.data.booking])
       } else if (searchType === 'ticketId') {
         res = await API.get(`/event-admin/bookings/search-ticket?ticketId=${encodeURIComponent(searchTerm)}`)
-        setBooking(res.data.booking)
+        setBookings([res.data.booking])
       } else {
-        res = await API.get(`/event-admin/bookings/search-user?search=${encodeURIComponent(searchTerm)}&page=1&limit=1`)
+        res = await API.get(`/event-admin/bookings/search-user?search=${encodeURIComponent(searchTerm)}&page=1&limit=50`)
         if (res.data.bookings.length > 0) {
-          // Fetch full details for the first result
-          const fullRes = await API.get(`/event-admin/bookings/search-booking?bookingId=${encodeURIComponent(res.data.bookings[0].bookingId)}`)
-          setBooking(fullRes.data.booking)
+          setBookings(res.data.bookings)
         } else {
           setError('No bookings found from your events')
         }
@@ -71,8 +99,8 @@ export default function EventAdminBookingSearch() {
     <EventAdminLayout title="Booking Search Dashboard">
       <div className="max-w-6xl mx-auto">
         {/* Search Section */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8 border border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Search Booking Details</h2>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8 mb-8 border border-gray-200">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Search Booking Details</h2>
           
           <form onSubmit={handleSearch} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -123,15 +151,60 @@ export default function EventAdminBookingSearch() {
           )}
         </div>
 
+        {bookings.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8 border border-gray-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Search Results</h3>
+              <span className="text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+                {bookings.length} booking{bookings.length > 1 ? 's' : ''} found
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px]">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Booking ID</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Customer</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Event</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Qty</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {bookings.map((item) => (
+                    <tr key={item._id || item.bookingId} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 font-mono text-sm text-gray-900">{item.bookingId || 'N/A'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">{item.userName || item.userEmail || 'N/A'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">{item.eventTitle || item.event?.title || 'N/A'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">{item.quantity || 0}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">{item.status || 'N/A'}</td>
+                      <td className="px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={() => loadBookingDetails(item)}
+                          className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-xs font-semibold"
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Booking Details View */}
         {booking && (
           <div className="space-y-6">
             {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-lg shadow-lg p-8 text-white">
+            <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-lg shadow-lg p-4 sm:p-6 lg:p-8 text-white">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-indigo-100 text-sm font-semibold mb-1">Booking ID</p>
-                  <p className="text-2xl font-bold font-mono">{booking.bookingId || booking._id?.substring(0, 12) || 'N/A'}</p>
+                  <p className="text-xl sm:text-2xl font-bold font-mono break-all">{booking.bookingId || booking._id?.substring(0, 12) || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-indigo-100 text-sm font-semibold mb-1">Event</p>
@@ -241,7 +314,7 @@ export default function EventAdminBookingSearch() {
                     <div className="mt-4">
                       <p className="text-sm font-bold text-gray-700 mb-3">Ticket IDs ({booking.ticketIds.length})</p>
                       <div className="bg-gray-50 rounded-lg p-4 max-h-48 overflow-y-auto">
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                           {booking.ticketIds.map((id, idx) => (
                             <div key={idx} className="bg-white border border-gray-300 rounded-lg p-3 text-center hover:shadow-lg transition">
                               <p className="text-xs text-gray-500 font-semibold mb-1">Ticket {idx + 1}</p>
@@ -316,7 +389,7 @@ export default function EventAdminBookingSearch() {
                     <h3 className="text-lg font-bold text-gray-900 mb-4">QR Codes</h3>
                     <p className="text-sm text-gray-600 mb-3">{booking.qrCodes.length} QR code(s) available</p>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {booking.qrCodes.slice(0, 4).map((qr, idx) => (
                         <button
                           key={idx}
@@ -360,8 +433,8 @@ export default function EventAdminBookingSearch() {
           </div>
         )}
 
-        {!booking && !loading && !error && (
-          <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+        {!booking && !loading && !error && bookings.length === 0 && (
+          <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 sm:p-12 text-center">
             <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -373,8 +446,8 @@ export default function EventAdminBookingSearch() {
         {/* QR Modal */}
         {showQRModal && booking?.qrCodes && booking.qrCodes[selectedQRIndex] && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg max-w-md w-full shadow-xl p-8">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-white rounded-lg max-w-md w-full shadow-xl p-4 sm:p-8">
+              <div className="flex items-center justify-between mb-6 gap-3">
                 <h3 className="text-lg font-bold text-gray-900">QR Code #{selectedQRIndex + 1}</h3>
                 <button
                   onClick={() => setShowQRModal(false)}

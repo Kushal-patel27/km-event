@@ -9,7 +9,7 @@ export default function Settings(){
   const { user, login, logout } = useAuth()
   const { isDarkMode, toggleDarkMode } = useDarkMode()
 
-  const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '' })
+  const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '', whatsappNumber: user?.whatsappNumber || '' })
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMsg, setProfileMsg] = useState(null)
 
@@ -216,6 +216,10 @@ export default function Settings(){
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                 <input type="email" value={profile.email} onChange={e=>setProfile(p=>({...p, email: e.target.value}))} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">WhatsApp Number</label>
+                <input type="tel" value={profile.whatsappNumber || ''} onChange={e=>setProfile(p=>({...p, whatsappNumber: e.target.value}))} placeholder="+919876543210" className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" />
               </div>
               <div className="sm:col-span-2">
                 <button disabled={profileSaving} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-60">

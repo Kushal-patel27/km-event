@@ -307,13 +307,13 @@ export default function AdminTeam() {
               setFilterActive('')
               setPage(1)
             }}
-            className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition border border-gray-200"
+            className="w-full md:w-auto px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition border border-gray-200"
           >
             Clear Filters
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
+            className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
           >
             + Create User
           </button>
@@ -439,12 +439,12 @@ export default function AdminTeam() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between mt-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-6 gap-3">
               <p className="text-sm text-gray-600">
                 Showing {users.length > 0 ? (page - 1) * limit + 1 : 0} to{' '}
                 {Math.min(page * limit, total)} of {total} users
               </p>
-              <div className="space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
@@ -485,7 +485,7 @@ export default function AdminTeam() {
                   </option>
                 ))}
               </select>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
                     setShowRoleModal(false)
@@ -601,7 +601,7 @@ export default function AdminTeam() {
 
               </div>
 
-              <div className="px-6 py-4 border-t border-gray-100 flex gap-3 bg-gray-50 rounded-b-xl">
+              <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row gap-3 bg-gray-50 rounded-b-xl">
                 <button
                   onClick={() => {
                     setShowCreateModal(false)
@@ -636,7 +636,7 @@ export default function AdminTeam() {
               <h3 className="text-2xl font-bold text-gray-900 mb-6">User Details</h3>
               
               <div className="space-y-4 mb-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-semibold text-gray-700">Name</label>
                     <input
@@ -658,7 +658,7 @@ export default function AdminTeam() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-semibold text-gray-700">Role</label>
                     <select
@@ -689,7 +689,7 @@ export default function AdminTeam() {
 
                 <div className="border-t pt-4 mt-4">
                   <h4 className="text-sm font-semibold text-gray-700 mb-2">Account Information</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500">Created At</p>
                       <p className="font-medium">
@@ -764,7 +764,7 @@ export default function AdminTeam() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
                     setShowDetailsModal(false)

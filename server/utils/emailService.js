@@ -15,6 +15,8 @@ dotenv.config({ path: path.join(__dirname, "..", ".env"), override: true });
 const emailUser = process.env.EMAIL_USER;
 const emailPass = process.env.EMAIL_PASS;
 const emailSender = emailUser || "k.m.easyevents@gmail.com";
+const enableSmtpLogger = String(process.env.EMAIL_SMTP_LOGGER || "false").toLowerCase() === "true";
+const enableSmtpDebug = String(process.env.EMAIL_SMTP_DEBUG || "false").toLowerCase() === "true";
 
 // Create transporter (using Gmail or other SMTP)
 const transporter = (emailUser && emailPass)
@@ -37,9 +39,9 @@ const transporter = (emailUser && emailPass)
         rateDelta: 1000,
         rateLimit: 5,
       },
-      // Logger for debugging
-      logger: process.env.NODE_ENV === "production" ? false : true,
-      debug: process.env.NODE_ENV === "production" ? false : true,
+      // Keep SMTP wire logs off by default to avoid noisy console output.
+      logger: enableSmtpLogger,
+      debug: enableSmtpDebug,
     })
   : null;
 
@@ -51,7 +53,19 @@ async function sendMailWithRetry(transporter, mailOptions, maxRetries = 3) {
     try {
       console.log(`[EMAIL] Sending email (attempt ${attempt}/${maxRetries})...`);
       const result = await transporter.sendMail(mailOptions);
-      console.log(`[EMAIL] Email sent successfully on attempt ${attempt}:`, result.messageId);
+
+      // Some SMTP providers resolve the request but still reject recipients.
+      // Treat these as failures so callers don't log false-positive success.
+      const rejected = Array.isArray(result?.rejected) ? result.rejected.filter(Boolean) : [];
+      const pending = Array.isArray(result?.pending) ? result.pending.filter(Boolean) : [];
+      const failedRecipients = [...rejected, ...pending];
+      if (failedRecipients.length > 0) {
+        const deliveryError = new Error(`Email rejected for recipient(s): ${failedRecipients.join(", ")}`);
+        deliveryError.code = "recipient_rejected";
+        deliveryError.recipients = failedRecipients;
+        throw deliveryError;
+      }
+
       return result;
     } catch (error) {
       lastError = error;
@@ -629,11 +643,13 @@ export const sendBookingConfirmationEmail = async (bookingDetails) => {
     };
 
     await sendMailWithRetry(ensureTransporter(), mailOptions);
-    console.log(`[BOOKING] Confirmation email sent successfully to ${recipientEmail} with ${pdfBuffers.length} PDF ticket(s)`);
     return true;
   } catch (error) {
     console.error("[BOOKING] Confirmation email failed:", error.message);
     console.error("[BOOKING] Error code:", error.code);
+    if (error.code === "validation_error" || /verify a domain at resend\.com\/domains/i.test(error.message || "")) {
+      console.error("[BOOKING] Resend sandbox/domain restriction detected. Verify a domain in Resend and use a from-address on that verified domain.");
+    }
     // Still return false but log the error properly for debugging
     return false;
   }

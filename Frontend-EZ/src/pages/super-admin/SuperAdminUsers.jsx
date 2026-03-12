@@ -310,13 +310,13 @@ export default function SuperAdminUsers() {
               setFilterActive('')
               setPage(1)
             }}
-            className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition border border-gray-200"
+            className="w-full md:w-auto px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition border border-gray-200"
           >
             Clear Filters
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
+            className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
           >
             + Create User
           </button>
@@ -432,12 +432,12 @@ export default function SuperAdminUsers() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between mt-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-6 gap-3">
               <p className="text-sm text-gray-600">
                 Showing {users.length > 0 ? (page - 1) * limit + 1 : 0} to{' '}
                 {Math.min(page * limit, total)} of {total} users
               </p>
-              <div className="space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
@@ -478,7 +478,7 @@ export default function SuperAdminUsers() {
                   </option>
                 ))}
               </select>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
                     setShowRoleModal(false)
@@ -560,7 +560,7 @@ export default function SuperAdminUsers() {
                   </div>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => {
                       setShowCreateModal(false)
@@ -592,7 +592,7 @@ export default function SuperAdminUsers() {
           <div className="min-h-screen flex items-center justify-center p-4">
             <div className="bg-white rounded-lg max-w-md w-full border border-amber-200 my-8">
             <div className="p-6 space-y-4">
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900">Reset User Password</h3>
                   <p className="text-sm text-gray-600 mt-1">This forces sign-out on all devices for this user.</p>
@@ -632,7 +632,7 @@ export default function SuperAdminUsers() {
                 )}
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   onClick={() => {
                     setShowPasswordModal(false)

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import ExportDataModal from '../../components/admin/ExportDataModal'
 import API from '../../services/api'
+import { EVENTS_EXPORT_FIELDS } from '../../utils/exportFieldOptions'
 import formatINR from '../../utils/currency'
 
 export default function AdminDashboard(){
@@ -125,6 +126,7 @@ export default function AdminDashboard(){
       if (filters.endDate) params.append('endDate', filters.endDate)
       if (filters.category) params.append('category', filters.category)
       if (filters.status) params.append('status', filters.status)
+      if (filters.selectedFields?.length) params.append('selectedFields', filters.selectedFields.join(','))
       
       // Call export API
       const response = await API.get(`/admin/export/events?${params.toString()}`, {
@@ -194,7 +196,7 @@ export default function AdminDashboard(){
           <div className="flex justify-end mb-4">
             <button
               onClick={() => setShowExportModal(true)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
             >
               📥 Export Events
             </button>
@@ -231,24 +233,24 @@ export default function AdminDashboard(){
           </div>
 
           {/* Quick Actions */}
-          <div className="flex flex-wrap gap-3 text-sm">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 text-sm">
             <button
               type="button"
               onClick={() => setShowComposer(true)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-sm"
+              className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-sm"
             >
               📧 Push Notification / Send Email
             </button>
-            <a href="/admin/team" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+            <a href="/admin/team" className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-center">
               Manage Team
             </a>
-            <a href="/admin/events" className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            <a href="/admin/events" className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-center">
               View Events
             </a>
-            <a href="/admin/bookings" className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            <a href="/admin/bookings" className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-center">
               View Bookings
             </a>
-            <a href="/admin/contacts" className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            <a href="/admin/contacts" className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-center">
               View Contacts
             </a>
           </div>
@@ -302,7 +304,7 @@ export default function AdminDashboard(){
       {showComposer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto border border-gray-200">
-            <div className="flex items-start justify-between p-6 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row items-start justify-between p-4 sm:p-6 border-b border-gray-200 gap-3">
               <div>
                 <h3 className="text-xl font-bold">Send Email / Push Notification</h3>
                 <p className="text-sm text-gray-600">Send formatted messages to selected user groups. Preview before sending.</p>
@@ -314,7 +316,7 @@ export default function AdminDashboard(){
               <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{composerError}</div>
             )}
 
-            <div className="grid lg:grid-cols-3 gap-6 p-6">
+            <div className="grid lg:grid-cols-3 gap-6 p-4 sm:p-6">
               <div className="lg:col-span-2 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
@@ -365,7 +367,7 @@ export default function AdminDashboard(){
                   />
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <button onClick={handleSend} disabled={sending} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60">
                     {sending ? 'Sending...' : 'Send Now'}
                   </button>
@@ -428,6 +430,7 @@ export default function AdminDashboard(){
         onExport={handleExport}
         title="Export Events"
         filters={exportFilters}
+          fields={EVENTS_EXPORT_FIELDS}
       />
     </AdminLayout>
   )

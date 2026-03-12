@@ -346,13 +346,13 @@ export default function SuperAdminStaff() {
             <table className="w-full min-w-[1000px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-6 py-3 text-left font-semibold">Name</th>
-                  <th className="px-6 py-3 text-left font-semibold">Email</th>
-                  <th className="px-6 py-3 text-left font-semibold">Type</th>
-                  <th className="px-6 py-3 text-left font-semibold">Events</th>
-                  <th className="px-6 py-3 text-left font-semibold">Gates</th>
-                  <th className="px-6 py-3 text-left font-semibold">Status</th>
-                  <th className="px-6 py-3 text-left font-semibold">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 text-left font-semibold">Name</th>
+                  <th className="px-4 sm:px-6 py-3 text-left font-semibold">Email</th>
+                  <th className="px-4 sm:px-6 py-3 text-left font-semibold">Type</th>
+                  <th className="px-4 sm:px-6 py-3 text-left font-semibold">Events</th>
+                  <th className="px-4 sm:px-6 py-3 text-left font-semibold">Gates</th>
+                  <th className="px-4 sm:px-6 py-3 text-left font-semibold">Status</th>
+                  <th className="px-4 sm:px-6 py-3 text-left font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -371,9 +371,9 @@ export default function SuperAdminStaff() {
                 ) : (
                   staff.map((member) => (
                     <tr key={member._id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium">{member.name}</td>
-                      <td className="px-6 py-4 text-gray-600 text-sm">{member.email}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4 font-medium">{member.name}</td>
+                      <td className="px-4 sm:px-6 py-4 text-gray-600 text-sm">{member.email}</td>
+                      <td className="px-4 sm:px-6 py-4">
                         <span
                           className={`px-3 py-1 rounded text-xs font-semibold ${
                             member.role === "staff_admin"
@@ -384,7 +384,7 @@ export default function SuperAdminStaff() {
                           {member.role === "staff_admin" ? "🎯 Staff Admin" : "🎫📱 Scanner"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-600 text-sm">
+                      <td className="px-4 sm:px-6 py-4 text-gray-600 text-sm">
                         {member.assignedEvents?.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {member.assignedEvents.map((event) => (
@@ -400,7 +400,7 @@ export default function SuperAdminStaff() {
                           <span className="text-gray-400">No events</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-gray-600 text-sm">
+                      <td className="px-4 sm:px-6 py-4 text-gray-600 text-sm">
                         {member.assignedGates?.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {member.assignedGates.map((gate, idx) => (
@@ -413,7 +413,7 @@ export default function SuperAdminStaff() {
                           <span className="text-gray-400">No gates</span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4">
                         <span
                           className={`px-2 py-1 rounded text-xs font-semibold ${
                             member.active
@@ -424,8 +424,8 @@ export default function SuperAdminStaff() {
                           {member.active ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
+                      <td className="px-4 sm:px-6 py-4">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <button
                             onClick={() => handleEdit(member)}
                             className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition"

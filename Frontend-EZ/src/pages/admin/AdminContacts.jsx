@@ -79,7 +79,7 @@ export default function AdminContacts(){
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Contact Messages</h2>
       </div>
 
@@ -187,12 +187,12 @@ export default function AdminContacts(){
 
           {/* Pagination */}
           {total > limit && (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <p className="text-sm text-gray-600">
                 Showing {contacts.length > 0 ? (page - 1) * limit + 1 : 0} to{' '}
                 {Math.min(page * limit, total)} of {total} messages
               </p>
-              <div className="space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
@@ -219,7 +219,7 @@ export default function AdminContacts(){
           <div className="min-h-screen flex items-center justify-center p-4">
             <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto my-8">
               <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                   <h3 className="text-xl font-bold text-gray-900">Contact Message</h3>
                   <button
                     onClick={() => setSelectedContact(null)}
@@ -284,7 +284,7 @@ export default function AdminContacts(){
                 />
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
                 <button
                   onClick={() => setSelectedContact(null)}
                   className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"

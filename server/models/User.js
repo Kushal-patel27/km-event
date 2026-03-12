@@ -16,6 +16,12 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    whatsappNumber: {
+      type: String,
+      trim: true,
+      default: null,
+      index: true,
+    },
     password: { type: String, required: false }, // Optional for OAuth users
     googleId: { type: String, unique: true, sparse: true }, // For Google OAuth
     role: {

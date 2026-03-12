@@ -8,7 +8,7 @@ import Commission from "../models/Commission.js";
 import OrganizerSubscription from "../models/OrganizerSubscription.js";
 import { sendReplyEmail } from "../utils/emailService.js";
 import { notifyNextInLine } from "./waitlistController.js";
-import { generateCSV, generateExcel, generatePDF, formatDate, formatCurrency, formatStatus } from "../utils/exportUtils.js";
+import { generateCSV, generateExcel, generatePDF, formatDate, formatCurrency, formatStatus, getSelectedColumns } from "../utils/exportUtils.js";
 
 const CANCELLATION_STATUSES = new Set(["cancelled", "refunded"]);
 
@@ -914,7 +914,7 @@ export const replyContact = async (req, res) => {
  */
 export const exportEventsData = async (req, res) => {
   try {
-    const { format = 'csv', startDate, endDate, category, location, status } = req.query;
+    const { format = 'csv', startDate, endDate, category, location, status, selectedFields } = req.query;
 
     // Build filter query
     const filter = {};
@@ -948,6 +948,7 @@ export const exportEventsData = async (req, res) => {
       { key: 'status', header: 'Status', width: 15, format: formatStatus },
       { key: 'createdAt', header: 'Created At', width: 20, format: formatDate }
     ];
+    const exportColumns = getSelectedColumns(columns, selectedFields);
 
     // Format data for export
     const exportData = events.map(event => ({
@@ -959,21 +960,21 @@ export const exportEventsData = async (req, res) => {
 
     // Generate export based on format
     if (format === 'csv') {
-      const csv = generateCSV(exportData, columns);
+      const csv = generateCSV(exportData, exportColumns);
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=events-export-${Date.now()}.csv`);
       return res.send(csv);
     }
 
     if (format === 'xlsx') {
-      const buffer = await generateExcel(exportData, columns, 'Events');
+      const buffer = await generateExcel(exportData, exportColumns, 'Events');
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=events-export-${Date.now()}.xlsx`);
       return res.send(buffer);
     }
 
     if (format === 'pdf') {
-      const buffer = await generatePDF(exportData, columns, {
+      const buffer = await generatePDF(exportData, exportColumns, {
         title: 'Events Report',
         subtitle: `Generated on ${formatDate(new Date())}`
       });
@@ -994,7 +995,7 @@ export const exportEventsData = async (req, res) => {
  */
 export const exportBookingsData = async (req, res) => {
   try {
-    const { format = 'csv', startDate, endDate, status, eventId, paymentStatus } = req.query;
+    const { format = 'csv', startDate, endDate, status, eventId, paymentStatus, selectedFields } = req.query;
 
     // Build filter query
     const filter = {};
@@ -1032,6 +1033,7 @@ export const exportBookingsData = async (req, res) => {
       { key: 'bookingDate', header: 'Booking Date', width: 20, format: formatDate },
       { key: 'scanned', header: 'Scanned', width: 12 }
     ];
+    const exportColumns = getSelectedColumns(columns, selectedFields);
 
     // Format data for export
     const exportData = bookings.map(booking => ({
@@ -1052,21 +1054,21 @@ export const exportBookingsData = async (req, res) => {
 
     // Generate export based on format
     if (format === 'csv') {
-      const csv = generateCSV(exportData, columns);
+      const csv = generateCSV(exportData, exportColumns);
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=bookings-export-${Date.now()}.csv`);
       return res.send(csv);
     }
 
     if (format === 'xlsx') {
-      const buffer = await generateExcel(exportData, columns, 'Bookings');
+      const buffer = await generateExcel(exportData, exportColumns, 'Bookings');
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=bookings-export-${Date.now()}.xlsx`);
       return res.send(buffer);
     }
 
     if (format === 'pdf') {
-      const buffer = await generatePDF(exportData, columns, {
+      const buffer = await generatePDF(exportData, exportColumns, {
         title: 'Bookings Report',
         subtitle: `Generated on ${formatDate(new Date())}`
       });

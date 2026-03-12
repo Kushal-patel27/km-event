@@ -46,6 +46,8 @@ export default function Login() {
             token: res.data.token,
             role: res.data.role,
             _id: res.data._id,
+            whatsappNumber: res.data.whatsappNumber,
+            requiresWhatsappNumber: res.data.requiresWhatsappNumber,
             lastLoginAt: res.data.lastLoginAt,
             assignedEvents: res.data.assignedEvents,
             assignedGates: res.data.assignedGates,
@@ -54,6 +56,12 @@ export default function Login() {
           // Redirect based on role and login mode
           const role = String(res.data.role || "").toLowerCase();
           console.log('Normalized role for navigation:', role);
+
+          if (mode !== "admin" && res.data.requiresWhatsappNumber) {
+            navigate('/complete-whatsapp');
+            loginSuccessful = true;
+            break;
+          }
           
           // If logging in from user side (mode !== "admin"), redirect admin users to home
           if (mode !== "admin") {

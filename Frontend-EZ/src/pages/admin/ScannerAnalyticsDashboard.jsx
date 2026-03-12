@@ -21,12 +21,54 @@ export default function ScannerAnalyticsDashboard() {
   
   // Auto-refresh
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(10); // seconds
+  const [refreshInterval, setRefreshInterval] = useState(30); // seconds
   const [lastUpdated, setLastUpdated] = useState(null);
   
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  const getEventId = (event) => event?._id || event?.id || '';
+
+  const getNestedData = (response) => {
+    if (!response || typeof response !== 'object') return null;
+    if (response.data?.data !== undefined) return response.data.data;
+    if (response.data !== undefined) return response.data;
+    return response;
+  };
+
+  const normalizeEventsResponse = (response) => {
+    if (!response || typeof response !== 'object') return [];
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data?.events)) return response.data.events;
+    if (Array.isArray(response.data?.data)) return response.data.data;
+    return [];
+  };
+
+  const normalizeDuplicateAttempts = (attempts) => {
+    if (!Array.isArray(attempts)) return [];
+
+    return attempts.map((attempt) => ({
+      ...attempt,
+      duplicateAttemptNumber: Number(attempt?.duplicateAttemptNumber || 0),
+      scannedAt: attempt?.scannedAt || attempt?.createdAt || null,
+      firstScanTime: attempt?.firstScanTime || attempt?.originalScanId?.scannedAt || null,
+      gateId: attempt?.gateId || attempt?.gateName || 'Unknown Gate',
+      deviceName: attempt?.deviceName || attempt?.deviceId || 'Unknown Device',
+      staff: {
+        ...attempt?.staff,
+        name: attempt?.staff?.name || attempt?.staffName || 'N/A'
+      },
+      booking: {
+        ...attempt?.booking,
+        bookingId: attempt?.displayBookingId || attempt?.booking?.bookingId || attempt?.booking?._id || 'N/A',
+        user: {
+          ...attempt?.booking?.user,
+          name: attempt?.booking?.user?.name || attempt?.attendeeName || 'Unknown User'
+        }
+      }
+    }));
+  };
   
   useEffect(() => {
     if (selectedEvent) {
@@ -47,9 +89,10 @@ export default function ScannerAnalyticsDashboard() {
   const fetchEvents = async () => {
     try {
       const res = await API.get('/events');
-      setEvents(res.data);
-      if (res.data.length > 0) {
-        setSelectedEvent(res.data[0]._id);
+      const eventList = normalizeEventsResponse(res);
+      setEvents(eventList);
+      if (eventList.length > 0) {
+        setSelectedEvent(getEventId(eventList[0]));
       }
     } catch (err) {
       console.error('Failed to fetch events:', err);
@@ -71,6 +114,7 @@ export default function ScannerAnalyticsDashboard() {
         API.get(`/hp-scanner/gate-report/${selectedEvent}`),
         API.get(`/hp-scanner/staff-report/${selectedEvent}`),
         API.get(`/hp-scanner/duplicate-attempts/${selectedEvent}`, { params: { limit: 20 } }),
+        API.get(`/hp-scanner/entry-logs/${selectedEvent}`, { params: { limit: 200 } }),
         // Also fetch from regular scanner endpoint for backward compatibility
         API.get(`/scanner/analytics/${selectedEvent}`).catch(() => null),
         API.get(`/scanner/events/${selectedEvent}/stats`).catch(() => null)
@@ -79,12 +123,12 @@ export default function ScannerAnalyticsDashboard() {
       // Extract analytics data (try hp-scanner first, fall back to scanner)
       let analyticsData = null;
       if (results[0].status === 'fulfilled') {
-        analyticsData = results[0].value.data.data;
-      } else if (results[4].status === 'fulfilled' && results[4].value) {
-        analyticsData = results[4].value.data.data;
+        analyticsData = getNestedData(results[0].value);
       } else if (results[5].status === 'fulfilled' && results[5].value) {
+        analyticsData = getNestedData(results[5].value);
+      } else if (results[6].status === 'fulfilled' && results[6].value) {
         // Convert normal scanner stats to analytics format
-        const statsData = results[5].value.data;
+        const statsData = getNestedData(results[6].value) || {};
         if (statsData.stats) {
           analyticsData = {
             liveStats: {
@@ -105,10 +149,10 @@ export default function ScannerAnalyticsDashboard() {
       // Extract gate report
       let gateData = null;
       if (results[1].status === 'fulfilled') {
-        gateData = results[1].value.data.data;
-      } else if (results[5].status === 'fulfilled' && results[5].value) {
+        gateData = getNestedData(results[1].value);
+      } else if (results[6].status === 'fulfilled' && results[6].value) {
         // Use normal scanner gate stats as fallback
-        const statsData = results[5].value.data;
+        const statsData = getNestedData(results[6].value) || {};
         if (statsData.stats?.byGate) {
           gateData = {
             gateCounts: statsData.stats.byGate
@@ -119,7 +163,7 @@ export default function ScannerAnalyticsDashboard() {
       // Extract staff report with enhanced data
       let staffData = null;
       if (results[2].status === 'fulfilled') {
-        const rawStaffData = results[2].value.data.data;
+        const rawStaffData = getNestedData(results[2].value);
         // Transform staff report to include success rate and other metrics
         if (Array.isArray(rawStaffData)) {
           // The backend returns array directly, so wrap it
@@ -140,16 +184,53 @@ export default function ScannerAnalyticsDashboard() {
             }))
           };
         } else if (rawStaffData && rawStaffData.staffPerformance) {
-          // Already in the right format
-          staffData = rawStaffData;
+          // Normalize existing format to avoid rendering crashes
+          staffData = {
+            ...rawStaffData,
+            staffPerformance: rawStaffData.staffPerformance.map((staff) => {
+              const totalScans = Number(staff.totalScans || 0);
+              const successfulScans = Number(staff.successfulScans ?? totalScans);
+              const duplicates = Number(staff.duplicates ?? Math.max(0, totalScans - successfulScans));
+              const computedSuccessRate = totalScans > 0
+                ? (successfulScans / totalScans) * 100
+                : 100;
+
+              return {
+                ...staff,
+                totalScans,
+                successfulScans,
+                duplicates,
+                avgResponseTime: Number(staff.avgResponseTime || staff.avgValidationTime || 0),
+                successRate: Number(staff.successRate ?? computedSuccessRate),
+                staffName: staff.staffName || 'Unknown'
+              };
+            })
+          };
         }
       }
       
       // Extract duplicate attempts
       let duplicatesData = [];
       if (results[3].status === 'fulfilled') {
-        duplicatesData = results[3].value.data.data.duplicates || [];
+        const duplicatePayload = getNestedData(results[3].value);
+        duplicatesData = normalizeDuplicateAttempts(duplicatePayload?.duplicates || []);
       }
+
+      // Entry logs improve timeline and fallback metrics when recentScans are not present
+      let recentScans = [];
+      if (results[4].status === 'fulfilled') {
+        const entryLogsPayload = getNestedData(results[4].value);
+        recentScans = entryLogsPayload?.logs || entryLogsPayload?.entryLogs || [];
+      }
+
+      recentScans = Array.isArray(recentScans)
+        ? recentScans
+            .filter((scan) => scan?.scannedAt)
+            .map((scan) => ({
+              ...scan,
+              scannedAt: scan.scannedAt
+            }))
+        : [];
       
       // If no analytics data found, create basic structure from available data
       if (!analyticsData) {
@@ -170,8 +251,12 @@ export default function ScannerAnalyticsDashboard() {
             cacheHitRate: 0,
             gateCounts: gateData?.gateCounts || {}
           },
-          recentScans: duplicatesData.slice(0, 20)
+          recentScans: recentScans.length > 0 ? recentScans : duplicatesData.slice(0, 20)
         };
+      }
+
+      if (analyticsData && (!Array.isArray(analyticsData.recentScans) || analyticsData.recentScans.length === 0)) {
+        analyticsData.recentScans = recentScans;
       }
       
       // Ensure liveStats has all required properties
@@ -187,6 +272,15 @@ export default function ScannerAnalyticsDashboard() {
           gateCounts: analyticsData.liveStats.gateCounts || {},
           staffCounts: analyticsData.liveStats.staffCounts || {}
         };
+
+        // Enrich derived metrics from fetched reports if API response omits them
+        if (!analyticsData.liveStats.activeGates && gateData) {
+          analyticsData.liveStats.activeGates = gateData.gates?.length || Object.keys(gateData.gateCounts || {}).length || 0;
+        }
+
+        if (!analyticsData.liveStats.activeStaff && staffData?.staffPerformance) {
+          analyticsData.liveStats.activeStaff = staffData.staffPerformance.length;
+        }
       }
       
       setLiveStats(analyticsData);
@@ -261,7 +355,9 @@ export default function ScannerAnalyticsDashboard() {
     const hourlyData = {};
     
     liveStats.recentScans.forEach(scan => {
-      const hour = new Date(scan.scannedAt).getHours();
+      const timestamp = new Date(scan.scannedAt);
+      if (Number.isNaN(timestamp.getTime())) return;
+      const hour = timestamp.getHours();
       if (!hourlyData[hour]) {
         hourlyData[hour] = { hour: `${hour}:00`, count: 0 };
       }
@@ -328,7 +424,7 @@ export default function ScannerAnalyticsDashboard() {
               >
                 <option value="">Select Event</option>
                 {events.map(event => (
-                  <option key={event._id} value={event._id}>{event.title}</option>
+                  <option key={getEventId(event)} value={getEventId(event)}>{event.title || event.name || 'Untitled Event'}</option>
                 ))}
               </select>
               
@@ -605,17 +701,17 @@ export default function ScannerAnalyticsDashboard() {
                           </div>
                           <div className="text-right">
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
-                              Attempt #{attempt.duplicateAttemptNumber}
+                              Attempt #{attempt.duplicateAttemptNumber || 1}
                             </span>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              {new Date(attempt.scannedAt).toLocaleString()}
+                              {attempt.scannedAt ? new Date(attempt.scannedAt).toLocaleString() : 'Unknown time'}
                             </p>
                           </div>
                         </div>
                         <div className="mt-3 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                           <span>Device: {attempt.deviceName || attempt.deviceId}</span>
                           <span>•</span>
-                          <span>First Entry: {new Date(attempt.firstScanTime).toLocaleString()}</span>
+                          <span>First Entry: {attempt.firstScanTime ? new Date(attempt.firstScanTime).toLocaleString() : 'N/A'}</span>
                         </div>
                       </div>
                     </div>

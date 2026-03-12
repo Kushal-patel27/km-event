@@ -50,6 +50,11 @@ export default function AuthCallback() {
           
           // Save complete user data to auth context
           login(userData);
+
+          if (data?.requiresWhatsappNumber) {
+            navigate('/complete-whatsapp', { replace: true });
+            return;
+          }
           
           // Check if user needs to set password
           if (data && data.hasPassword === false) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
@@ -9,16 +9,29 @@ import { motion, AnimatePresence } from 'framer-motion';
  * @param {function} props.onExport - Export handler (format, filters) => void
  * @param {string} props.title - Modal title
  * @param {Array} props.filters - Available filters configuration
+ * @param {Array} props.fields - Export field configuration [{key, label}]
  */
-export default function ExportDataModal({ isOpen, onClose, onExport, title = 'Export Data', filters = [] }) {
+export default function ExportDataModal({ isOpen, onClose, onExport, title = 'Export Data', filters = [], fields = [] }) {
   const [format, setFormat] = useState('csv');
   const [filterValues, setFilterValues] = useState({});
+  const [selectedFields, setSelectedFields] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
+
+  const allFieldKeys = useMemo(() => fields.map(field => field.key), [fields]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedFields(allFieldKeys);
+    }
+  }, [isOpen, allFieldKeys]);
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      await onExport(format, filterValues);
+      await onExport(format, {
+        ...filterValues,
+        selectedFields
+      });
     } finally {
       setIsExporting(false);
       onClose();
@@ -32,6 +45,24 @@ export default function ExportDataModal({ isOpen, onClose, onExport, title = 'Ex
   const handleReset = () => {
     setFilterValues({});
     setFormat('csv');
+    setSelectedFields(allFieldKeys);
+  };
+
+  const toggleField = (fieldKey) => {
+    setSelectedFields(prev => {
+      if (prev.includes(fieldKey)) {
+        return prev.filter(key => key !== fieldKey);
+      }
+      return [...prev, fieldKey];
+    });
+  };
+
+  const selectAllFields = () => {
+    setSelectedFields(allFieldKeys);
+  };
+
+  const clearFields = () => {
+    setSelectedFields([]);
   };
 
   return (
@@ -143,6 +174,47 @@ export default function ExportDataModal({ isOpen, onClose, onExport, title = 'Ex
                 </div>
               )}
 
+              {/* Fields Selection */}
+              {fields.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3 gap-2">
+                    <label className="block text-sm font-semibold text-gray-700">Fields to Export</label>
+                    <div className="flex items-center gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={selectAllFields}
+                        className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearFields}
+                        className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-56 overflow-y-auto">
+                    {fields.map(field => (
+                      <label key={field.key} className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedFields.includes(field.key)}
+                          onChange={() => toggleField(field.key)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>{field.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    {selectedFields.length} of {fields.length} fields selected
+                  </p>
+                </div>
+              )}
+
               {/* Summary */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start gap-3">
@@ -152,6 +224,11 @@ export default function ExportDataModal({ isOpen, onClose, onExport, title = 'Ex
                   <div className="text-sm text-blue-800">
                     <p className="font-semibold mb-1">Export Information</p>
                     <p>Format: <strong>{format.toUpperCase()}</strong></p>
+                    {fields.length > 0 && (
+                      <p className="mt-1">
+                        Fields: <strong>{selectedFields.length === 0 ? 'None selected' : `${selectedFields.length}/${fields.length}`}</strong>
+                      </p>
+                    )}
                     {Object.entries(filterValues).filter(([k, v]) => v).length > 0 && (
                       <p className="mt-1">
                         Active filters: <strong>{Object.entries(filterValues).filter(([k, v]) => v).length}</strong>
@@ -181,7 +258,7 @@ export default function ExportDataModal({ isOpen, onClose, onExport, title = 'Ex
                 </button>
                 <button
                   onClick={handleExport}
-                  disabled={isExporting}
+                  disabled={isExporting || (fields.length > 0 && selectedFields.length === 0)}
                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isExporting ? (
