@@ -15,6 +15,7 @@ function enrichUser(userObj){
   return {
     ...userObj,
     role,
+    skipWhatsappPrompt: userObj.skipWhatsappPrompt === true,
     isAdmin: ADMIN_ROLES.includes(role) || userObj.isAdmin === true
   }
 }

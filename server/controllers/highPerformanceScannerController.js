@@ -638,17 +638,41 @@ export const getDuplicateAttempts = async (req, res) => {
         }
       })
       .populate('staff', 'name email')
-      .populate('originalScanId', 'scannedAt gateId staff')
+      .populate({
+        path: 'originalScanId',
+        select: 'scannedAt gateId staff booking',
+        populate: {
+          path: 'booking',
+          select: 'bookingId'
+        }
+      })
       .sort({ scannedAt: -1 })
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const normalizedDuplicates = duplicates.map((duplicate) => {
+      const bookingRef = duplicate.booking;
+      const originalBookingRef = duplicate.originalScanId?.booking;
+
+      const displayBookingId =
+        bookingRef?.bookingId ||
+        originalBookingRef?.bookingId ||
+        (bookingRef?._id ? String(bookingRef._id) : null) ||
+        (originalBookingRef?._id ? String(originalBookingRef._id) : null) ||
+        null;
+
+      return {
+        ...duplicate.toObject(),
+        displayBookingId
+      };
+    });
     
     const total = await EntryLog.countDocuments(query);
     
     return res.status(200).json({
       success: true,
       data: {
-        duplicates,
+        duplicates: normalizedDuplicates,
         pagination: {
           total,
           page: parseInt(page),

@@ -1,6 +1,6 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
-import { createBooking, getMyBookings, getEventBookingsForOrganizer, getAllBookings, deleteBooking, getBookedSeats, downloadTicketPDF, getAdminAllBookings, searchBookingByBookingId, searchBookingsByUser, searchBookingByTicketId } from "../controllers/bookingController.js";
+import { createBooking, getMyBookings, getEventBookingsForOrganizer, getAllBookings, deleteBooking, getBookedSeats, downloadTicketPDF, downloadTicketPDFPublic, getAdminAllBookings, searchBookingByBookingId, searchBookingsByUser, searchBookingByTicketId } from "../controllers/bookingController.js";
 
 const router = express.Router();
 
@@ -12,6 +12,7 @@ router.get(
   getEventBookingsForOrganizer
 );
 router.get("/event/:eventId/seats", getBookedSeats); // Public endpoint to check seat availability
+router.get("/public/:bookingId/ticket/:ticketIndex/pdf", downloadTicketPDFPublic); // Signed public PDF link for WhatsApp delivery
 router.get("/:bookingId/ticket/:ticketIndex/pdf", protect, downloadTicketPDF); // Download ticket PDF
 
 // Admin API endpoints

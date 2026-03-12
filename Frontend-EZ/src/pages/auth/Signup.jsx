@@ -10,6 +10,7 @@ export default function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [minPasswordLength, setMinPasswordLength] = useState(8);
@@ -44,9 +45,16 @@ export default function Signup() {
     }
 
     try {
-      const res = await API.post('/auth/register', { name, email, password })
-      signup({ name: res.data.name, email: res.data.email, token: res.data.token, role: res.data.role })
-      navigate('/')
+      const res = await API.post('/auth/register', { name, email, password, whatsappNumber })
+      signup({
+        name: res.data.name,
+        email: res.data.email,
+        token: res.data.token,
+        role: res.data.role,
+        whatsappNumber: res.data.whatsappNumber,
+        requiresWhatsappNumber: res.data.requiresWhatsappNumber,
+      })
+      navigate(res.data.requiresWhatsappNumber ? '/complete-whatsapp' : '/')
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     }
@@ -120,6 +128,22 @@ export default function Signup() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
+                  className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
+                    isDarkMode
+                      ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/20'
+                      : 'bg-white border-blue-200 text-gray-900 placeholder-gray-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>WhatsApp Number</label>
+                <input
+                  required
+                  type="tel"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  placeholder="+919876543210"
                   className={`w-full px-4 py-3 rounded-lg border transition-all outline-none ${
                     isDarkMode
                       ? 'bg-black border-gray-800 text-gray-100 placeholder-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/20'

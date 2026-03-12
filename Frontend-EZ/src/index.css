@@ -133,6 +133,79 @@ html.dark .dark-date-input::-webkit-calendar-picker-indicator {
 }
 
 @layer utilities {
+  .responsive-role-shell,
+  .responsive-role-shell * {
+    min-width: 0;
+  }
+
+  @media (max-width: 767px) {
+    .responsive-role-shell {
+      overflow-x: clip;
+    }
+
+    .responsive-role-shell .role-shell-main,
+    .responsive-role-shell .role-shell-content,
+    .responsive-role-shell .role-shell-main > * {
+      min-width: 0;
+    }
+
+    .responsive-role-shell .overflow-x-auto,
+    .responsive-role-shell .overflow-x-scroll {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+
+    .responsive-role-shell table {
+      width: max-content;
+      max-width: none;
+    }
+
+    .responsive-role-shell .overflow-x-auto > table,
+    .responsive-role-shell .overflow-x-scroll > table {
+      min-width: max(100%, max-content);
+    }
+
+    .responsive-role-shell .fixed.inset-0 {
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+
+    .responsive-role-shell .fixed.inset-0 > div {
+      width: min(100%, 100%);
+      max-width: 100% !important;
+      max-height: calc(100dvh - 1.5rem);
+    }
+
+    .responsive-role-shell .fixed.inset-0 .sticky.top-0 {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .responsive-role-shell .grid[class*='grid-cols-2']:not(.sm\:grid-cols-2),
+    .responsive-role-shell .grid[class*='grid-cols-3']:not(.sm\:grid-cols-3),
+    .responsive-role-shell .grid[class*='grid-cols-4']:not(.sm\:grid-cols-4) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .responsive-role-shell .flex.items-center.justify-between {
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    /* Keep top-bar controls vertically centered on mobile. */
+    .responsive-role-shell > header .flex.items-center.justify-between {
+      align-items: center;
+    }
+
+    .responsive-role-shell input,
+    .responsive-role-shell select,
+    .responsive-role-shell textarea {
+      max-width: 100%;
+    }
+  }
+}
+
+@layer utilities {
   /* Hide scrollbar for Chrome, Safari and Opera */
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

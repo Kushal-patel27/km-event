@@ -142,7 +142,7 @@ export default function EventAdminDashboard(){
         </div>
 
         {/* Upcoming Events */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold">Upcoming Events</h2>
             <Link 
@@ -164,7 +164,7 @@ export default function EventAdminDashboard(){
         </div>
 
         {/* Recent Bookings */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold">Recent Bookings</h2>
             <Link 
@@ -241,7 +241,7 @@ function EventCard({ event }) {
   return (
     <Link 
       to={`/event-admin/events`}
-      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
     >
       <div>
         <div className="font-medium">{event.title}</div>
@@ -249,7 +249,7 @@ function EventCard({ event }) {
           {new Date(event.date).toLocaleDateString()} • {event.location}
         </div>
       </div>
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-gray-600 sm:text-right">
         {event.availableTickets}/{event.totalTickets} tickets
       </div>
     </Link>

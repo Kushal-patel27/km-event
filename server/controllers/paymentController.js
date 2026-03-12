@@ -94,6 +94,9 @@ export const createOrder = async (req, res) => {
       amount: amount,
       currency: "INR",
       orderId: razorpayOrder.id,
+      // Keep paymentId unique from the start to support deployments where
+      // a unique index on paymentId already exists in MongoDB.
+      paymentId: razorpayOrder.id,
       razorpayOrderId: razorpayOrder.id,
       status: "created",
       paymentType,

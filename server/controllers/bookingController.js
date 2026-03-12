@@ -1,17 +1,52 @@
 import Booking from "../models/Booking.js";
 import Event from "../models/Event.js";
+import User from "../models/User.js";
+import crypto from "crypto";
 import generateQR, { generateBookingQRCode } from "../utils/generateQR.js";
 import { ADMIN_ROLE_SET } from "../models/User.js";
 import SystemConfig from "../models/SystemConfig.js";
 import FeatureToggle from "../models/FeatureToggle.js";
-import crypto from "crypto";
 import { sendBookingConfirmationEmail } from "../utils/emailService.js";
 import { generateTicketPDF } from "../utils/generateTicketPDF.js";
+import { sendBookingConfirmationWhatsApp } from "../utils/whatsappService.js";
 import { notifyNextInLine } from "./waitlistController.js";
 import OrganizerSubscription from "../models/OrganizerSubscription.js";
 import Commission from "../models/Commission.js";
 import Coupon from "../models/Coupon.js";
 import generateUniqueBookingId from "../utils/generateBookingId.js";
+
+function getTicketLinkSecret() {
+  return process.env.BOOKING_TICKET_LINK_SECRET || process.env.JWT_SECRET || "km_event_ticket_secret";
+}
+
+function signTicketLink({ bookingId, ticketIndex, expiresAtMs }) {
+  const payload = `${bookingId}:${ticketIndex}:${expiresAtMs}`;
+  return crypto
+    .createHmac("sha256", getTicketLinkSecret())
+    .update(payload)
+    .digest("hex");
+}
+
+function buildSignedTicketPdfUrl({ bookingId, ticketIndex, expiryHours = 72 }) {
+  const expiresAtMs = Date.now() + expiryHours * 60 * 60 * 1000;
+  const sig = signTicketLink({ bookingId, ticketIndex, expiresAtMs });
+  const backendBaseUrl = process.env.BACKEND_PUBLIC_URL || process.env.API_URL || "http://localhost:5000";
+
+  return `${backendBaseUrl}/api/bookings/public/${bookingId}/ticket/${ticketIndex}/pdf?exp=${expiresAtMs}&sig=${sig}`;
+}
+
+function verifySignedTicketLink({ bookingId, ticketIndex, exp, sig }) {
+  if (!bookingId || ticketIndex === undefined || !exp || !sig) return false;
+  const expiresAtMs = Number(exp);
+  if (!Number.isFinite(expiresAtMs) || Date.now() > expiresAtMs) return false;
+
+  const expectedSig = signTicketLink({ bookingId, ticketIndex, expiresAtMs });
+  const providedBuffer = Buffer.from(String(sig));
+  const expectedBuffer = Buffer.from(expectedSig);
+
+  if (providedBuffer.length !== expectedBuffer.length) return false;
+  return crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+}
 
 function generateUniqueTicketId() {
   // Generate a short ticket ID like A1B2C3D4 (8 characters)
@@ -22,6 +57,31 @@ function generateUniqueTicketId() {
     result += chars[randomBytes[i % 4] % chars.length];
   }
   return result;
+}
+
+function escapeRegex(value = "") {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function getEventScopeFilterForUser(user) {
+  if (!user) return { event: { $in: [] } };
+
+  if (user.role === "super_admin" || user.role === "admin") {
+    return {};
+  }
+
+  const assignedEventIds = Array.isArray(user.assignedEvents)
+    ? user.assignedEvents.filter(Boolean)
+    : [];
+
+  if (assignedEventIds.length > 0) {
+    return { event: { $in: assignedEventIds } };
+  }
+
+  const organizerEvents = await Event.find({ organizer: user._id }).select("_id").lean();
+  const organizerEventIds = organizerEvents.map((event) => event._id);
+
+  return { event: { $in: organizerEventIds } };
 }
 
 export const createBooking = async (req, res) => {
@@ -387,7 +447,7 @@ export const createBooking = async (req, res) => {
     // ==================== POPULATE BOOKING DATA ====================
     const populatedBooking = await Booking.findById(booking._id)
       .populate('event', 'title location date image')
-      .populate('user', 'name email');
+      .populate('user', 'name email whatsappNumber');
 
     // Check if email/SMS feature is enabled for this event
     let emailEnabled = true;
@@ -411,6 +471,14 @@ export const createBooking = async (req, res) => {
     }
 
     console.log(`[BOOKING] Final emailEnabled value: ${emailEnabled}`);
+
+    const ticketLinks = populatedBooking.ticketIds.map((_, idx) =>
+      buildSignedTicketPdfUrl({
+        bookingId: populatedBooking._id.toString(),
+        ticketIndex: idx,
+        expiryHours: 72,
+      })
+    );
 
     // Send booking confirmation email only if feature is enabled
     if (emailEnabled) {
@@ -436,13 +504,46 @@ export const createBooking = async (req, res) => {
         bookingDate: populatedBooking.createdAt,
         bookingId: populatedBooking._id.toString(),
         qrCodes: populatedBooking.qrCodes
-      }).then(() => {
-        console.log('[BOOKING] Confirmation email sent successfully');
+      }).then((emailSent) => {
+        if (emailSent) {
+          console.log('[BOOKING] Confirmation email sent successfully');
+          return;
+        }
+
+        console.error('[BOOKING] Confirmation email was not sent');
       }).catch(emailError => {
         console.error('[BOOKING] Failed to send email:', emailError.message);
       });
     } else {
       console.log('[BOOKING] Skipping email - Email/SMS feature disabled for this event');
+    }
+
+    // Prefer profile WhatsApp number, fallback to number entered on booking form.
+    const whatsappNumber = populatedBooking.user?.whatsappNumber || populatedBooking.userPhone || req.body.phone || null;
+    if (whatsappNumber) {
+      if (!populatedBooking.user?.whatsappNumber) {
+        // Best-effort sync so future bookings automatically use the same number.
+        User.findByIdAndUpdate(req.user._id, { whatsappNumber }).catch(() => {});
+      }
+
+      const whatsappSent = await sendBookingConfirmationWhatsApp({
+        whatsappNumber,
+        recipientName: populatedBooking.user?.name || "Guest",
+        eventName: populatedBooking.event?.title,
+        eventDate: populatedBooking.event?.date,
+        venue: populatedBooking.event?.location,
+        bookingId: populatedBooking.bookingId || populatedBooking._id.toString(),
+        ticketIds: populatedBooking.ticketIds,
+        ticketLinks,
+      });
+      
+      if (whatsappSent) {
+        console.log('[BOOKING] WhatsApp confirmation sent successfully');
+      } else {
+        console.log('[BOOKING] WhatsApp confirmation failed (check logs above for details)');
+      }
+    } else {
+      console.log('[BOOKING] Skipping WhatsApp confirmation - no valid WhatsApp/contact number found');
     }
 
     // Return booking with qrCheckIn status for frontend
@@ -664,6 +765,72 @@ export const downloadTicketPDF = async (req, res) => {
   }
 };
 
+// Download ticket PDF via signed public link (for WhatsApp delivery)
+export const downloadTicketPDFPublic = async (req, res) => {
+  try {
+    const { bookingId, ticketIndex } = req.params;
+    const { exp, sig } = req.query;
+
+    const index = parseInt(ticketIndex, 10);
+    if (Number.isNaN(index) || index < 0) {
+      return res.status(400).json({ message: "Invalid ticket index" });
+    }
+
+    const validSignature = verifySignedTicketLink({
+      bookingId,
+      ticketIndex: index,
+      exp,
+      sig,
+    });
+
+    if (!validSignature) {
+      return res.status(403).json({ message: "Invalid or expired ticket link" });
+    }
+
+    const booking = await Booking.findById(bookingId)
+      .populate('event', 'title location date')
+      .populate('user', 'name email');
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    if (index >= booking.quantity) {
+      return res.status(400).json({ message: "Invalid ticket index" });
+    }
+
+    const eventDateObj = new Date(booking.event.date);
+    const eventTime = eventDateObj.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const ticketData = {
+      recipientName: booking.user.name,
+      eventName: booking.event.title,
+      eventDate: booking.event.date,
+      eventTime,
+      venue: booking.event.location,
+      ticketId: booking.ticketIds[index] || 'N/A',
+      ticketType: booking.ticketType?.name || 'Standard',
+      seat: booking.seats && booking.seats[index] ? booking.seats[index] : null,
+      bookingId: booking._id.toString(),
+      bookingDate: booking.createdAt,
+      qrCode: booking.qrCodes && booking.qrCodes[index] ? booking.qrCodes[index].image : null
+    };
+
+    const pdfBuffer = await generateTicketPDF(ticketData);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Ticket_${ticketData.ticketId}.pdf`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('[DOWNLOAD PUBLIC PDF ERROR]', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 /**
  * Admin API: Get all bookings with pagination
  */
@@ -846,7 +1013,10 @@ export const searchBookingByTicketId = async (req, res) => {
       return res.status(400).json({ message: 'Ticket ID is required' });
     }
 
-    const booking = await Booking.findOne({ ticketIds: ticketId })
+    const normalizedTicketId = ticketId.trim().toUpperCase();
+    const ticketIdPattern = new RegExp(`^${escapeRegex(normalizedTicketId)}$`, 'i');
+
+    const booking = await Booking.findOne({ ticketIds: { $regex: ticketIdPattern } })
       .populate('user', 'name email phone')
       .populate('event', 'title date location')
       .lean();
@@ -879,7 +1049,7 @@ export const searchBookingByTicketId = async (req, res) => {
       createdAt: booking.createdAt,
       qrCode: booking.qrCode,
       qrCodes: booking.qrCodes || [],
-      foundTicketId: ticketId,
+      foundTicketId: normalizedTicketId,
     };
 
     res.json({
@@ -896,21 +1066,19 @@ export const searchBookingByTicketId = async (req, res) => {
 export const eventAdminSearchBookingByBookingId = async (req, res) => {
   try {
     const { bookingId } = req.query;
-    const organizerId = req.user._id;
 
     if (!bookingId || bookingId.trim() === '') {
       return res.status(400).json({ message: 'Booking ID is required' });
     }
 
-    // Find events owned by this event admin
-    const Event = (await import('../models/Event.js')).default;
-    const organizerEvents = await Event.find({ organizer: organizerId }).select('_id');
-    const eventIds = organizerEvents.map(e => e._id);
+    const eventScopeFilter = await getEventScopeFilterForUser(req.user);
+    const normalizedBookingId = bookingId.trim().toUpperCase();
+    const bookingIdPattern = new RegExp(`^${escapeRegex(normalizedBookingId)}$`, 'i');
 
-    // Find booking that belongs to one of the organizer's events
-    const booking = await Booking.findOne({ 
-      bookingId,
-      event: { $in: eventIds }
+    // Find booking that belongs to one of the event admin's accessible events.
+    const booking = await Booking.findOne({
+      ...eventScopeFilter,
+      bookingId: { $regex: bookingIdPattern },
     })
       .populate('user', 'name email phone')
       .populate('event', 'title date location')
@@ -964,7 +1132,6 @@ export const eventAdminSearchBookingByBookingId = async (req, res) => {
 export const eventAdminSearchBookingsByUser = async (req, res) => {
   try {
     const { search, page = 1, limit = 20 } = req.query;
-    const organizerId = req.user._id;
 
     if (!search || search.trim() === '') {
       return res.status(400).json({ message: 'Search term is required' });
@@ -974,16 +1141,23 @@ export const eventAdminSearchBookingsByUser = async (req, res) => {
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
     const skip = (pageNum - 1) * limitNum;
 
-    // Find events owned by this event admin
-    const Event = (await import('../models/Event.js')).default;
-    const organizerEvents = await Event.find({ organizer: organizerId }).select('_id');
-    const eventIds = organizerEvents.map(e => e._id);
+    const eventScopeFilter = await getEventScopeFilterForUser(req.user);
+    const normalizedSearch = search.trim();
+    const escapedSearch = escapeRegex(normalizedSearch);
+    const searchRegex = new RegExp(escapedSearch, 'i');
+    const matchingUserIds = await User.find({
+      $or: [
+        { email: { $regex: searchRegex } },
+        { name: { $regex: searchRegex } },
+      ],
+    }).distinct('_id');
 
     const filter = {
-      event: { $in: eventIds },
+      ...eventScopeFilter,
       $or: [
-        { userEmail: { $regex: search, $options: 'i' } },
-        { userName: { $regex: search, $options: 'i' } },
+        { userEmail: { $regex: searchRegex } },
+        { userName: { $regex: searchRegex } },
+        ...(matchingUserIds.length > 0 ? [{ user: { $in: matchingUserIds } }] : []),
       ],
     };
 
@@ -1034,21 +1208,19 @@ export const eventAdminSearchBookingsByUser = async (req, res) => {
 export const eventAdminSearchBookingByTicketId = async (req, res) => {
   try {
     const { ticketId } = req.query;
-    const organizerId = req.user._id;
 
     if (!ticketId || ticketId.trim() === '') {
       return res.status(400).json({ message: 'Ticket ID is required' });
     }
 
-    // Find events owned by this event admin
-    const Event = (await import('../models/Event.js')).default;
-    const organizerEvents = await Event.find({ organizer: organizerId }).select('_id');
-    const eventIds = organizerEvents.map(e => e._id);
+    const eventScopeFilter = await getEventScopeFilterForUser(req.user);
+    const normalizedTicketId = ticketId.trim().toUpperCase();
+    const ticketIdPattern = new RegExp(`^${escapeRegex(normalizedTicketId)}$`, 'i');
 
-    // Find booking that belongs to one of the organizer's events
-    const booking = await Booking.findOne({ 
-      ticketIds: ticketId,
-      event: { $in: eventIds }
+    // Find booking that belongs to one of the event admin's accessible events.
+    const booking = await Booking.findOne({
+      ...eventScopeFilter,
+      ticketIds: { $regex: ticketIdPattern },
     })
       .populate('user', 'name email phone')
       .populate('event', 'title date location')
@@ -1086,7 +1258,7 @@ export const eventAdminSearchBookingByTicketId = async (req, res) => {
       createdAt: booking.createdAt,
       qrCode: booking.qrCode,
       qrCodes: booking.qrCodes || [],
-      foundTicketId: ticketId,
+      foundTicketId: normalizedTicketId,
     };
 
     res.json({

@@ -87,7 +87,7 @@ export default function StaffAdminEntries() {
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-lg font-bold">Entry Logs</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
             <label className="text-sm font-medium text-gray-700">Event:</label>
             <select
               value={selectedEvent}
@@ -96,7 +96,7 @@ export default function StaffAdminEntries() {
                 if (e.target.value) setSearchParams({ event: e.target.value })
                 else setSearchParams({})
               }}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
               {events.map((event) => (
                 <option key={event._id} value={event._id}>

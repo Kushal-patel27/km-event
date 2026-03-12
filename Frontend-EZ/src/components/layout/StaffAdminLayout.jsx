@@ -24,7 +24,7 @@ export default function StaffAdminLayout({ title = 'Staff Admin', children }){
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="responsive-role-shell role-shell-staff-admin min-h-screen bg-gray-50 text-gray-900">
       {/* Top Bar */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
@@ -47,7 +47,8 @@ export default function StaffAdminLayout({ title = 'Staff Admin', children }){
                 )}
               </button>
               <Link to="/" className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                <Logo dark={false} size="sm" key="staff-admin-logo" />
+                <span className="md:hidden"><Logo dark={false} size="lg" key="staff-admin-logo-sm" /></span>
+                <span className="hidden md:block"><Logo dark={false} size="sm" key="staff-admin-logo" /></span>
               </Link>
               <div className="hidden md:block border-l border-gray-200 h-6"></div>
               <h1 className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold truncate">Staff Admin Panel</h1>
@@ -55,12 +56,14 @@ export default function StaffAdminLayout({ title = 'Staff Admin', children }){
 
             {/* Right Section */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
-              <NavigationButtons
-                homeTo="/staff-admin/dashboard"
-                homeLabel="Dashboard"
-                showLabels={false}
-                size="sm"
-              />
+              <div className="flex">
+                <NavigationButtons
+                  homeTo="/staff-admin/dashboard"
+                  homeLabel="Dashboard"
+                  showLabels={false}
+                  size="sm"
+                />
+              </div>
               {/* User Section */}
               <div className="hidden sm:flex items-center gap-3 md:gap-4">
                 <div className="flex flex-col items-end text-right">
@@ -85,27 +88,39 @@ export default function StaffAdminLayout({ title = 'Staff Admin', children }){
         <div className="grid grid-cols-1 md:grid-cols-[256px_1fr] gap-4 sm:gap-6 mt-4 sm:mt-6">
           <AnimatePresence>
             {open && (
-              <motion.aside
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="md:hidden bg-white border border-gray-200 rounded-xl p-2 sm:p-3"
-              >
-                <nav className="flex flex-col gap-1">
-                  {nav.map(item => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={`px-2.5 sm:px-3 py-2 rounded-lg flex items-center gap-2 text-xs sm:text-sm font-medium ${location.pathname === item.to ? 'bg-red-600 text-white' : 'hover:bg-gray-100'}`}
-                      onClick={() => setOpen(false)}
-                    >
-                      <span>{item.icon}</span>
-                      {item.label}
-                    </Link>
-                  ))}
-                </nav>
-              </motion.aside>
+              <>
+                <motion.button
+                  type="button"
+                  aria-label="Close navigation"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-30 bg-gray-900/40 md:hidden"
+                  onClick={() => setOpen(false)}
+                />
+                <motion.aside
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed top-14 sm:top-16 left-0 right-0 bottom-0 z-40 md:hidden overflow-y-auto bg-white border-t border-gray-200 shadow-xl p-4"
+                >
+                  <nav className="flex flex-col gap-1">
+                    {nav.map(item => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        className={`px-2.5 sm:px-3 py-2 rounded-lg flex items-center gap-2 text-xs sm:text-sm font-medium ${location.pathname === item.to ? 'bg-red-600 text-white' : 'hover:bg-gray-100'}`}
+                        onClick={() => setOpen(false)}
+                      >
+                        <span>{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </nav>
+                </motion.aside>
+              </>
             )}
           </AnimatePresence>
 
@@ -125,11 +140,11 @@ export default function StaffAdminLayout({ title = 'Staff Admin', children }){
           </aside>
 
           {/* Main Content */}
-          <main>
+          <main className="role-shell-main min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
               <h1 className="text-lg sm:text-xl md:text-2xl font-bold">{title}</h1>
             </div>
-            <div className="space-y-6 pb-6">
+            <div className="role-shell-content space-y-6 pb-6 min-w-0">
               {children}
             </div>
           </main>

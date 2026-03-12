@@ -5,6 +5,7 @@ import AdminLayout from '../../components/layout/AdminLayout'
 import ExportDataModal from '../../components/admin/ExportDataModal'
 import API from '../../services/api'
 import formatCurrency from '../../utils/currency'
+import { BOOKINGS_EXPORT_FIELDS } from '../../utils/exportFieldOptions'
 
 export default function SubscriptionDashboard() {
   const navigate = useNavigate()
@@ -109,6 +110,7 @@ export default function SubscriptionDashboard() {
       if (filters.startDate) params.append('startDate', filters.startDate)
       if (filters.endDate) params.append('endDate', filters.endDate)
       if (filters.status) params.append('status', filters.status)
+      if (filters.selectedFields?.length) params.append('selectedFields', filters.selectedFields.join(','))
       
       // For subscriptions, we can use bookings export or create a custom endpoint
       // Using bookings export with subscription context
@@ -1031,6 +1033,7 @@ export default function SubscriptionDashboard() {
         onExport={handleExport}
         title="Export Subscriptions"
         filters={exportFilters}
+        fields={BOOKINGS_EXPORT_FIELDS}
       />
     </AdminLayout>
   )

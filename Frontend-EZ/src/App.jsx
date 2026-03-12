@@ -27,6 +27,7 @@ import Signup from './pages/auth/Signup'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import AuthCallback from './pages/auth/AuthCallback'
 import SetPassword from './pages/auth/SetPassword'
+import CompleteWhatsappNumber from './pages/auth/CompleteWhatsappNumber'
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminEvents from './pages/admin/AdminEvents'
@@ -150,6 +151,7 @@ export default function App(){
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/set-password" element={<ProtectedRoute><SetPassword /></ProtectedRoute>} />
+              <Route path="/complete-whatsapp" element={<ProtectedRoute><CompleteWhatsappNumber /></ProtectedRoute>} />
 
               {/* Admin routes */}
               <Route path="/admin/login" element={<AdminLogin />} />

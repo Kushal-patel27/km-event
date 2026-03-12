@@ -121,16 +121,35 @@ function normalizeOtpWindow(user, now) {
 }
 
 function buildUserResponse(user, token) {
+  const hasWhatsAppNumber = Boolean(user.whatsappNumber);
   return {
     _id: user._id,
     name: user.name,
     email: user.email,
     role: user.role,
     lastLoginAt: user.lastLoginAt,
+    whatsappNumber: user.whatsappNumber || null,
+    requiresWhatsappNumber: !hasWhatsAppNumber,
     assignedEvents: user.assignedEvents || [],
     assignedGates: user.assignedGates || [],
     token,
   };
+}
+
+function normalizeWhatsAppNumber(rawValue) {
+  if (rawValue === undefined || rawValue === null) return null;
+  const value = String(rawValue).trim();
+  if (!value) return null;
+
+  const cleaned = value.replace(/[^\d+]/g, "");
+  const digitsOnly = cleaned.replace(/\D/g, "");
+
+  // Supports international format with optional leading +.
+  if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+    return { error: "Please enter a valid WhatsApp number (10-15 digits including country code)." };
+  }
+
+  return cleaned.startsWith("+") ? `+${digitsOnly}` : digitsOnly;
 }
 
 async function issueTokensAndRespond(user, req, res) {
@@ -161,7 +180,7 @@ async function issueTokensAndRespond(user, req, res) {
 }
 
 export const registerUser = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, whatsappNumber } = req.body;
 
   if (!JWT_SECRET) return res.status(500).json({ message: "Missing JWT_SECRET" });
 
@@ -180,10 +199,16 @@ export const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    const normalizedWhatsApp = normalizeWhatsAppNumber(whatsappNumber);
+    if (normalizedWhatsApp?.error) {
+      return res.status(400).json({ message: normalizedWhatsApp.error });
+    }
+
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
+      whatsappNumber: normalizedWhatsApp,
     });
 
     const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
@@ -194,6 +219,8 @@ export const registerUser = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      whatsappNumber: user.whatsappNumber || null,
+      requiresWhatsappNumber: !user.whatsappNumber,
       role: user.role,
       assignedEvents: user.assignedEvents || [],
       assignedGates: user.assignedGates || [],
@@ -233,6 +260,8 @@ export const loginUser = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      whatsappNumber: user.whatsappNumber || null,
+      requiresWhatsappNumber: !user.whatsappNumber,
       role: user.role,
       lastLoginAt: user.lastLoginAt,
       assignedEvents: user.assignedEvents || [],
@@ -279,6 +308,8 @@ export const loginAdmin = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      whatsappNumber: user.whatsappNumber || null,
+      requiresWhatsappNumber: !user.whatsappNumber,
       role: user.role,
       lastLoginAt: user.lastLoginAt,
       assignedEvents: user.assignedEvents || [],
@@ -325,6 +356,8 @@ export const loginStaff = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      whatsappNumber: user.whatsappNumber || null,
+      requiresWhatsappNumber: !user.whatsappNumber,
       role: user.role,
       assignedEvents: user.assignedEvents,
       assignedGates: user.assignedGates,
@@ -344,7 +377,7 @@ export const getMe = async (req, res) => {
     const userWithPassword = await User.findById(req.user._id).select("password");
     const hasPassword = Boolean(userWithPassword?.password);
     const base = req.user.toObject ? req.user.toObject() : req.user;
-    res.json({ ...base, hasPassword });
+    res.json({ ...base, hasPassword, requiresWhatsappNumber: !base.whatsappNumber });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -365,6 +398,8 @@ export const refreshSession = async (req, res) => {
       _id: req.user._id,
       name: req.user.name,
       email: req.user.email,
+      whatsappNumber: req.user.whatsappNumber || null,
+      requiresWhatsappNumber: !req.user.whatsappNumber,
       role: req.user.role,
       assignedEvents: req.user.assignedEvents || [],
       assignedGates: req.user.assignedGates || [],
@@ -386,7 +421,7 @@ export const logout = async (req, res) => {
 
 // Update profile (name, email)
 export const updateProfile = async (req, res) => {
-  const { name, email } = req.body;
+  const { name, email, whatsappNumber } = req.body;
   try {
     if (!req.user) return res.status(401).json({ message: "Not authorized" });
 
@@ -403,6 +438,15 @@ export const updateProfile = async (req, res) => {
 
     user.name = name ?? user.name;
     user.email = email ?? user.email;
+
+    if (whatsappNumber !== undefined) {
+      const normalizedWhatsApp = normalizeWhatsAppNumber(whatsappNumber);
+      if (normalizedWhatsApp?.error) {
+        return res.status(400).json({ message: normalizedWhatsApp.error });
+      }
+      user.whatsappNumber = normalizedWhatsApp;
+    }
+
     await user.save();
 
     const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
@@ -413,6 +457,8 @@ export const updateProfile = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      whatsappNumber: user.whatsappNumber || null,
+      requiresWhatsappNumber: !user.whatsappNumber,
       role: user.role,
       token,
     });

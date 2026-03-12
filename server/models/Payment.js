@@ -25,7 +25,7 @@ const paymentSchema = new mongoose.Schema(
     },
     paymentId: {
       type: String,
-      default: null,
+      default: undefined,
       index: true
     },
     signature: {

@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import AdminLayout from '../../components/layout/AdminLayout'
 import ExportDataModal from '../../components/admin/ExportDataModal'
 import { AnimatePresence, motion } from 'framer-motion'
+import { EVENTS_EXPORT_FIELDS } from '../../utils/exportFieldOptions'
 
 const FALLBACK_CATEGORIES = ['Music', 'Sports', 'Comedy', 'Arts', 'Culture', 'Travel', 'Festival', 'Workshop', 'Conference', 'Other']
 const CITY_SUGGESTIONS = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Chandigarh']
@@ -519,6 +520,7 @@ export default function AdminEvents() {
       if (filters.category) params.append('category', filters.category)
       if (filters.location) params.append('location', filters.location)
       if (filters.status) params.append('status', filters.status)
+      if (filters.selectedFields?.length) params.append('selectedFields', filters.selectedFields.join(','))
       
       // Call export API
       const response = await API.get(`/admin/export/events?${params.toString()}`, {
@@ -1005,6 +1007,7 @@ export default function AdminEvents() {
         onExport={handleExport}
         title="Export Events Data"
         filters={exportFilters}
+        fields={EVENTS_EXPORT_FIELDS}
       />
     </AdminLayout>
   )

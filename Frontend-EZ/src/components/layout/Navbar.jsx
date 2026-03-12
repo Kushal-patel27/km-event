@@ -14,6 +14,7 @@ export default function Navbar(){
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [waitlistCount, setWaitlistCount] = useState(0)
+  const [eventRequestCount, setEventRequestCount] = useState(0)
 
   // Sync search query with URL params
   useEffect(() => {
@@ -41,6 +42,28 @@ export default function Navbar(){
       }
     }
     fetchWaitlistCount()
+  }, [user, location.pathname])
+
+  // Fetch event request count for event_admin users.
+  useEffect(() => {
+    if (!user || user.role !== 'event_admin') {
+      setEventRequestCount(0)
+      return
+    }
+
+    const fetchEventRequestCount = async () => {
+      try {
+        const { data } = await API.get('/event-requests/my-requests', {
+          headers: { Authorization: `Bearer ${user?.token || localStorage.getItem('token')}` }
+        })
+        setEventRequestCount(data.requests?.length || 0)
+      } catch (err) {
+        console.error('Failed to fetch event request count:', err)
+        setEventRequestCount(0)
+      }
+    }
+
+    fetchEventRequestCount()
   }, [user, location.pathname])
 
   // Close mobile menu when navigating (but keep search open)
@@ -83,6 +106,7 @@ export default function Navbar(){
   }
 
   const isHomePage = location.pathname === '/'
+  const showEventRequestNav = user?.role === 'event_admin' && eventRequestCount > 0
 
   return (
     <header
@@ -162,7 +186,7 @@ export default function Navbar(){
                 </Link>
               )}
               {/* Event Request link - only show for event_admins with approved events */}
-              {user && user.role === 'event_admin' && user.assignedEvents && user.assignedEvents.length > 0 && (
+              {showEventRequestNav && (
                 <Link to="/my-event-requests" className={`shrink-0 text-sm font-semibold tracking-wide px-2 py-1 rounded-md transition whitespace-nowrap ${
                   location.pathname === '/my-event-requests'
                     ? 'text-red-500'
@@ -494,7 +518,7 @@ export default function Navbar(){
                   Waitlist {waitlistCount > 0 && `(${waitlistCount})`}
                 </Link>
               )}
-              {user && user.role === 'event_admin' && user.assignedEvents && user.assignedEvents.length > 0 && (
+              {showEventRequestNav && (
                 <Link
                   to="/my-event-requests"
                   onClick={() => setMobileMenuOpen(false)}

@@ -5,8 +5,16 @@ import Event from "../models/Event.js";
 import Booking from "../models/Booking.js";
 import Contact from "../models/Contact.js";
 import SystemConfig from "../models/SystemConfig.js";
+import SecurityEvent from "../models/SecurityEvent.js";
+import Payment from "../models/Payment.js";
+import Commission from "../models/Commission.js";
+import EventAdminPayout from "../models/EventAdminPayout.js";
+import Coupon from "../models/Coupon.js";
+import FeatureToggle from "../models/FeatureToggle.js";
+import OrganizerSubscription from "../models/OrganizerSubscription.js";
+import SubscriptionPlan from "../models/SubscriptionPlan.js";
 import { notifyNextInLine } from "./waitlistController.js";
-import { generateCSV, generateExcel, generatePDF, formatDate, formatCurrency, formatStatus } from "../utils/exportUtils.js";
+import { generateCSV, generateExcel, generatePDF, formatDate, formatCurrency, formatStatus, getSelectedColumns } from "../utils/exportUtils.js";
 
 const CANCELLATION_STATUSES = new Set(["cancelled", "refunded"]);
 
@@ -1251,6 +1259,656 @@ export const updateSystemConfig = async (req, res) => {
 
 // ============ LOGS & AUDIT ============
 
+const AVAILABLE_LOG_TYPES = [
+  "login",
+  "user_created",
+  "session_activity",
+  "booking_created",
+  "booking_updated",
+  "event_created",
+  "event_updated",
+  "event_status_changed",
+  "security_event",
+  "payment_created",
+  "payment_failed",
+  "payment_refunded",
+  "commission_status_changed",
+  "payout_requested",
+  "payout_processing",
+  "payout_completed",
+  "payout_failed",
+  "payout_reversed",
+  "coupon_created",
+  "coupon_deactivated",
+  "coupon_usage_updated",
+  "feature_toggle_updated",
+  "system_config_updated",
+  "subscription_created",
+  "subscription_status_changed",
+  "subscription_plan_deactivated",
+];
+
+const PAYOUT_LOG_TYPES = new Set([
+  "payout_requested",
+  "payout_processing",
+  "payout_completed",
+  "payout_failed",
+  "payout_reversed",
+]);
+
+function buildDateRangeQuery(field, startDate, endDate) {
+  if (!startDate && !endDate) return {};
+
+  const range = {};
+  if (startDate) {
+    range.$gte = new Date(startDate);
+  }
+  if (endDate) {
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    range.$lte = end;
+  }
+  return { [field]: range };
+}
+
+async function resolveUserIdFilter({ userId, email, search }) {
+  if (!userId && !email && !search) return null;
+
+  const filter = {};
+
+  if (userId) {
+    filter._id = userId;
+  }
+
+  if (email && search) {
+    filter.$and = [
+      { email: { $regex: email, $options: "i" } },
+      {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      },
+    ];
+  } else if (email) {
+    filter.email = { $regex: email, $options: "i" };
+  } else if (search) {
+    filter.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const ids = await User.find(filter).distinct("_id");
+  return ids;
+}
+
+function applySearchToMappedLogs(logs, search) {
+  if (!search) return logs;
+  const s = search.toLowerCase();
+  return logs.filter((log) =>
+    (log.userName || "").toLowerCase().includes(s) ||
+    (log.userEmail || "").toLowerCase().includes(s) ||
+    (log.type || "").toLowerCase().includes(s) ||
+    JSON.stringify(log.details || {}).toLowerCase().includes(s)
+  );
+}
+
+async function getTypeFilteredLogs({ type, pageNum, limitNum, userId, email, search, startDate, endDate }) {
+  const skip = (pageNum - 1) * limitNum;
+  const userIds = await resolveUserIdFilter({ userId, email, search });
+  const hasUserFilter = Boolean(userId || email || search);
+
+  if (hasUserFilter && (!userIds || userIds.length === 0)) {
+    return {
+      logs: [],
+      total: 0,
+      pages: 0,
+    };
+  }
+
+  if (type === "login") {
+    const query = {
+      lastLoginAt: { $exists: true, $ne: null },
+      ...buildDateRangeQuery("lastLoginAt", startDate, endDate),
+    };
+    if (userIds) query._id = { $in: userIds };
+
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select("name email role lastLoginAt sessions")
+        .sort({ lastLoginAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments(query),
+    ]);
+
+    const logs = users.map((u) => {
+      const mostRecentSession = Array.isArray(u.sessions) && u.sessions.length > 0
+        ? [...u.sessions].sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt))[0]
+        : null;
+
+      return {
+        type: "login",
+        userId: u._id,
+        userEmail: u.email,
+        userName: u.name,
+        timestamp: u.lastLoginAt,
+        details: {
+          role: u.role,
+          userAgent: mostRecentSession?.userAgent,
+        },
+      };
+    });
+
+    return { logs, total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "user_created") {
+    const query = {
+      createdAt: { $exists: true, $ne: null },
+      ...buildDateRangeQuery("createdAt", startDate, endDate),
+    };
+    if (userIds) query._id = { $in: userIds };
+
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select("name email role createdAt")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments(query),
+    ]);
+
+    const logs = users.map((u) => ({
+      type: "user_created",
+      userId: u._id,
+      userEmail: u.email,
+      userName: u.name,
+      timestamp: u.createdAt,
+      details: { role: u.role },
+    }));
+
+    return { logs, total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "session_activity") {
+    const match = {};
+    if (userIds) {
+      match._id = { $in: userIds.map((id) => new mongoose.Types.ObjectId(id)) };
+    }
+
+    const dateMatch = {};
+    if (startDate) {
+      dateMatch.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateMatch.$lte = end;
+    }
+
+    const pipeline = [
+      { $match: match },
+      { $unwind: "$sessions" },
+      { $match: { "sessions.lastSeenAt": { $exists: true, ...(Object.keys(dateMatch).length ? dateMatch : {}) } } },
+      { $sort: { "sessions.lastSeenAt": -1 } },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          email: 1,
+          role: 1,
+          sessionLastSeenAt: "$sessions.lastSeenAt",
+          sessionUserAgent: "$sessions.userAgent",
+          sessionIp: "$sessions.ip",
+        },
+      },
+    ];
+
+    const [rows, totalRows] = await Promise.all([
+      User.aggregate([...pipeline, { $skip: skip }, { $limit: limitNum }]),
+      User.aggregate([...pipeline, { $count: "total" }]),
+    ]);
+
+    const total = totalRows[0]?.total || 0;
+
+    const logs = rows.map((row) => ({
+      type: "session_activity",
+      userId: row._id,
+      userEmail: row.email,
+      userName: row.name,
+      timestamp: row.sessionLastSeenAt,
+      details: {
+        userAgent: row.sessionUserAgent,
+        ip: row.sessionIp,
+        role: row.role,
+      },
+    }));
+
+    return { logs, total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "booking_created" || type === "booking_updated") {
+    const query = {};
+    if (userIds) query.user = { $in: userIds };
+
+    if (type === "booking_created") {
+      Object.assign(query, buildDateRangeQuery("createdAt", startDate, endDate));
+    } else {
+      query.$expr = { $gt: ["$updatedAt", "$createdAt"] };
+      Object.assign(query, buildDateRangeQuery("updatedAt", startDate, endDate));
+    }
+
+    const [rows, total] = await Promise.all([
+      Booking.find(query)
+        .populate("user", "name email")
+        .populate("event", "title")
+        .sort(type === "booking_created" ? { createdAt: -1 } : { updatedAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Booking.countDocuments(query),
+    ]);
+
+    const logs = rows.map((booking) => ({
+      type,
+      userId: booking.user?._id,
+      userEmail: booking.user?.email,
+      userName: booking.user?.name,
+      timestamp: type === "booking_created" ? booking.createdAt : booking.updatedAt,
+      details: {
+        bookingId: booking.bookingId,
+        event: booking.event?.title,
+        quantity: booking.quantity,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+      },
+    }));
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "event_created" || type === "event_updated" || type === "event_status_changed") {
+    const query = {};
+    if (userIds) query.organizer = { $in: userIds };
+
+    if (type === "event_created") {
+      Object.assign(query, buildDateRangeQuery("createdAt", startDate, endDate));
+    } else if (type === "event_updated") {
+      query.$expr = { $gt: ["$updatedAt", "$createdAt"] };
+      Object.assign(query, buildDateRangeQuery("updatedAt", startDate, endDate));
+    } else {
+      query.status = { $in: ["cancelled", "completed"] };
+      Object.assign(query, buildDateRangeQuery("updatedAt", startDate, endDate));
+    }
+
+    const sort = type === "event_created" ? { createdAt: -1 } : { updatedAt: -1 };
+    const [rows, total] = await Promise.all([
+      Event.find(query)
+        .populate("organizer", "name email")
+        .sort(sort)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Event.countDocuments(query),
+    ]);
+
+    const logs = rows.map((event) => ({
+      type,
+      userId: event.organizer?._id,
+      userEmail: event.organizer?.email,
+      userName: event.organizer?.name,
+      timestamp: type === "event_created" ? event.createdAt : (event.updatedAt || event.createdAt),
+      details: {
+        eventTitle: event.title,
+        eventCategory: event.category,
+        eventDate: event.date,
+        totalTickets: event.totalTickets,
+        status: event.status,
+      },
+    }));
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "security_event") {
+    const query = {
+      ...buildDateRangeQuery("createdAt", startDate, endDate),
+    };
+    if (userIds) query.user = { $in: userIds };
+    if (email) query.email = { $regex: email, $options: "i" };
+
+    const [rows, total] = await Promise.all([
+      SecurityEvent.find(query)
+        .populate("user", "name email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      SecurityEvent.countDocuments(query),
+    ]);
+
+    const logs = rows.map((row) => ({
+      type: "security_event",
+      userId: row.user?._id,
+      userEmail: row.user?.email || row.email,
+      userName: row.user?.name,
+      timestamp: row.createdAt,
+      details: {
+        securityType: row.type,
+        ip: row.ip,
+        userAgent: row.userAgent,
+        metadata: row.metadata,
+      },
+    }));
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "payment_created" || type === "payment_failed" || type === "payment_refunded") {
+    const query = {
+      ...buildDateRangeQuery("createdAt", startDate, endDate),
+    };
+    if (userIds) query.userId = { $in: userIds };
+    if (type === "payment_failed") query.status = "failed";
+    if (type === "payment_refunded") query.status = "refunded";
+
+    const sortField = type === "payment_refunded" ? "refundedAt" : "createdAt";
+    const [rows, total] = await Promise.all([
+      Payment.find(query)
+        .populate("userId", "name email")
+        .sort({ [sortField]: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Payment.countDocuments(query),
+    ]);
+
+    const logs = rows.map((row) => ({
+      type,
+      userId: row.userId?._id,
+      userEmail: row.userId?.email,
+      userName: row.userId?.name,
+      timestamp: type === "payment_refunded" ? (row.refundedAt || row.updatedAt || row.createdAt) : row.createdAt,
+      details: {
+        paymentType: row.paymentType,
+        status: row.status,
+        amount: row.amount,
+        currency: row.currency,
+        orderId: row.orderId,
+        errorCode: row.errorCode,
+        errorDescription: row.errorDescription,
+        refundAmount: row.refundAmount,
+        refundId: row.refundId,
+        refundReason: row.refundReason,
+      },
+    }));
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "commission_status_changed") {
+    const query = {
+      status: { $ne: "pending" },
+      ...buildDateRangeQuery("updatedAt", startDate, endDate),
+    };
+    if (userIds) query.organizer = { $in: userIds };
+
+    const [rows, total] = await Promise.all([
+      Commission.find(query)
+        .populate("organizer", "name email")
+        .populate("event", "title")
+        .populate("booking", "bookingId")
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Commission.countDocuments(query),
+    ]);
+
+    const logs = rows.map((row) => ({
+      type,
+      userId: row.organizer?._id,
+      userEmail: row.organizer?.email,
+      userName: row.organizer?.name,
+      timestamp: row.updatedAt || row.createdAt,
+      details: {
+        event: row.event?.title,
+        bookingId: row.booking?.bookingId,
+        status: row.status,
+        notes: row.notes,
+      },
+    }));
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (PAYOUT_LOG_TYPES.has(type)) {
+    const query = {
+      ...buildDateRangeQuery("createdAt", startDate, endDate),
+    };
+    if (userIds) query.eventAdmin = { $in: userIds };
+    if (type === "payout_requested") {
+      query.status = "pending";
+    } else {
+      query.status = type.replace("payout_", "");
+    }
+
+    const [rows, total] = await Promise.all([
+      EventAdminPayout.find(query)
+        .populate("eventAdmin", "name email")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      EventAdminPayout.countDocuments(query),
+    ]);
+
+    const logs = rows.map((row) => {
+      const timestamp = row.completedAt || row.processedAt || row.updatedAt || row.requestedAt || row.createdAt;
+      return {
+        type,
+        userId: row.eventAdmin?._id,
+        userEmail: row.eventAdmin?.email,
+        userName: row.eventAdmin?.name,
+        timestamp,
+        details: {
+          amount: row.totalAmount,
+          status: row.status,
+          paymentMethod: row.paymentMethod,
+          transactionId: row.transactionId,
+          failureReason: row.failureReason,
+          notes: row.notes,
+        },
+      };
+    });
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "coupon_created" || type === "coupon_deactivated" || type === "coupon_usage_updated") {
+    const query = {
+      ...buildDateRangeQuery("createdAt", startDate, endDate),
+    };
+    if (userIds) query.createdBy = { $in: userIds };
+    if (type === "coupon_deactivated") query.isActive = false;
+    if (type === "coupon_usage_updated") query.usageCount = { $gt: 0 };
+
+    const [rows, total] = await Promise.all([
+      Coupon.find(query)
+        .populate("createdBy", "name email")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Coupon.countDocuments(query),
+    ]);
+
+    const logs = rows.map((row) => ({
+      type,
+      userId: row.createdBy?._id,
+      userEmail: row.createdBy?.email,
+      userName: row.createdBy?.name,
+      timestamp: type === "coupon_created" ? row.createdAt : (row.updatedAt || row.createdAt),
+      details: {
+        code: row.code,
+        discountType: row.discountType,
+        discountValue: row.discountValue,
+        usageLimit: row.usageLimit,
+        usageCount: row.usageCount,
+        isActive: row.isActive,
+      },
+    }));
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "feature_toggle_updated") {
+    const query = {
+      ...buildDateRangeQuery("updatedAt", startDate, endDate),
+    };
+    if (userIds) query.toggledBy = { $in: userIds };
+
+    const [rows, total] = await Promise.all([
+      FeatureToggle.find(query)
+        .populate("eventId", "title")
+        .populate("toggledBy", "name email")
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      FeatureToggle.countDocuments(query),
+    ]);
+
+    const logs = rows.map((row) => ({
+      type,
+      userId: row.toggledBy?._id,
+      userEmail: row.toggledBy?.email,
+      userName: row.toggledBy?.name,
+      timestamp: row.updatedAt || row.createdAt,
+      details: {
+        event: row.eventId?.title,
+        features: row.features,
+      },
+    }));
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "system_config_updated") {
+    const doc = await SystemConfig.findById("system_config").lean();
+    if (!doc?.updatedAt) {
+      return { logs: [], total: 0, pages: 0 };
+    }
+
+    const inRange = (() => {
+      if (!startDate && !endDate) return true;
+      const t = new Date(doc.updatedAt).getTime();
+      const start = startDate ? new Date(startDate).getTime() : -Infinity;
+      const end = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : Infinity;
+      return t >= start && t <= end;
+    })();
+
+    if (!inRange || skip > 0) {
+      return { logs: [], total: 0, pages: 0 };
+    }
+
+    return {
+      logs: [
+        {
+          type,
+          timestamp: doc.updatedAt,
+          details: {
+            qrCodeRules: doc.qrCodeRules,
+            ticketLimits: doc.ticketLimits,
+            security: doc.security,
+            emailNotifications: doc.emailNotifications,
+          },
+        },
+      ],
+      total: 1,
+      pages: 1,
+    };
+  }
+
+  if (type === "subscription_created" || type === "subscription_status_changed") {
+    const query = {};
+    if (userIds) query.organizer = { $in: userIds };
+    if (type === "subscription_status_changed") {
+      query.status = { $ne: "active" };
+      Object.assign(query, buildDateRangeQuery("updatedAt", startDate, endDate));
+    } else {
+      Object.assign(query, buildDateRangeQuery("createdAt", startDate, endDate));
+    }
+
+    const [rows, total] = await Promise.all([
+      OrganizerSubscription.find(query)
+        .populate("organizer", "name email")
+        .populate("plan", "name displayName")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      OrganizerSubscription.countDocuments(query),
+    ]);
+
+    const logs = rows.map((row) => ({
+      type,
+      userId: row.organizer?._id,
+      userEmail: row.organizer?.email,
+      userName: row.organizer?.name,
+      timestamp: type === "subscription_created"
+        ? (row.subscribedAt || row.createdAt)
+        : (row.cancelledAt || row.updatedAt || row.createdAt),
+      details: {
+        plan: row.plan?.displayName || row.plan?.name,
+        status: row.status,
+        commissionPercentage: row.currentCommissionPercentage,
+        reason: row.cancelReason,
+        notes: row.notes,
+      },
+    }));
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  if (type === "subscription_plan_deactivated") {
+    const query = {
+      isActive: false,
+      ...buildDateRangeQuery("updatedAt", startDate, endDate),
+    };
+
+    const [rows, total] = await Promise.all([
+      SubscriptionPlan.find(query)
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      SubscriptionPlan.countDocuments(query),
+    ]);
+
+    const logs = rows.map((row) => ({
+      type,
+      timestamp: row.updatedAt || row.createdAt,
+      details: {
+        name: row.displayName || row.name,
+        commissionPercentage: row.commissionPercentage,
+      },
+    }));
+
+    return { logs: applySearchToMappedLogs(logs, search), total, pages: Math.ceil(total / limitNum) };
+  }
+
+  return {
+    logs: [],
+    total: 0,
+    pages: 0,
+  };
+}
+
 /**
  * Get system logs (login, user changes, etc.)
  */
@@ -1260,14 +1918,85 @@ export const getSystemLogs = async (req, res) => {
     const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
 
+    // Fast path: for type-filtered requests query only the required collection.
+    if (type) {
+      const result = await getTypeFilteredLogs({
+        type,
+        pageNum,
+        limitNum,
+        userId,
+        email,
+        search,
+        startDate,
+        endDate,
+      });
+
+      return res.json({
+        logs: result.logs,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: result.total,
+          pages: result.pages,
+        },
+        filters: {
+          availableTypes: AVAILABLE_LOG_TYPES,
+        },
+      });
+    }
+
+    const userIds = await resolveUserIdFilter({ userId, email });
+    const hasUserScopedFilter = Boolean(userId || email);
+
+    if (hasUserScopedFilter && userIds && userIds.length === 0) {
+      return res.json({
+        logs: [],
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: 0,
+          pages: 0,
+        },
+        filters: {
+          availableTypes: AVAILABLE_LOG_TYPES,
+        },
+      });
+    }
+
+    const dateRange = (() => {
+      const range = {};
+      if (startDate) range.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        range.$lte = end;
+      }
+      return Object.keys(range).length ? range : null;
+    })();
+
     const logs = [];
+    const pushLog = (entry) => {
+      if (!entry?.timestamp) return;
+      logs.push(entry);
+    };
 
-    // Get ALL users and their sessions (no limit)
-    const users = await User.find({}, { sessions: 1, _id: 1, email: 1, name: 1, createdAt: 1, lastLoginAt: 1, role: 1 })
+    // Get all users first so we can enrich user IDs from other collections.
+    const usersQuery = {};
+    if (userIds) {
+      usersQuery._id = { $in: userIds };
+    }
+    if (dateRange) {
+      usersQuery.$or = [
+        { createdAt: dateRange },
+        { lastLoginAt: dateRange },
+        { "sessions.lastSeenAt": dateRange },
+      ];
+    }
+
+    const users = await User.find(usersQuery, { sessions: { $slice: -10 }, _id: 1, email: 1, name: 1, createdAt: 1, lastLoginAt: 1, role: 1 })
       .lean()
-      .sort({ lastLoginAt: -1 });
-
-    const sessionByUserId = new Map();
+      .sort({ lastLoginAt: -1, createdAt: -1 })
+      .limit(400);
 
     users.forEach((user) => {
       // Get most recent session for IP info
@@ -1275,13 +2004,9 @@ export const getSystemLogs = async (req, res) => {
         ? user.sessions.sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt))[0]
         : null;
 
-      if (mostRecentSession) {
-        sessionByUserId.set(user._id.toString(), mostRecentSession);
-      }
-
       // Add user creation log
       if (user.createdAt) {
-        logs.push({
+        pushLog({
           type: "user_created",
           userId: user._id,
           userEmail: user.email,
@@ -1295,7 +2020,7 @@ export const getSystemLogs = async (req, res) => {
 
       // Add last login log
       if (user.lastLoginAt) {
-        logs.push({
+        pushLog({
           type: "login",
           userId: user._id,
           userEmail: user.email,
@@ -1310,9 +2035,17 @@ export const getSystemLogs = async (req, res) => {
 
       // Add session logs
       if (user.sessions && Array.isArray(user.sessions)) {
-        user.sessions.forEach((session) => {
+        const sortedSessions = [...user.sessions]
+          .sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt))
+          .slice(0, 5);
+
+        sortedSessions.forEach((session) => {
           if (session.lastSeenAt) {
-              logs.push({
+            const sessionTs = new Date(session.lastSeenAt);
+            if (dateRange?.$gte && sessionTs < dateRange.$gte) return;
+            if (dateRange?.$lte && sessionTs > dateRange.$lte) return;
+
+            pushLog({
               type: "session_activity",
               userId: user._id,
               userEmail: user.email,
@@ -1320,6 +2053,7 @@ export const getSystemLogs = async (req, res) => {
               timestamp: session.lastSeenAt,
               details: {
                 userAgent: session.userAgent,
+                ip: session.ip,
                 role: user.role,
               },
             });
@@ -1328,37 +2062,139 @@ export const getSystemLogs = async (req, res) => {
       }
     });
 
-    // Get ALL bookings (no limit)
-    const allBookings = await Booking.find()
-      .populate('user', 'name email')
-      .populate('event', 'title')
-      .sort({ createdAt: -1 })
-      .lean();
+    const [
+      allBookings,
+      allEvents,
+      securityEvents,
+      allPayments,
+      allCommissions,
+      allPayouts,
+      allCoupons,
+      allFeatureToggles,
+      systemConfig,
+      organizerSubscriptions,
+      subscriptionPlans,
+    ] = await Promise.all([
+      Booking.find({
+        ...(userIds ? { user: { $in: userIds } } : {}),
+        ...(dateRange ? { $or: [{ createdAt: dateRange }, { updatedAt: dateRange }] } : {}),
+      })
+        .populate("user", "name email")
+        .populate("event", "title")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(500)
+        .lean(),
+      Event.find({
+        ...(userIds ? { organizer: { $in: userIds } } : {}),
+        ...(dateRange ? { $or: [{ createdAt: dateRange }, { updatedAt: dateRange }] } : {}),
+      })
+        .populate("organizer", "name email")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(500)
+        .lean(),
+      SecurityEvent.find({
+        ...(userIds ? { user: { $in: userIds } } : {}),
+        ...(email ? { email: { $regex: email, $options: "i" } } : {}),
+        ...buildDateRangeQuery("createdAt", startDate, endDate),
+      })
+        .populate("user", "name email role")
+        .sort({ createdAt: -1 })
+        .limit(500)
+        .lean(),
+      Payment.find({
+        ...(userIds ? { userId: { $in: userIds } } : {}),
+        ...(dateRange ? { $or: [{ createdAt: dateRange }, { updatedAt: dateRange }, { refundedAt: dateRange }] } : {}),
+      })
+        .populate("userId", "name email")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(500)
+        .lean(),
+      Commission.find({
+        ...(userIds ? { organizer: { $in: userIds } } : {}),
+        ...(dateRange ? { $or: [{ createdAt: dateRange }, { updatedAt: dateRange }] } : {}),
+      })
+        .populate("organizer", "name email")
+        .populate("event", "title")
+        .populate("booking", "bookingId")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(500)
+        .lean(),
+      EventAdminPayout.find({
+        ...(userIds ? { eventAdmin: { $in: userIds } } : {}),
+        ...(dateRange ? { $or: [{ createdAt: dateRange }, { updatedAt: dateRange }, { requestedAt: dateRange }] } : {}),
+      })
+        .populate("eventAdmin", "name email")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(500)
+        .lean(),
+      Coupon.find({
+        ...(userIds ? { createdBy: { $in: userIds } } : {}),
+        ...(dateRange ? { $or: [{ createdAt: dateRange }, { updatedAt: dateRange }] } : {}),
+      })
+        .populate("createdBy", "name email")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(500)
+        .lean(),
+      FeatureToggle.find({
+        ...(userIds ? { toggledBy: { $in: userIds } } : {}),
+        ...(dateRange ? { $or: [{ createdAt: dateRange }, { updatedAt: dateRange }] } : {}),
+      })
+        .populate("eventId", "title")
+        .populate("toggledBy", "name email")
+        .sort({ updatedAt: -1 })
+        .limit(500)
+        .lean(),
+      SystemConfig.findById("system_config").lean(),
+      OrganizerSubscription.find({
+        ...(userIds ? { organizer: { $in: userIds } } : {}),
+        ...(dateRange ? { $or: [{ createdAt: dateRange }, { updatedAt: dateRange }, { subscribedAt: dateRange }, { cancelledAt: dateRange }] } : {}),
+      })
+        .populate("organizer", "name email")
+        .populate("plan", "name displayName")
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(500)
+        .lean(),
+      SubscriptionPlan.find({
+        ...(dateRange ? { $or: [{ createdAt: dateRange }, { updatedAt: dateRange }] } : {}),
+      }).sort({ updatedAt: -1, createdAt: -1 }).limit(500).lean(),
+    ]);
 
     allBookings.forEach((booking) => {
-      const bookingUserId = booking.user?._id?.toString();
-      logs.push({
+      pushLog({
         type: "booking_created",
         userId: booking.user?._id,
         userEmail: booking.user?.email,
         userName: booking.user?.name,
         timestamp: booking.createdAt,
         details: {
+          bookingId: booking.bookingId,
           event: booking.event?.title,
           quantity: booking.quantity,
           status: booking.status,
+          paymentStatus: booking.paymentStatus,
         },
       });
+
+      if (booking.updatedAt && booking.createdAt && new Date(booking.updatedAt) > new Date(booking.createdAt)) {
+        pushLog({
+          type: "booking_updated",
+          userId: booking.user?._id,
+          userEmail: booking.user?.email,
+          userName: booking.user?.name,
+          timestamp: booking.updatedAt,
+          details: {
+            bookingId: booking.bookingId,
+            event: booking.event?.title,
+            status: booking.status,
+            paymentStatus: booking.paymentStatus,
+          },
+        });
+      }
+
     });
 
-    // Get ALL events (no limit)
-    const allEvents = await Event.find()
-      .populate('organizer', 'name email')
-      .sort({ createdAt: -1 })
-      .lean();
-
     allEvents.forEach((event) => {
-      logs.push({
+      pushLog({
         type: "event_created",
         userId: event.organizer?._id,
         userEmail: event.organizer?.email,
@@ -1369,8 +2205,281 @@ export const getSystemLogs = async (req, res) => {
           eventCategory: event.category,
           eventDate: event.date,
           totalTickets: event.totalTickets,
+          status: event.status,
         },
       });
+
+      if (event.updatedAt && event.createdAt && new Date(event.updatedAt) > new Date(event.createdAt)) {
+        pushLog({
+          type: "event_updated",
+          userId: event.organizer?._id,
+          userEmail: event.organizer?.email,
+          userName: event.organizer?.name,
+          timestamp: event.updatedAt,
+          details: {
+            eventTitle: event.title,
+            status: event.status,
+            availableTickets: event.availableTickets,
+          },
+        });
+      }
+
+      if (event.status === "cancelled" || event.status === "completed") {
+        pushLog({
+          type: "event_status_changed",
+          userId: event.organizer?._id,
+          userEmail: event.organizer?.email,
+          userName: event.organizer?.name,
+          timestamp: event.updatedAt || event.createdAt,
+          details: {
+            eventTitle: event.title,
+            status: event.status,
+          },
+        });
+      }
+    });
+
+    securityEvents.forEach((securityEvent) => {
+      pushLog({
+        type: "security_event",
+        userId: securityEvent.user?._id,
+        userEmail: securityEvent.user?.email || securityEvent.email,
+        userName: securityEvent.user?.name,
+        timestamp: securityEvent.createdAt,
+        details: {
+          securityType: securityEvent.type,
+          ip: securityEvent.ip,
+          userAgent: securityEvent.userAgent,
+          metadata: securityEvent.metadata,
+        },
+      });
+    });
+
+    allPayments.forEach((payment) => {
+      const paymentUser = payment.userId;
+      pushLog({
+        type: "payment_created",
+        userId: paymentUser?._id,
+        userEmail: paymentUser?.email,
+        userName: paymentUser?.name,
+        timestamp: payment.createdAt,
+        details: {
+          paymentType: payment.paymentType,
+          status: payment.status,
+          amount: payment.amount,
+          currency: payment.currency,
+          orderId: payment.orderId,
+        },
+      });
+
+      if (payment.status === "failed") {
+        pushLog({
+          type: "payment_failed",
+          userId: paymentUser?._id,
+          userEmail: paymentUser?.email,
+          userName: paymentUser?.name,
+          timestamp: payment.updatedAt || payment.createdAt,
+          details: {
+            paymentType: payment.paymentType,
+            amount: payment.amount,
+            currency: payment.currency,
+            orderId: payment.orderId,
+            errorCode: payment.errorCode,
+            errorDescription: payment.errorDescription,
+          },
+        });
+      }
+
+      if (payment.status === "refunded") {
+        pushLog({
+          type: "payment_refunded",
+          userId: paymentUser?._id,
+          userEmail: paymentUser?.email,
+          userName: paymentUser?.name,
+          timestamp: payment.refundedAt || payment.updatedAt || payment.createdAt,
+          details: {
+            paymentType: payment.paymentType,
+            amount: payment.amount,
+            refundAmount: payment.refundAmount,
+            refundId: payment.refundId,
+            refundReason: payment.refundReason,
+            orderId: payment.orderId,
+          },
+        });
+      }
+    });
+
+    allCommissions.forEach((commission) => {
+      if (commission.status !== "pending") {
+        pushLog({
+          type: "commission_status_changed",
+          userId: commission.organizer?._id,
+          userEmail: commission.organizer?.email,
+          userName: commission.organizer?.name,
+          timestamp: commission.updatedAt || commission.createdAt,
+          details: {
+            event: commission.event?.title,
+            bookingId: commission.booking?.bookingId,
+            status: commission.status,
+            notes: commission.notes,
+          },
+        });
+      }
+    });
+
+    allPayouts.forEach((payout) => {
+      pushLog({
+        type: "payout_requested",
+        userId: payout.eventAdmin?._id,
+        userEmail: payout.eventAdmin?.email,
+        userName: payout.eventAdmin?.name,
+        timestamp: payout.requestedAt || payout.createdAt,
+        details: {
+          amount: payout.totalAmount,
+          status: payout.status,
+          paymentMethod: payout.paymentMethod,
+          commissionAmount: payout.commissionAmount,
+          commissionCount: payout.commissionCount,
+          ticketCount: payout.ticketCount,
+        },
+      });
+
+      if (payout.status !== "pending") {
+        const payoutTimestamp = payout.completedAt || payout.processedAt || payout.updatedAt || payout.createdAt;
+        pushLog({
+          type: `payout_${payout.status}`,
+          userId: payout.eventAdmin?._id,
+          userEmail: payout.eventAdmin?.email,
+          userName: payout.eventAdmin?.name,
+          timestamp: payoutTimestamp,
+          details: {
+            amount: payout.totalAmount,
+            status: payout.status,
+            paymentMethod: payout.paymentMethod,
+            transactionId: payout.transactionId,
+            failureReason: payout.failureReason,
+            notes: payout.notes,
+          },
+        });
+      }
+    });
+
+    allCoupons.forEach((coupon) => {
+      pushLog({
+        type: "coupon_created",
+        userId: coupon.createdBy?._id,
+        userEmail: coupon.createdBy?.email,
+        userName: coupon.createdBy?.name,
+        timestamp: coupon.createdAt,
+        details: {
+          code: coupon.code,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue,
+          usageLimit: coupon.usageLimit,
+          usageCount: coupon.usageCount,
+          isActive: coupon.isActive,
+        },
+      });
+
+      if (!coupon.isActive) {
+        pushLog({
+          type: "coupon_deactivated",
+          userId: coupon.createdBy?._id,
+          userEmail: coupon.createdBy?.email,
+          userName: coupon.createdBy?.name,
+          timestamp: coupon.updatedAt || coupon.createdAt,
+          details: {
+            code: coupon.code,
+            usageCount: coupon.usageCount,
+          },
+        });
+      }
+
+      if ((coupon.usageCount || 0) > 0) {
+        pushLog({
+          type: "coupon_usage_updated",
+          userId: coupon.createdBy?._id,
+          userEmail: coupon.createdBy?.email,
+          userName: coupon.createdBy?.name,
+          timestamp: coupon.updatedAt || coupon.createdAt,
+          details: {
+            code: coupon.code,
+            usageCount: coupon.usageCount,
+            usageLimit: coupon.usageLimit,
+          },
+        });
+      }
+    });
+
+    allFeatureToggles.forEach((featureToggle) => {
+      pushLog({
+        type: "feature_toggle_updated",
+        userId: featureToggle.toggledBy?._id,
+        userEmail: featureToggle.toggledBy?.email,
+        userName: featureToggle.toggledBy?.name,
+        timestamp: featureToggle.updatedAt || featureToggle.createdAt,
+        details: {
+          event: featureToggle.eventId?.title,
+          features: featureToggle.features,
+        },
+      });
+    });
+
+    if (systemConfig?.updatedAt) {
+      pushLog({
+        type: "system_config_updated",
+        timestamp: systemConfig.updatedAt,
+        details: {
+          qrCodeRules: systemConfig.qrCodeRules,
+          ticketLimits: systemConfig.ticketLimits,
+          security: systemConfig.security,
+          emailNotifications: systemConfig.emailNotifications,
+        },
+      });
+    }
+
+    organizerSubscriptions.forEach((subscription) => {
+      pushLog({
+        type: "subscription_created",
+        userId: subscription.organizer?._id,
+        userEmail: subscription.organizer?.email,
+        userName: subscription.organizer?.name,
+        timestamp: subscription.subscribedAt || subscription.createdAt,
+        details: {
+          plan: subscription.plan?.displayName || subscription.plan?.name,
+          status: subscription.status,
+          commissionPercentage: subscription.currentCommissionPercentage,
+        },
+      });
+
+      if (subscription.status !== "active") {
+        pushLog({
+          type: "subscription_status_changed",
+          userId: subscription.organizer?._id,
+          userEmail: subscription.organizer?.email,
+          userName: subscription.organizer?.name,
+          timestamp: subscription.cancelledAt || subscription.updatedAt || subscription.createdAt,
+          details: {
+            plan: subscription.plan?.displayName || subscription.plan?.name,
+            status: subscription.status,
+            reason: subscription.cancelReason,
+            notes: subscription.notes,
+          },
+        });
+      }
+    });
+
+    subscriptionPlans.forEach((plan) => {
+      if (!plan.isActive) {
+        pushLog({
+          type: "subscription_plan_deactivated",
+          timestamp: plan.updatedAt || plan.createdAt,
+          details: {
+            name: plan.displayName || plan.name,
+            commissionPercentage: plan.commissionPercentage,
+          },
+        });
+      }
     });
 
     // Sort all logs by timestamp
@@ -1393,8 +2502,10 @@ export const getSystemLogs = async (req, res) => {
       filteredLogs = filteredLogs.filter(log => 
         (log.userName?.toLowerCase().includes(searchLower)) ||
         (log.userEmail?.toLowerCase().includes(searchLower)) ||
+        (log.type?.toLowerCase().includes(searchLower)) ||
         (log.details?.event?.toLowerCase().includes(searchLower)) ||
-        (log.details?.eventTitle?.toLowerCase().includes(searchLower))
+        (log.details?.eventTitle?.toLowerCase().includes(searchLower)) ||
+        ((log.details && JSON.stringify(log.details).toLowerCase().includes(searchLower)) || false)
       );
     }
     if (startDate) {
@@ -1420,7 +2531,7 @@ export const getSystemLogs = async (req, res) => {
         pages: Math.ceil(filteredLogs.length / limitNum),
       },
       filters: {
-        availableTypes: ['login', 'user_created', 'booking_created', 'session_activity', 'event_created'],
+        availableTypes: AVAILABLE_LOG_TYPES,
       },
     });
   } catch (error) {
@@ -1433,7 +2544,7 @@ export const getSystemLogs = async (req, res) => {
  */
 export const exportUsers = async (req, res) => {
   try {
-    const { format = 'csv', startDate, endDate, role, active } = req.query;
+    const { format = 'csv', startDate, endDate, role, active, selectedFields } = req.query;
 
     // Build filter
     const filter = {};
@@ -1460,6 +2571,7 @@ export const exportUsers = async (req, res) => {
       { key: 'createdAt', header: 'Created', width: 20, format: formatDate },
       { key: 'lastLoginAt', header: 'Last Login', width: 20, format: formatDate }
     ];
+    const exportColumns = getSelectedColumns(columns, selectedFields);
 
     // Format data for export
     const exportData = users.map(user => ({
@@ -1469,21 +2581,21 @@ export const exportUsers = async (req, res) => {
 
     // Generate export based on format
     if (format === 'csv') {
-      const csv = generateCSV(exportData, columns);
+      const csv = generateCSV(exportData, exportColumns);
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=users-export-${Date.now()}.csv`);
       return res.send(csv);
     }
 
     if (format === 'xlsx') {
-      const buffer = await generateExcel(exportData, columns, 'Users');
+      const buffer = await generateExcel(exportData, exportColumns, 'Users');
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=users-export-${Date.now()}.xlsx`);
       return res.send(buffer);
     }
 
     if (format === 'pdf') {
-      const buffer = await generatePDF(exportData, columns, {
+      const buffer = await generatePDF(exportData, exportColumns, {
         title: 'Users Report',
         subtitle: `Generated on ${formatDate(new Date())}`
       });
@@ -1504,7 +2616,7 @@ export const exportUsers = async (req, res) => {
  */
 export const exportEvents = async (req, res) => {
   try {
-    const { format = 'csv', startDate, endDate, status } = req.query;
+    const { format = 'csv', startDate, endDate, status, selectedFields } = req.query;
 
     // Build filter
     const filter = {};
@@ -1534,6 +2646,7 @@ export const exportEvents = async (req, res) => {
       { key: 'status', header: 'Status', width: 15, format: formatStatus },
       { key: 'createdAt', header: 'Created', width: 20, format: formatDate }
     ];
+    const exportColumns = getSelectedColumns(columns, selectedFields);
 
     // Format data for export
     const exportData = events.map(event => ({
@@ -1545,21 +2658,21 @@ export const exportEvents = async (req, res) => {
 
     // Generate export based on format
     if (format === 'csv') {
-      const csv = generateCSV(exportData, columns);
+      const csv = generateCSV(exportData, exportColumns);
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=events-export-${Date.now()}.csv`);
       return res.send(csv);
     }
 
     if (format === 'xlsx') {
-      const buffer = await generateExcel(exportData, columns, 'Events');
+      const buffer = await generateExcel(exportData, exportColumns, 'Events');
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=events-export-${Date.now()}.xlsx`);
       return res.send(buffer);
     }
 
     if (format === 'pdf') {
-      const buffer = await generatePDF(exportData, columns, {
+      const buffer = await generatePDF(exportData, exportColumns, {
         title: 'Events Report',
         subtitle: `Generated on ${formatDate(new Date())}`
       });
@@ -1580,7 +2693,7 @@ export const exportEvents = async (req, res) => {
  */
 export const exportBookings = async (req, res) => {
   try {
-    const { format = 'csv', startDate, endDate, status, paymentStatus } = req.query;
+    const { format = 'csv', startDate, endDate, status, paymentStatus, selectedFields } = req.query;
 
     // Build filter
     const filter = {};
@@ -1615,6 +2728,7 @@ export const exportBookings = async (req, res) => {
       { key: 'bookingDate', header: 'Booking Date', width: 20, format: formatDate },
       { key: 'scanned', header: 'Scanned', width: 12 }
     ];
+    const exportColumns = getSelectedColumns(columns, selectedFields);
 
     // Format data for export
     const exportData = bookings.map(booking => ({
@@ -1635,21 +2749,21 @@ export const exportBookings = async (req, res) => {
 
     // Generate export based on format
     if (format === 'csv') {
-      const csv = generateCSV(exportData, columns);
+      const csv = generateCSV(exportData, exportColumns);
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=bookings-export-${Date.now()}.csv`);
       return res.send(csv);
     }
 
     if (format === 'xlsx') {
-      const buffer = await generateExcel(exportData, columns, 'Bookings');
+      const buffer = await generateExcel(exportData, exportColumns, 'Bookings');
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=bookings-export-${Date.now()}.xlsx`);
       return res.send(buffer);
     }
 
     if (format === 'pdf') {
-      const buffer = await generatePDF(exportData, columns, {
+      const buffer = await generatePDF(exportData, exportColumns, {
         title: 'Bookings Report',
         subtitle: `Generated on ${formatDate(new Date())}`
       });

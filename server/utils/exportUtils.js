@@ -387,3 +387,25 @@ export function formatStatus(status) {
   if (!status) return '';
   return String(status).toUpperCase();
 }
+
+/**
+ * Filter export columns based on selected fields from query string.
+ * Falls back to all columns if no valid selection is provided.
+ */
+export function getSelectedColumns(columns, selectedFields) {
+  if (!selectedFields) return columns;
+
+  const requestedKeys = Array.isArray(selectedFields)
+    ? selectedFields
+    : String(selectedFields)
+      .split(',')
+      .map(key => key.trim())
+      .filter(Boolean);
+
+  if (requestedKeys.length === 0) return columns;
+
+  const requestedSet = new Set(requestedKeys);
+  const filtered = columns.filter(col => requestedSet.has(col.key));
+
+  return filtered.length > 0 ? filtered : columns;
+}

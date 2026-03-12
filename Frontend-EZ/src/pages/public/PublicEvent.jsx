@@ -15,6 +15,8 @@ export default function PublicEvent() {
   const [error, setError] = useState('');
   const [copying, setCopying] = useState(false);
 
+  const isMongoObjectId = (value) => /^[a-f\d]{24}$/i.test(value || '');
+
   useEffect(() => {
     fetchEvent();
   }, [slug, shortCode]);
@@ -24,12 +26,16 @@ export default function PublicEvent() {
       setLoading(true);
       let res;
       
-      // If slug is provided, fetch by slug or try as _id for backwards compatibility
+      // If slug is provided, fetch by slug first.
+      // Only try /events/:id fallback when the param is a valid Mongo ObjectId.
       if (slug) {
         try {
           res = await axios.get(`${API_URL}/api/events/public/${slug}`);
         } catch {
-          // If not found as slug, try as _id for backwards compatibility
+          if (!isMongoObjectId(slug)) {
+            throw new Error('Event not found');
+          }
+
           try {
             res = await axios.get(`${API_URL}/api/events/${slug}`);
           } catch {

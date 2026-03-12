@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import API from '../../services/api'
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout'
 
+const HIDDEN_LOG_TYPES = ['coupon_usage_updated', 'payment_created', 'booking_updated']
+
 export default function SuperAdminLogs() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -43,11 +45,12 @@ export default function SuperAdminLogs() {
       
       const res = await API.get(`/super-admin/logs?${params}`)
       console.log('Logs response:', res.data) // Debug log
-      setLogs(res.data.logs)
+      const visibleLogs = (res.data.logs || []).filter((log) => !HIDDEN_LOG_TYPES.includes(log.type))
+      setLogs(visibleLogs)
       setTotal(res.data.pagination.total)
       
       if (res.data.filters?.availableTypes) {
-        setAvailableTypes(res.data.filters.availableTypes)
+        setAvailableTypes(res.data.filters.availableTypes.filter((type) => !HIDDEN_LOG_TYPES.includes(type)))
       }
     } catch (err) {
       console.error('Error fetching logs:', err)
@@ -58,6 +61,22 @@ export default function SuperAdminLogs() {
   }
 
   const getLogTypeStyle = (type) => {
+    if (type?.startsWith('payment_')) {
+      return 'bg-emerald-100 text-emerald-800 border-l-4 border-emerald-500'
+    }
+    if (type?.startsWith('payout_')) {
+      return 'bg-cyan-100 text-cyan-800 border-l-4 border-cyan-500'
+    }
+    if (type?.startsWith('commission_')) {
+      return 'bg-indigo-100 text-indigo-800 border-l-4 border-indigo-500'
+    }
+    if (type?.startsWith('coupon_')) {
+      return 'bg-pink-100 text-pink-800 border-l-4 border-pink-500'
+    }
+    if (type?.startsWith('subscription_')) {
+      return 'bg-teal-100 text-teal-800 border-l-4 border-teal-500'
+    }
+
     switch(type) {
       case 'login':
         return 'bg-green-100 text-green-800 border-l-4 border-green-500'
@@ -65,16 +84,34 @@ export default function SuperAdminLogs() {
         return 'bg-blue-100 text-blue-800 border-l-4 border-blue-500'
       case 'booking_created':
         return 'bg-purple-100 text-purple-800 border-l-4 border-purple-500'
+      case 'booking_updated':
+      case 'booking_status_changed':
+        return 'bg-fuchsia-100 text-fuchsia-800 border-l-4 border-fuchsia-500'
       case 'session_activity':
         return 'bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500'
       case 'event_created':
         return 'bg-orange-100 text-orange-800 border-l-4 border-orange-500'
+      case 'event_updated':
+      case 'event_status_changed':
+        return 'bg-amber-100 text-amber-800 border-l-4 border-amber-500'
+      case 'security_event':
+      case 'duplicate_scan_attempt':
+        return 'bg-rose-100 text-rose-800 border-l-4 border-rose-500'
+      case 'feature_toggle_updated':
+      case 'system_config_updated':
+        return 'bg-slate-100 text-slate-800 border-l-4 border-slate-500'
       default:
         return 'bg-gray-100 text-gray-800 border-l-4 border-gray-500'
     }
   }
 
   const getLogTypeIcon = (type) => {
+    if (type?.startsWith('payment_')) return '💳'
+    if (type?.startsWith('payout_')) return '💸'
+    if (type?.startsWith('commission_')) return '🧾'
+    if (type?.startsWith('coupon_')) return '🏷️'
+    if (type?.startsWith('subscription_')) return '📦'
+
     switch(type) {
       case 'login':
         return '🔓'
@@ -86,6 +123,20 @@ export default function SuperAdminLogs() {
         return '🔗'
       case 'event_created':
         return '📅'
+      case 'event_updated':
+      case 'event_status_changed':
+        return '🛠️'
+      case 'booking_updated':
+      case 'booking_status_changed':
+        return '🧷'
+      case 'security_event':
+        return '🛡️'
+      case 'duplicate_scan_attempt':
+        return '🚫'
+      case 'feature_toggle_updated':
+        return '🎚️'
+      case 'system_config_updated':
+        return '⚙️'
       default:
         return '📋'
     }
@@ -99,14 +150,51 @@ export default function SuperAdminLogs() {
     if (log.type === 'booking_created') {
       return `Event: ${log.details?.event || 'N/A'}, Qty: ${log.details?.quantity || 0}, Status: ${log.details?.status || 'N/A'}`
     }
+    if (log.type === 'booking_updated' || log.type === 'booking_status_changed') {
+      return `Booking: ${log.details?.bookingId || 'N/A'}, Event: ${log.details?.event || 'N/A'}, Status: ${log.details?.status || 'N/A'}`
+    }
     if (log.type === 'event_created') {
       return `Event: ${log.details?.eventTitle || 'N/A'}, Category: ${log.details?.eventCategory || 'N/A'}, Tickets: ${log.details?.totalTickets || 0}`
+    }
+    if (log.type === 'event_updated' || log.type === 'event_status_changed') {
+      return `Event: ${log.details?.eventTitle || 'N/A'}, Status: ${log.details?.status || 'N/A'}`
+    }
+    if (log.type === 'security_event') {
+      return `Type: ${log.details?.securityType || 'N/A'}, IP: ${log.details?.ip || 'N/A'}`
+    }
+    if (log.type?.startsWith('payment_')) {
+      return `Order: ${log.details?.orderId || 'N/A'}, Amount: ${log.details?.amount || 0} ${log.details?.currency || ''}, Status: ${log.details?.status || log.type.replace('payment_', '')}`
+    }
+    if (log.type?.startsWith('payout_')) {
+      return `Amount: ${log.details?.amount || 0}, Method: ${log.details?.paymentMethod || 'N/A'}, Txn: ${log.details?.transactionId || 'N/A'}`
+    }
+    if (log.type?.startsWith('commission_')) {
+      return `Event: ${log.details?.event || 'N/A'}, Commission: ${log.details?.commissionAmount || 0}, Status: ${log.details?.status || 'N/A'}`
+    }
+    if (log.type?.startsWith('coupon_')) {
+      return `Code: ${log.details?.code || 'N/A'}, Usage: ${log.details?.usageCount || 0}${log.details?.usageLimit ? `/${log.details.usageLimit}` : ''}`
+    }
+    if (log.type === 'duplicate_scan_attempt') {
+      return `Event: ${log.details?.event || 'N/A'}, Gate: ${log.details?.gateName || log.details?.gateId || 'N/A'}, Attempt: ${log.details?.duplicateAttemptNumber || 0}`
+    }
+    if (log.type === 'feature_toggle_updated') {
+      return `Event: ${log.details?.event || 'N/A'} (feature flags updated)`
+    }
+    if (log.type === 'system_config_updated') {
+      return 'System-wide configuration updated'
+    }
+    if (log.type?.startsWith('subscription_')) {
+      return `Plan: ${log.details?.plan || log.details?.name || 'N/A'}, Status: ${log.details?.status || (log.details?.isActive ? 'active' : 'inactive')}`
     }
     if (log.details?.userAgent) {
       return log.details.userAgent.substring(0, 60) + '...'
     }
     if (log.details?.role) {
       return `Role: ${log.details.role}`
+    }
+    if (log.details && Object.keys(log.details).length > 0) {
+      const compact = JSON.stringify(log.details)
+      return compact.length > 120 ? `${compact.substring(0, 120)}...` : compact
     }
     return '-'
   }

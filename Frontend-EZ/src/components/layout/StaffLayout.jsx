@@ -22,11 +22,12 @@ export default function StaffLayout({ title, children }) {
   const isActive = (path) => location.pathname === path
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="responsive-role-shell role-shell-staff min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Logo dark={false} key="staff-logo" size="lg" />
+            <span className="sm:hidden"><Logo dark={false} key="staff-logo-sm" size="sm" /></span>
+            <span className="hidden sm:block"><Logo dark={false} key="staff-logo" size="lg" /></span>
             <h1 className="text-sm sm:text-base font-semibold dark:text-white truncate">Staff Scanner</h1>
           </div>
 
@@ -58,12 +59,14 @@ export default function StaffLayout({ title, children }) {
           </nav>
 
           <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
-            <NavigationButtons
-              homeTo="/staff/scanner"
-              homeLabel="Scanner"
-              showLabels={false}
-              size="sm"
-            />
+            <div className="hidden sm:flex">
+              <NavigationButtons
+                homeTo="/staff/scanner"
+                homeLabel="Scanner"
+                showLabels={false}
+                size="sm"
+              />
+            </div>
             <div className="text-xs sm:text-sm hidden sm:block">
               <div className="font-medium dark:text-white">{user?.name}</div>
               <div className="text-gray-500">Staff</div>
@@ -72,7 +75,8 @@ export default function StaffLayout({ title, children }) {
               onClick={handleLogout}
               className="px-2 sm:px-3 py-1 sm:py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm rounded transition flex-shrink-0"
             >
-              Logout
+              <span className="hidden sm:inline">Logout</span>
+              <span className="sm:hidden">Exit</span>
             </button>
           </div>
         </div>
@@ -107,9 +111,9 @@ export default function StaffLayout({ title, children }) {
         </div>
       </header>
 
-      <main className="p-4 sm:p-6 max-w-7xl mx-auto pb-8">
+      <main className="role-shell-main p-4 sm:p-6 max-w-7xl mx-auto pb-8 min-w-0">
         <h2 className="text-xl sm:text-2xl font-bold dark:text-white mb-4">{title}</h2>
-        {children}
+        <div className="role-shell-content min-w-0">{children}</div>
       </main>
     </div>
   )

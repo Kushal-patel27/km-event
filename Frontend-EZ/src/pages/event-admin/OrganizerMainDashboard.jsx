@@ -4,6 +4,7 @@ import API from '../../services/api'
 import formatCurrency from '../../utils/currency'
 import EventAdminLayout from '../../components/layout/EventAdminLayout'
 import ExportDataModal from '../../components/admin/ExportDataModal'
+import { BOOKINGS_EXPORT_FIELDS } from '../../utils/exportFieldOptions'
 
 export default function OrganizerDashboard() {
   const navigate = useNavigate()
@@ -93,6 +94,7 @@ export default function OrganizerDashboard() {
       if (filters.startDate) params.append('startDate', filters.startDate)
       if (filters.endDate) params.append('endDate', filters.endDate)
       if (filters.eventId) params.append('eventId', filters.eventId)
+      if (filters.selectedFields?.length) params.append('selectedFields', filters.selectedFields.join(','))
       
       // Call export API - use event-admin endpoint for organizer analytics
       const response = await API.get(`/event-admin/export/bookings?${params.toString()}`, {
@@ -468,6 +470,7 @@ export default function OrganizerDashboard() {
         onExport={handleExport}
         title="Export Analytics"
         filters={exportFilters}
+        fields={BOOKINGS_EXPORT_FIELDS}
       />
     </EventAdminLayout>
   )

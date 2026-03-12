@@ -3,6 +3,11 @@ import { motion } from 'framer-motion'
 import API from '../../services/api'
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout'
 import ExportDataModal from '../../components/admin/ExportDataModal'
+import {
+  BOOKINGS_EXPORT_FIELDS,
+  EVENTS_EXPORT_FIELDS,
+  USERS_EXPORT_FIELDS
+} from '../../utils/exportFieldOptions'
 
 export default function SuperAdminExport() {
   const [showExportModal, setShowExportModal] = useState(false)
@@ -13,15 +18,18 @@ export default function SuperAdminExport() {
   const exportFiltersConfig = {
     users: [
       {
-        label: 'Date Range',
-        name: 'dateRange',
-        type: 'dateRange',
-        startName: 'startDate',
-        endName: 'endDate'
+        key: 'startDate',
+        label: 'Start Date',
+        type: 'date'
       },
       {
+        key: 'endDate',
+        label: 'End Date',
+        type: 'date'
+      },
+      {
+        key: 'role',
         label: 'User Role',
-        name: 'role',
         type: 'select',
         options: [
           { value: 'super_admin', label: 'Super Admin' },
@@ -33,8 +41,8 @@ export default function SuperAdminExport() {
         ]
       },
       {
+        key: 'active',
         label: 'Status',
-        name: 'active',
         type: 'select',
         options: [
           { value: 'true', label: 'Active' },
@@ -44,15 +52,18 @@ export default function SuperAdminExport() {
     ],
     events: [
       {
-        label: 'Date Range',
-        name: 'dateRange',
-        type: 'dateRange',
-        startName: 'startDate',
-        endName: 'endDate'
+        key: 'startDate',
+        label: 'Start Date',
+        type: 'date'
       },
       {
+        key: 'endDate',
+        label: 'End Date',
+        type: 'date'
+      },
+      {
+        key: 'status',
         label: 'Event Status',
-        name: 'status',
         type: 'select',
         options: [
           { value: 'draft', label: 'Draft' },
@@ -65,15 +76,18 @@ export default function SuperAdminExport() {
     ],
     bookings: [
       {
-        label: 'Date Range',
-        name: 'dateRange',
-        type: 'dateRange',
-        startName: 'startDate',
-        endName: 'endDate'
+        key: 'startDate',
+        label: 'Start Date',
+        type: 'date'
       },
       {
+        key: 'endDate',
+        label: 'End Date',
+        type: 'date'
+      },
+      {
+        key: 'status',
         label: 'Booking Status',
-        name: 'status',
         type: 'select',
         options: [
           { value: 'confirmed', label: 'Confirmed' },
@@ -82,8 +96,8 @@ export default function SuperAdminExport() {
         ]
       },
       {
+        key: 'paymentStatus',
         label: 'Payment Status',
-        name: 'paymentStatus',
         type: 'select',
         options: [
           { value: 'completed', label: 'Completed' },
@@ -93,6 +107,12 @@ export default function SuperAdminExport() {
         ]
       }
     ]
+  }
+
+  const exportFieldsConfig = {
+    users: USERS_EXPORT_FIELDS,
+    events: EVENTS_EXPORT_FIELDS,
+    bookings: BOOKINGS_EXPORT_FIELDS
   }
 
   const handleOpenExport = (type) => {
@@ -111,9 +131,14 @@ export default function SuperAdminExport() {
       // Add filter values
       if (filters) {
         Object.keys(filters).forEach(key => {
-          if (filters[key]) {
-            params.append(key, filters[key])
+          if (!filters[key]) return
+
+          if (Array.isArray(filters[key])) {
+            params.append(key, filters[key].join(','))
+            return
           }
+
+          params.append(key, filters[key])
         })
       }
 
@@ -256,6 +281,7 @@ export default function SuperAdminExport() {
           onClose={() => setShowExportModal(false)}
           title={`Export ${selectedExportType?.charAt(0).toUpperCase() + selectedExportType?.slice(1)}`}
           filters={exportFiltersConfig[selectedExportType] || []}
+          fields={exportFieldsConfig[selectedExportType] || []}
           onExport={handleExport}
           isLoading={loadingExport}
         />
