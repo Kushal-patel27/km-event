@@ -9,6 +9,8 @@ import {
   refreshSession,
   logout,
   updateProfile,
+  updateProfilePhoto,
+  removeProfilePhoto,
   changePassword,
   getPreferences,
   updatePreferences,
@@ -26,6 +28,7 @@ import passport from "../config/passport.js";
 import jwt from "jsonwebtoken";
 import { protect, requireSuperAdmin } from "../middleware/authMiddleware.js";
 import rateLimit from "express-rate-limit";
+import { parseProfilePhotoUpload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -117,6 +120,8 @@ router.get("/verify-session", protect, (req, res) => {
   res.json({ valid: true, user: { _id: req.user._id, email: req.user.email, role: req.user.role } });
 });
 router.put("/profile", protect, updateProfile);
+router.put("/profile/photo", protect, parseProfilePhotoUpload, updateProfilePhoto);
+router.delete("/profile/photo", protect, removeProfilePhoto);
 router.put("/password", protect, changePassword);
 router.put("/password/set", protect, setPassword);
 router.get("/preferences", protect, getPreferences);

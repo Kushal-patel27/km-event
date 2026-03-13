@@ -20,6 +20,7 @@
   "dependencies": {
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -30,6 +31,7 @@
     "express-validator": "^7.3.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.1",
+    "multer": "^2.0.2",
     "nanoid": "^5.1.6",
     "nodemailer": "^7.0.12",
     "passport": "^0.7.0",
@@ -37,7 +39,8 @@
     "pdfkit": "^0.17.2",
     "qrcode": "^1.5.4",
     "razorpay": "^2.9.6",
-    "redis": "^4.6.12"
+    "redis": "^4.6.12",
+    "sharp": "^0.34.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

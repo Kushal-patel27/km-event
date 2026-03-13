@@ -40,18 +40,8 @@ export default function Login() {
           
           // Login successful
           console.log('Login API Response:', res.data);
-          login({
-            name: res.data.name,
-            email: res.data.email,
-            token: res.data.token,
-            role: res.data.role,
-            _id: res.data._id,
-            whatsappNumber: res.data.whatsappNumber,
-            requiresWhatsappNumber: res.data.requiresWhatsappNumber,
-            lastLoginAt: res.data.lastLoginAt,
-            assignedEvents: res.data.assignedEvents,
-            assignedGates: res.data.assignedGates,
-          });
+          // Keep full backend auth payload so new profile fields (e.g. profilePhoto) persist after re-login.
+          login(res.data);
 
           // Redirect based on role and login mode
           const role = String(res.data.role || "").toLowerCase();

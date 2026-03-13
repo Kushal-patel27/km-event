@@ -2,10 +2,12 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+import sharp from "sharp";
 import User, { ADMIN_ROLE_SET } from "../models/User.js";
 import SecurityEvent from "../models/SecurityEvent.js";
 import SystemConfig from "../models/SystemConfig.js";
 import { sendPasswordResetOtpEmail } from "../utils/emailService.js";
+import { deleteCloudinaryImage, uploadProfilePhotoBuffer } from "../utils/cloudinary.js";
 
 const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || "15m";
 const REFRESH_TOKEN_TTL = process.env.REFRESH_TOKEN_TTL || "7d";
@@ -122,6 +124,15 @@ function normalizeOtpWindow(user, now) {
 
 function buildUserResponse(user, token) {
   const hasWhatsAppNumber = Boolean(user.whatsappNumber);
+  const safeProfilePhoto = user.profilePhoto?.url
+    ? {
+        url: user.profilePhoto.url,
+        width: user.profilePhoto.width || null,
+        height: user.profilePhoto.height || null,
+        format: user.profilePhoto.format || null,
+      }
+    : null;
+
   return {
     _id: user._id,
     name: user.name,
@@ -129,11 +140,24 @@ function buildUserResponse(user, token) {
     role: user.role,
     lastLoginAt: user.lastLoginAt,
     whatsappNumber: user.whatsappNumber || null,
+    bio: user.bio || null,
+    address: user.address || null,
+    profilePhoto: safeProfilePhoto,
     requiresWhatsappNumber: !hasWhatsAppNumber,
     assignedEvents: user.assignedEvents || [],
     assignedGates: user.assignedGates || [],
     token,
   };
+}
+
+function normalizeOptionalText(value, { fieldName, maxLength }) {
+  if (value === undefined || value === null) return { value: null };
+  const normalized = String(value).trim();
+  if (!normalized) return { value: null };
+  if (normalized.length > maxLength) {
+    return { error: `${fieldName} must be ${maxLength} characters or less.` };
+  }
+  return { value: normalized };
 }
 
 function normalizeWhatsAppNumber(rawValue) {
@@ -215,17 +239,7 @@ export const registerUser = async (req, res) => {
       expiresIn: "7d",
     });
 
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      whatsappNumber: user.whatsappNumber || null,
-      requiresWhatsappNumber: !user.whatsappNumber,
-      role: user.role,
-      assignedEvents: user.assignedEvents || [],
-      assignedGates: user.assignedGates || [],
-      token,
-    });
+    res.status(201).json(buildUserResponse(user, token));
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -256,18 +270,7 @@ export const loginUser = async (req, res) => {
       expiresIn: "7d",
     });
 
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      whatsappNumber: user.whatsappNumber || null,
-      requiresWhatsappNumber: !user.whatsappNumber,
-      role: user.role,
-      lastLoginAt: user.lastLoginAt,
-      assignedEvents: user.assignedEvents || [],
-      assignedGates: user.assignedGates || [],
-      token,
-    });
+    res.json(buildUserResponse(user, token));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -304,18 +307,7 @@ export const loginAdmin = async (req, res) => {
       expiresIn: "7d",
     });
 
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      whatsappNumber: user.whatsappNumber || null,
-      requiresWhatsappNumber: !user.whatsappNumber,
-      role: user.role,
-      lastLoginAt: user.lastLoginAt,
-      assignedEvents: user.assignedEvents || [],
-      assignedGates: user.assignedGates || [],
-      token,
-    });
+    res.json(buildUserResponse(user, token));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -352,18 +344,7 @@ export const loginStaff = async (req, res) => {
       expiresIn: "7d",
     });
 
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      whatsappNumber: user.whatsappNumber || null,
-      requiresWhatsappNumber: !user.whatsappNumber,
-      role: user.role,
-      assignedEvents: user.assignedEvents,
-      assignedGates: user.assignedGates,
-      lastLoginAt: user.lastLoginAt,
-      token,
-    });
+    res.json(buildUserResponse(user, token));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -376,8 +357,8 @@ export const getMe = async (req, res) => {
     if (!req.user) return res.status(401).json({ message: "Not authorized" });
     const userWithPassword = await User.findById(req.user._id).select("password");
     const hasPassword = Boolean(userWithPassword?.password);
-    const base = req.user.toObject ? req.user.toObject() : req.user;
-    res.json({ ...base, hasPassword, requiresWhatsappNumber: !base.whatsappNumber });
+    const { token: _unusedToken, ...safeUser } = buildUserResponse(req.user, null);
+    res.json({ ...safeUser, hasPassword });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -394,17 +375,7 @@ export const refreshSession = async (req, res) => {
       expiresIn: ACCESS_TOKEN_TTL,
     });
 
-    res.json({
-      _id: req.user._id,
-      name: req.user.name,
-      email: req.user.email,
-      whatsappNumber: req.user.whatsappNumber || null,
-      requiresWhatsappNumber: !req.user.whatsappNumber,
-      role: req.user.role,
-      assignedEvents: req.user.assignedEvents || [],
-      assignedGates: req.user.assignedGates || [],
-      token,
-    });
+    res.json(buildUserResponse(req.user, token));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -421,7 +392,7 @@ export const logout = async (req, res) => {
 
 // Update profile (name, email)
 export const updateProfile = async (req, res) => {
-  const { name, email, whatsappNumber } = req.body;
+  const { name, email, whatsappNumber, bio, address } = req.body;
   try {
     if (!req.user) return res.status(401).json({ message: "Not authorized" });
 
@@ -447,23 +418,127 @@ export const updateProfile = async (req, res) => {
       user.whatsappNumber = normalizedWhatsApp;
     }
 
+    if (bio !== undefined) {
+      const normalizedBio = normalizeOptionalText(bio, { fieldName: "Bio", maxLength: 500 });
+      if (normalizedBio.error) {
+        return res.status(400).json({ message: normalizedBio.error });
+      }
+      user.bio = normalizedBio.value;
+    }
+
+    if (address !== undefined) {
+      const normalizedAddress = normalizeOptionalText(address, { fieldName: "Address", maxLength: 250 });
+      if (normalizedAddress.error) {
+        return res.status(400).json({ message: normalizedAddress.error });
+      }
+      user.address = normalizedAddress.value;
+    }
+
     await user.save();
 
     const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      whatsappNumber: user.whatsappNumber || null,
-      requiresWhatsappNumber: !user.whatsappNumber,
-      role: user.role,
-      token,
-    });
+    res.json(buildUserResponse(user, token));
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateProfilePhoto = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+    if (!req.file?.buffer) {
+      return res.status(400).json({ message: "Profile photo file is required." });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Normalize orientation and reduce overly large inputs while preserving good quality.
+    const optimizedBuffer = await sharp(req.file.buffer)
+      .rotate()
+      .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 95, mozjpeg: true })
+      .toBuffer();
+
+    const uploadedImage = await uploadProfilePhotoBuffer({
+      buffer: optimizedBuffer,
+      userId: user._id.toString(),
+    });
+
+    const previousPublicId = user.profilePhoto?.publicId;
+    user.profilePhoto = {
+      url: uploadedImage.secure_url,
+      publicId: uploadedImage.public_id,
+      width: uploadedImage.width || null,
+      height: uploadedImage.height || null,
+      format: uploadedImage.format || null,
+    };
+    await user.save();
+
+    if (previousPublicId && previousPublicId !== uploadedImage.public_id) {
+      deleteCloudinaryImage(previousPublicId).catch((err) => {
+        console.error("Failed to remove old profile photo:", err.message);
+      });
+    }
+
+    const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    return res.json({
+      message: "Profile photo updated successfully",
+      ...buildUserResponse(user, token),
+    });
+  } catch (error) {
+    console.error("Profile photo upload failed:", error);
+    if (error.message?.includes("Cloudinary is not configured")) {
+      return res.status(500).json({ message: error.message });
+    }
+    return res.status(500).json({ message: "Unable to upload profile photo. Please try again." });
+  }
+};
+
+export const removeProfilePhoto = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Not authorized" });
+
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const previousPublicId = user.profilePhoto?.publicId;
+    user.profilePhoto = {
+      url: null,
+      publicId: null,
+      width: null,
+      height: null,
+      format: null,
+    };
+    await user.save();
+
+    // Do not block user flow on external delete timeouts.
+    if (previousPublicId) {
+      deleteCloudinaryImage(previousPublicId).catch((err) => {
+        console.error("Failed to remove profile photo from Cloudinary:", err?.message || err);
+      });
+    }
+
+    const token = jwt.sign({ id: user._id, tv: user.tokenVersion }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    return res.json({
+      message: "Profile photo removed successfully",
+      ...buildUserResponse(user, token),
+    });
+  } catch (error) {
+    console.error("Profile photo remove failed:", error);
+    if (error.message?.includes("Cloudinary is not configured")) {
+      return res.status(500).json({ message: error.message });
+    }
+    return res.status(500).json({ message: "Unable to remove profile photo. Please try again." });
   }
 };
 
@@ -811,7 +886,22 @@ export const getMyData = async (req, res) => {
       Booking.find({ user: req.user._id }).lean(),
     ]);
     res.json({
-      user: { _id: req.user._id, name: req.user.name, email: req.user.email },
+      user: {
+        _id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        whatsappNumber: req.user.whatsappNumber || null,
+        bio: req.user.bio || null,
+        address: req.user.address || null,
+        profilePhoto: req.user.profilePhoto?.url
+          ? {
+              url: req.user.profilePhoto.url,
+              width: req.user.profilePhoto.width || null,
+              height: req.user.profilePhoto.height || null,
+              format: req.user.profilePhoto.format || null,
+            }
+          : null,
+      },
       contacts,
       bookings,
       exportedAt: new Date().toISOString(),
