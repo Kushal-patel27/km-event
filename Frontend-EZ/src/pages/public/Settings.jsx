@@ -9,9 +9,21 @@ export default function Settings(){
   const { user, login, logout } = useAuth()
   const { isDarkMode, toggleDarkMode } = useDarkMode()
 
-  const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '', whatsappNumber: user?.whatsappNumber || '' })
+  const [profile, setProfile] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    whatsappNumber: user?.whatsappNumber || '',
+    address: user?.address || '',
+    bio: user?.bio || '',
+    profilePhoto: user?.profilePhoto || null,
+  })
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMsg, setProfileMsg] = useState(null)
+  const [selectedPhoto, setSelectedPhoto] = useState(null)
+  const [selectedPhotoPreview, setSelectedPhotoPreview] = useState('')
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoRemoving, setPhotoRemoving] = useState(false)
+  const [photoMsg, setPhotoMsg] = useState(null)
 
   const [security, setSecurity] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [securitySaving, setSecuritySaving] = useState(false)
@@ -38,6 +50,23 @@ export default function Settings(){
     load()
   },[user])
 
+  useEffect(() => {
+    setProfile({
+      name: user?.name || '',
+      email: user?.email || '',
+      whatsappNumber: user?.whatsappNumber || '',
+      address: user?.address || '',
+      bio: user?.bio || '',
+      profilePhoto: user?.profilePhoto || null,
+    })
+  }, [user])
+
+  useEffect(() => {
+    return () => {
+      if (selectedPhotoPreview) URL.revokeObjectURL(selectedPhotoPreview)
+    }
+  }, [selectedPhotoPreview])
+
   const tokenHeader = () => {
     const token = user?.token || localStorage.getItem('token')
     return token ? { headers: { Authorization: `Bearer ${token}` } } : {}
@@ -56,6 +85,77 @@ export default function Settings(){
       setProfileMsg({ type: 'error', text: err.response?.data?.message || 'Failed to update profile' })
     } finally {
       setProfileSaving(false)
+    }
+  }
+
+  const onPhotoSelected = (event) => {
+    const file = event.target.files?.[0]
+    setPhotoMsg(null)
+    if (!file) {
+      setSelectedPhoto(null)
+      if (selectedPhotoPreview) URL.revokeObjectURL(selectedPhotoPreview)
+      setSelectedPhotoPreview('')
+      return
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setPhotoMsg({ type: 'error', text: 'Only JPG, PNG, or WEBP files are allowed.' })
+      return
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      setPhotoMsg({ type: 'error', text: 'Image must be 8MB or smaller.' })
+      return
+    }
+
+    setSelectedPhoto(file)
+    if (selectedPhotoPreview) URL.revokeObjectURL(selectedPhotoPreview)
+    setSelectedPhotoPreview(URL.createObjectURL(file))
+  }
+
+  const uploadProfilePhoto = async () => {
+    if (!selectedPhoto) {
+      setPhotoMsg({ type: 'error', text: 'Please select an image first.' })
+      return
+    }
+
+    setPhotoUploading(true)
+    setPhotoMsg(null)
+    try {
+      const formData = new FormData()
+      formData.append('profilePhoto', selectedPhoto)
+      const { data } = await API.put('/auth/profile/photo', formData, tokenHeader())
+      const { message, ...userData } = data
+      login({ ...user, ...userData })
+      setProfile((prev) => ({ ...prev, profilePhoto: userData.profilePhoto || null }))
+      setSelectedPhoto(null)
+      if (selectedPhotoPreview) URL.revokeObjectURL(selectedPhotoPreview)
+      setSelectedPhotoPreview('')
+      setPhotoMsg({ type: 'success', text: 'Profile photo uploaded successfully.' })
+    } catch (err) {
+      setPhotoMsg({ type: 'error', text: err.response?.data?.message || 'Failed to upload profile photo.' })
+    } finally {
+      setPhotoUploading(false)
+    }
+  }
+
+  const removeProfilePhoto = async () => {
+    setPhotoMsg(null)
+    setPhotoRemoving(true)
+    try {
+      const { data } = await API.delete('/auth/profile/photo', tokenHeader())
+      const { message, ...userData } = data
+      login({ ...user, ...userData })
+      setProfile((prev) => ({ ...prev, profilePhoto: null }))
+      setSelectedPhoto(null)
+      if (selectedPhotoPreview) URL.revokeObjectURL(selectedPhotoPreview)
+      setSelectedPhotoPreview('')
+      setPhotoMsg({ type: 'success', text: 'Profile photo removed successfully.' })
+    } catch (err) {
+      setPhotoMsg({ type: 'error', text: err.response?.data?.message || 'Failed to remove profile photo.' })
+    } finally {
+      setPhotoRemoving(false)
     }
   }
 
@@ -208,6 +308,44 @@ export default function Settings(){
               </div>
             )}
 
+            <div className="mb-5 p-4 rounded-lg border border-gray-200 dark:border-white/10">
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">Profile Photo</h3>
+              {photoMsg && (
+                <div className={`mb-3 p-3 rounded-lg text-sm ${photoMsg.type==='success' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-800' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800'}`}>
+                  {photoMsg.text}
+                </div>
+              )}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <img
+                  src={selectedPhotoPreview || profile.profilePhoto?.url || 'https://placehold.co/120x120?text=Photo'}
+                  alt="Profile preview"
+                  className="w-24 h-24 rounded-full object-cover border border-gray-200 dark:border-white/10"
+                />
+                <div className="flex-1">
+                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhotoSelected} className="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gray-200 dark:file:bg-gray-700 file:text-gray-800 dark:file:text-gray-100" />
+                  <p className="text-xs mt-2 text-gray-600 dark:text-gray-400">Max 8MB. High-quality image optimization is applied before upload.</p>
+                  <button
+                    type="button"
+                    onClick={uploadProfilePhoto}
+                    disabled={photoUploading || !selectedPhoto}
+                    className="mt-3 px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-lg font-semibold disabled:opacity-60"
+                  >
+                    {photoUploading ? 'Uploading...' : 'Upload Photo'}
+                  </button>
+                  {profile.profilePhoto?.url && (
+                    <button
+                      type="button"
+                      onClick={removeProfilePhoto}
+                      disabled={photoRemoving}
+                      className="mt-3 ml-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-60"
+                    >
+                      {photoRemoving ? 'Removing...' : 'Remove Photo'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <form onSubmit={saveProfile} className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
@@ -220,6 +358,15 @@ export default function Settings(){
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">WhatsApp Number</label>
                 <input type="tel" value={profile.whatsappNumber || ''} onChange={e=>setProfile(p=>({...p, whatsappNumber: e.target.value}))} placeholder="+919876543210" className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
+                <input value={profile.address || ''} onChange={e=>setProfile(p=>({...p, address: e.target.value}))} placeholder="Your address" className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" maxLength={250} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bio</label>
+                <textarea value={profile.bio || ''} onChange={e=>setProfile(p=>({...p, bio: e.target.value}))} placeholder="Tell people a little about you" rows={4} className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-black text-gray-900 dark:text-gray-100" maxLength={500} />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{(profile.bio || '').length}/500</p>
               </div>
               <div className="sm:col-span-2">
                 <button disabled={profileSaving} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-60">

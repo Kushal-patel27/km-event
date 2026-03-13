@@ -36,6 +36,25 @@ const userSchema = new mongoose.Schema(
     assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Staff Admin who assigned this staff
     sessions: [sessionSchema],
     lastLoginAt: { type: Date },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: null,
+    },
+    address: {
+      type: String,
+      trim: true,
+      maxlength: 250,
+      default: null,
+    },
+    profilePhoto: {
+      url: { type: String, default: null },
+      publicId: { type: String, default: null },
+      width: { type: Number, default: null },
+      height: { type: Number, default: null },
+      format: { type: String, default: null },
+    },
     preferences: {
       emailUpdates: { type: Boolean, default: true },
       bookingReminders: { type: Boolean, default: true },
