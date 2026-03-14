@@ -20,6 +20,18 @@ import {
   exportBookingsData,
 } from "../controllers/adminController.js";
 import { sendNotification, listNotifications, listTemplates, saveTemplate } from "../controllers/notificationController.js";
+import { sendPushNotification } from "../controllers/pushNotificationController.js";
+import rateLimit from "express-rate-limit";
+
+// Limit push notification dispatches to 20 per hour per admin (prevents accidental spam)
+const pushNotificationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?._id?.toString() || req.ip,
+  message: { message: "Too many push notification requests. Please wait before sending more." },
+});
 
 const router = express.Router();
 
@@ -62,5 +74,8 @@ router.post("/notifications/templates", saveTemplate);
 // ============ EXPORT DATA ============
 router.get("/export/events", exportEventsData);
 router.get("/export/bookings", exportBookingsData);
+
+// ============ PUSH NOTIFICATIONS (FCM) ============
+router.post("/send-notification", pushNotificationLimiter, sendPushNotification);
 
 export default router;

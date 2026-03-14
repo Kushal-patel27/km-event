@@ -62,6 +62,7 @@ const userSchema = new mongoose.Schema(
       language: { type: String, default: "en" },
       timezone: { type: String, default: "UTC" },
     },
+    fcmToken: { type: String, default: null },
     passwordReset: {
       otpHash: { type: String },
       otpExpiresAt: { type: Date },
