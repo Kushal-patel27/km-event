@@ -20,9 +20,9 @@ export function getFirebaseAdmin() {
     let serviceAccount;
     try {
       serviceAccount = JSON.parse(json);
-    } catch {
+    } catch (err) {
       throw new Error(
-        "FIREBASE_SERVICE_ACCOUNT_JSON contains invalid JSON. Ensure the value is a properly formatted service account object."
+        `FIREBASE_SERVICE_ACCOUNT_JSON contains invalid JSON: ${err.message}. Ensure the value is a properly formatted service account object.`
       );
     }
     admin.initializeApp({

@@ -18,6 +18,7 @@ import {
   getUsersEmailPreferences,
   exportEventsData,
   exportBookingsData,
+  getFcmDevices,
 } from "../controllers/adminController.js";
 import { sendNotification, listNotifications, listTemplates, saveTemplate } from "../controllers/notificationController.js";
 import { sendPushNotification } from "../controllers/pushNotificationController.js";
@@ -76,6 +77,7 @@ router.get("/export/events", exportEventsData);
 router.get("/export/bookings", exportBookingsData);
 
 // ============ PUSH NOTIFICATIONS (FCM) ============
+router.get("/fcm-devices", getFcmDevices);
 router.post("/send-notification", pushNotificationLimiter, sendPushNotification);
 
 export default router;
