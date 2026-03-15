@@ -8,6 +8,16 @@ const INVALID_TOKEN_CODES = new Set([
   "messaging/registration-token-not-registered",
 ]);
 
+const MAX_TOKENS_PER_BATCH = 500;
+
+function chunkArray(items, size) {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
 /**
  * Send FCM push notifications to all users or a specific user.
  *
@@ -18,10 +28,21 @@ const INVALID_TOKEN_CODES = new Set([
  */
 export const sendPushNotification = async (req, res) => {
   try {
-    const { title, message, target = "all", userId } = req.body;
+    const { title, message, target = "all", userId } = req.body || {};
 
-    if (!title || !message) {
+    const normalizedTitle = typeof title === "string" ? title.trim() : "";
+    const normalizedMessage = typeof message === "string" ? message.trim() : "";
+
+    if (!normalizedTitle || !normalizedMessage) {
       return res.status(400).json({ message: "title and message are required" });
+    }
+
+    if (normalizedTitle.length > 100) {
+      return res.status(400).json({ message: "title must be 100 characters or fewer" });
+    }
+
+    if (normalizedMessage.length > 500) {
+      return res.status(400).json({ message: "message must be 500 characters or fewer" });
     }
 
     if (!["all", "user"].includes(target)) {
@@ -43,7 +64,7 @@ export const sendPushNotification = async (req, res) => {
         : { _id: userId, fcmToken: { $ne: null } };
 
     const users = await User.find(filter).select("_id fcmToken").lean();
-    const tokens = users.map((u) => u.fcmToken).filter(Boolean);
+    const tokens = [...new Set(users.map((u) => u.fcmToken).filter(Boolean))];
 
     if (!tokens.length) {
       return res.status(200).json({
@@ -54,22 +75,38 @@ export const sendPushNotification = async (req, res) => {
       });
     }
 
-    const admin = getFirebaseAdmin();
+    let firebase;
+    try {
+      firebase = getFirebaseAdmin();
+    } catch (firebaseInitError) {
+      return res.status(503).json({
+        message: "Push notifications are not configured on the server.",
+        detail: firebaseInitError.message,
+      });
+    }
 
-    // sendEachForMulticast supports up to 500 tokens per call
-    const response = await admin.messaging().sendEachForMulticast({
-      tokens,
-      notification: { title, body: message },
-      data: { click_action: "FLUTTER_NOTIFICATION_CLICK" },
-    });
-
-    // Collect stale / invalid tokens and null them out in the DB
+    // sendEachForMulticast supports up to 500 tokens per call.
+    const tokenChunks = chunkArray(tokens, MAX_TOKENS_PER_BATCH);
+    let successCount = 0;
+    let failureCount = 0;
     const invalidTokens = [];
-    response.responses.forEach((r, idx) => {
-      if (!r.success && INVALID_TOKEN_CODES.has(r.error?.code)) {
-        invalidTokens.push(tokens[idx]);
-      }
-    });
+
+    for (const tokenChunk of tokenChunks) {
+      const response = await firebase.messaging().sendEachForMulticast({
+        tokens: tokenChunk,
+        notification: { title: normalizedTitle, body: normalizedMessage },
+        data: { click_action: "FLUTTER_NOTIFICATION_CLICK" },
+      });
+
+      successCount += response.successCount;
+      failureCount += response.failureCount;
+
+      response.responses.forEach((r, idx) => {
+        if (!r.success && INVALID_TOKEN_CODES.has(r.error?.code)) {
+          invalidTokens.push(tokenChunk[idx]);
+        }
+      });
+    }
 
     if (invalidTokens.length) {
       await User.updateMany(
@@ -80,11 +117,62 @@ export const sendPushNotification = async (req, res) => {
 
     return res.json({
       success: true,
-      sent: response.successCount,
-      failed: response.failureCount,
+      sent: successCount,
+      failed: failureCount,
+      batches: tokenChunks.length,
       cleanedInvalidTokens: invalidTokens.length,
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    const code = error?.code;
+
+    if (code === "messaging/authentication-error" || code === "app/invalid-credential") {
+      return res.status(503).json({
+        message: "Firebase credentials are invalid or expired.",
+      });
+    }
+
+    if (code === "messaging/invalid-argument") {
+      return res.status(400).json({
+        message: "Invalid push notification payload sent to Firebase.",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Failed to send push notification. Please try again.",
+      detail: error?.message,
+    });
+  }
+};
+
+/**
+ * Check whether push notifications are ready to send.
+ * GET /api/admin/push-notification/health
+ */
+export const getPushNotificationHealth = async (req, res) => {
+  try {
+    const registeredDevices = await User.countDocuments({ fcmToken: { $ne: null } });
+
+    try {
+      getFirebaseAdmin();
+      return res.json({
+        success: true,
+        configured: true,
+        registeredDevices,
+      });
+    } catch (firebaseInitError) {
+      return res.json({
+        success: false,
+        configured: false,
+        registeredDevices,
+        message: "Push notifications are not configured on the server.",
+        detail: firebaseInitError.message,
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to check push notification health.",
+      detail: error?.message,
+    });
   }
 };
