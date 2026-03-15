@@ -1,4 +1,7 @@
 
+# Dependencies
+node_modules/
+
 # Environment files (VERY IMPORTANT)
 .env
 server/.env

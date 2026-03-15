@@ -24,6 +24,7 @@ export default function AdminLayout({ title = 'Admin', children }){
         { to: '/admin/booking-search', label: 'Booking Search', icon: '🔍', roles: ['super_admin','event_admin','staff_admin','admin'] },
         { to: '/admin/contacts', label: 'Contacts', icon: '📬', roles: ['super_admin','admin'] },
         { to: '/admin/email-preferences', label: 'Email Preferences', icon: '📧', roles: ['super_admin','admin'] },
+        { to: '/admin/send-notification', label: 'Push Notifications', icon: '🔔', roles: ['super_admin','admin'] },
       ]
     },
     {
