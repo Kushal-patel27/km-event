@@ -5,35 +5,114 @@ import API from '../../services/api'
 const PUSH_TEMPLATES = [
   {
     id: 'event-reminder',
+    icon: '⏰',
+    category: 'Reminder',
     name: 'Event Reminder',
     title: 'Event starts soon',
-    message: 'Your event begins in 1 hour. Please arrive 15 minutes early for a smooth check-in.'
+    message: 'Your event begins in 1 hour. Please arrive 15 minutes early for a smooth check-in.',
+    color: '#E11D48',
   },
   {
     id: 'ticket-live',
+    icon: '🎟️',
+    category: 'Sales',
     name: 'Tickets Live',
     title: 'Tickets are now live',
-    message: 'Bookings are now open. Reserve your seat before tickets sell out.'
+    message: 'Bookings are now open. Reserve your seat before tickets sell out.',
+    color: '#2563EB',
   },
   {
     id: 'venue-update',
+    icon: '📍',
+    category: 'Update',
     name: 'Venue Update',
     title: 'Important venue update',
-    message: 'The event entry gate has changed. Open the app to view updated venue details.'
+    message: 'The event entry gate has changed. Open the app to view updated venue details.',
+    color: '#7C3AED',
   },
   {
     id: 'schedule-change',
+    icon: '🗓️',
+    category: 'Update',
     name: 'Schedule Change',
     title: 'Schedule updated',
-    message: 'There is a schedule update for this event. Check the app for the latest timeline.'
+    message: 'There is a schedule update for this event. Check the app for the latest timeline.',
+    color: '#0F766E',
   },
   {
     id: 'thank-you',
+    icon: '💌',
+    category: 'Engagement',
     name: 'Post-Event Thank You',
     title: 'Thanks for joining us',
-    message: 'Thank you for attending. We would love your feedback. Open the app to rate your experience.'
+    message: 'Thank you for attending. We would love your feedback. Open the app to rate your experience.',
+    color: '#EA580C',
+  },
+  {
+    id: 'flash-sale',
+    icon: '⚡',
+    category: 'Sales',
+    name: 'Flash Sale Alert',
+    title: 'Flash Sale is live now',
+    message: 'Limited-time ticket offer is now active. Grab your seat before the timer ends.',
+    color: '#BE123C',
+  },
+  {
+    id: 'countdown-24h',
+    icon: '🔥',
+    category: 'Reminder',
+    name: '24h Countdown',
+    title: 'Only 24 hours left',
+    message: 'Your event starts tomorrow. Open the app to review schedule, gate, and checklist.',
+    color: '#DC2626',
+  },
+  {
+    id: 'seat-upgrade',
+    icon: '✨',
+    category: 'Offer',
+    name: 'Seat Upgrade Offer',
+    title: 'Upgrade your seat today',
+    message: 'Premium seats are now available at a special upgrade price. Offer valid for a short time.',
+    color: '#9333EA',
+  },
+  {
+    id: 'entry-open',
+    icon: '🚪',
+    category: 'Update',
+    name: 'Entry Gates Open',
+    title: 'Entry gates are now open',
+    message: 'Gates are open now. Please keep your QR ticket ready for faster access.',
+    color: '#0891B2',
+  },
+  {
+    id: 'new-drop',
+    icon: '🎉',
+    category: 'Launch',
+    name: 'New Event Drop',
+    title: 'New event just dropped',
+    message: 'A new event is now live in your city. Open the app to discover details and book early.',
+    color: '#0F766E',
   },
 ]
+
+const COLOR_PRESETS = [
+  { id: 'bookmyshow-red', label: 'BMS Red', value: '#E11D48' },
+  { id: 'royal-blue', label: 'Royal Blue', value: '#2563EB' },
+  { id: 'premium-purple', label: 'Premium Purple', value: '#7C3AED' },
+  { id: 'teal', label: 'Teal', value: '#0F766E' },
+  { id: 'sunset', label: 'Sunset', value: '#EA580C' },
+  { id: 'charcoal', label: 'Charcoal', value: '#111827' },
+]
+
+const HEX_COLOR_RE = /^#([0-9A-Fa-f]{6})$/
+
+function normalizeHexColor(input) {
+  if (typeof input !== 'string') return ''
+  let value = input.trim()
+  if (!value) return ''
+  if (!value.startsWith('#')) value = `#${value}`
+  return value.toUpperCase()
+}
 
 function mapApiErrorToMessage(err) {
   const status = err?.response?.status
@@ -51,19 +130,50 @@ function mapApiErrorToMessage(err) {
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function StatCard({ icon, label, value, sub, color = 'gray' }) {
   const ring = {
-    green: 'border-green-200 bg-green-50',
-    blue:  'border-blue-200 bg-blue-50',
-    gray:  'border-gray-200 bg-white',
-  }[color] ?? 'border-gray-200 bg-white'
+    green: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white',
+    blue:  'border-red-200 bg-gradient-to-br from-rose-50 to-white',
+    gray:  'border-gray-200 bg-gradient-to-br from-gray-50 to-white',
+  }[color] ?? 'border-gray-200 bg-gradient-to-br from-gray-50 to-white'
 
   return (
-    <div className={`border rounded-xl p-4 shadow-sm ${ring}`}>
+    <div className={`border rounded-2xl p-4 shadow-sm hover:shadow-md transition ${ring}`}>
       <div className="flex items-center gap-2 mb-1">
         <span className="text-lg">{icon}</span>
         <span className="text-xs uppercase tracking-wide font-semibold text-gray-500">{label}</span>
       </div>
       <div className="text-2xl font-bold text-gray-900">{value ?? '—'}</div>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
+    </div>
+  )
+}
+
+function PremiumDispatchToast({ toast, onClose }) {
+  if (!toast?.show) return null
+
+  const isError = toast.type === 'error'
+  const boxClass = isError
+    ? 'from-red-700 to-red-600 border-red-400/40'
+    : 'from-gray-900 to-black border-rose-400/30'
+
+  return (
+    <div className="fixed top-6 right-6 z-[10000] w-[92vw] max-w-md animate-[fadeIn_.25s_ease-out]">
+      <div className={`rounded-2xl border bg-gradient-to-br ${boxClass} text-white shadow-2xl px-4 py-4`}>
+        <div className="flex items-start gap-3">
+          <div className="text-xl mt-0.5">{isError ? '⚠️' : '🔔'}</div>
+          <div className="flex-1">
+            <p className="font-semibold tracking-wide">{toast.title}</p>
+            <p className="text-sm text-white/90 mt-1">{toast.message}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-white/80 hover:text-white text-lg leading-none"
+            aria-label="Close notification"
+          >
+            ×
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -291,12 +401,14 @@ function DevicesTab() {
 }
 
 // ─── ComposeTab ───────────────────────────────────────────────────────────────
-function ComposeTab({ onSuccess, pushConfigured }) {
+function ComposeTab({ onSuccess, pushConfigured, onNotify }) {
   const [title,    setTitle]    = useState('')
   const [message,  setMessage]  = useState('')
   const [target,   setTarget]   = useState('all')
   const [selectedUser, setSelectedUser] = useState(null)   // { _id, name, email }
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const [selectedColor, setSelectedColor] = useState('#E11D48')
+  const [colorInput, setColorInput] = useState('#E11D48')
 
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
@@ -309,28 +421,42 @@ function ComposeTab({ onSuccess, pushConfigured }) {
 
     if (!pushConfigured) {
       setError('Push service is not configured. Add Firebase service account credentials on the server first.')
+      onNotify?.({ type: 'error', title: 'Push Not Ready', message: 'Configure Firebase service account on the server first.' })
       return
     }
 
     if (!title.trim())   { setError('Title is required.');   return }
     if (!message.trim()) { setError('Message is required.'); return }
+    if (!HEX_COLOR_RE.test(selectedColor)) {
+      setError('Please choose a valid hex color (for example: #E11D48).')
+      return
+    }
     if (target === 'user' && !selectedUser) {
       setError('Please search and select a user.')
       return
     }
 
     const payload = target === 'all'
-      ? { title: title.trim(), message: message.trim(), target: 'all' }
-      : { title: title.trim(), message: message.trim(), target: 'user', userId: selectedUser._id }
+      ? { title: title.trim(), message: message.trim(), target: 'all', color: selectedColor }
+      : { title: title.trim(), message: message.trim(), target: 'user', userId: selectedUser._id, color: selectedColor }
 
     setLoading(true)
     try {
       const res = await API.post('/admin/send-notification', payload)
       setResult(res.data)
+      const sent = res.data?.sent ?? 0
+      const failed = res.data?.failed ?? 0
+      onNotify?.({
+        type: failed > 0 ? 'error' : 'success',
+        title: failed > 0 ? 'Notification Sent With Issues' : 'Notification Sent',
+        message: `Delivered: ${sent} • Failed: ${failed}`,
+      })
       onSuccess?.({ ...payload, sent: res.data.sent ?? 0, failed: res.data.failed ?? 0, sentAt: new Date().toISOString() })
-      setTitle(''); setMessage(''); setTarget('all'); setSelectedUser(null); setSelectedTemplateId('')
+      setTitle(''); setMessage(''); setTarget('all'); setSelectedUser(null); setSelectedTemplateId(''); setSelectedColor('#E11D48'); setColorInput('#E11D48')
     } catch (err) {
-      setError(mapApiErrorToMessage(err))
+      const mapped = mapApiErrorToMessage(err)
+      setError(mapped)
+      onNotify?.({ type: 'error', title: 'Notification Failed', message: mapped })
     } finally {
       setLoading(false)
     }
@@ -340,8 +466,22 @@ function ComposeTab({ onSuccess, pushConfigured }) {
     setSelectedTemplateId(template.id)
     setTitle(template.title)
     setMessage(template.message)
+    const templateColor = template.color || '#E11D48'
+    setSelectedColor(templateColor)
+    setColorInput(templateColor)
     setError('')
     setResult(null)
+  }
+
+  const applyColorInput = () => {
+    const normalized = normalizeHexColor(colorInput)
+    if (!HEX_COLOR_RE.test(normalized)) {
+      setError('Invalid color format. Use a full hex value like #E11D48.')
+      return
+    }
+    setSelectedColor(normalized)
+    setColorInput(normalized)
+    setError('')
   }
 
   return (
@@ -364,7 +504,7 @@ function ComposeTab({ onSuccess, pushConfigured }) {
       {/* Title */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Quick Templates
+          Pre-Built Premium Templates
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {PUSH_TEMPLATES.map((template) => (
@@ -372,14 +512,27 @@ function ComposeTab({ onSuccess, pushConfigured }) {
               key={template.id}
               type="button"
               onClick={() => applyTemplate(template)}
-              className={`text-left px-3 py-2 rounded-lg border text-sm transition ${
+              className={`text-left px-3 py-2 rounded-lg border text-sm transition relative overflow-hidden ${
                 selectedTemplateId === template.id
-                  ? 'border-black bg-gray-50 text-gray-900'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                  ? 'border-red-400 bg-gradient-to-r from-rose-50 to-red-50 text-red-900 shadow-sm'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-red-200 hover:bg-rose-50/40'
               }`}
             >
-              <p className="font-semibold">{template.name}</p>
-              <p className="text-xs text-gray-500 truncate">{template.title}</p>
+              <span
+                className="absolute top-0 right-0 h-full w-1.5"
+                style={{ backgroundColor: template.color }}
+                aria-hidden="true"
+              />
+              <div className="flex items-start justify-between gap-2 pr-2">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <span>{template.icon || '🔔'}</span>
+                  <span>{template.name}</span>
+                </p>
+                <span className="text-[10px] px-2 py-0.5 rounded-full border border-gray-300 text-gray-600 bg-white/70">
+                  {template.category || 'General'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 truncate mt-0.5">{template.title}</p>
             </button>
           ))}
         </div>
@@ -415,6 +568,56 @@ function ComposeTab({ onSuccess, pushConfigured }) {
           maxLength={500}
         />
         <p className="text-xs text-gray-400 mt-1 text-right">{message.length}/500</p>
+      </div>
+
+      {/* Notification color */}
+      <div className="space-y-3">
+        <label className="block text-sm font-semibold text-gray-700">
+          Notification Color <span className="text-red-500">*</span>
+        </label>
+
+        <div className="flex flex-wrap gap-2">
+          {COLOR_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => { setSelectedColor(preset.value); setColorInput(preset.value); setError('') }}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition ${
+                selectedColor === preset.value
+                  ? 'border-gray-900 bg-gray-900 text-white'
+                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <span className="w-3 h-3 rounded-full border border-white/70" style={{ backgroundColor: preset.value }} />
+              {preset.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={colorInput}
+            onChange={(e) => setColorInput(e.target.value)}
+            onBlur={applyColorInput}
+            placeholder="#E11D48"
+            className="w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+          />
+          <button
+            type="button"
+            onClick={applyColorInput}
+            className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 transition"
+          >
+            Apply
+          </button>
+          <span className="text-xs text-gray-500">Use full hex format.</span>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 p-4" style={{ background: `linear-gradient(135deg, ${selectedColor}22, #ffffff)` }}>
+          <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Live Preview</p>
+          <p className="font-semibold" style={{ color: selectedColor }}>{title.trim() || 'Notification title preview'}</p>
+          <p className="text-sm text-gray-700 mt-1">{message.trim() || 'Your message preview will appear here.'}</p>
+        </div>
       </div>
 
       {/* Send-to toggle */}
@@ -461,7 +664,7 @@ function ComposeTab({ onSuccess, pushConfigured }) {
         <button
           type="submit"
           disabled={loading || !pushConfigured}
-          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 active:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 active:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition shadow"
         >
           {loading ? (
             <>
@@ -476,7 +679,7 @@ function ComposeTab({ onSuccess, pushConfigured }) {
         {(title || message) && !loading && (
           <button
             type="button"
-            onClick={() => { setTitle(''); setMessage(''); setTarget('all'); setSelectedUser(null); setSelectedTemplateId(''); setError(''); setResult(null) }}
+            onClick={() => { setTitle(''); setMessage(''); setTarget('all'); setSelectedUser(null); setSelectedTemplateId(''); setSelectedColor('#E11D48'); setColorInput('#E11D48'); setError(''); setResult(null) }}
             className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition"
           >
             Clear
@@ -535,6 +738,7 @@ function HistoryRow({ item }) {
 export default function AdminSendNotification() {
   const [activeTab, setActiveTab] = useState('compose')   // 'compose' | 'devices'
   const [history, setHistory]     = useState([])
+  const [toast, setToast] = useState({ show: false, type: 'success', title: '', message: '' })
 
   // Real device count from the API
   const [deviceCount, setDeviceCount]       = useState(null)
@@ -568,6 +772,16 @@ export default function AdminSendNotification() {
       })
   }, [])
 
+  useEffect(() => {
+    if (!toast.show) return undefined
+    const timer = setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3600)
+    return () => clearTimeout(timer)
+  }, [toast.show])
+
+  const notify = useCallback(({ type = 'success', title = '', message = '' }) => {
+    setToast({ show: true, type, title, message })
+  }, [])
+
   const handleSuccess = (entry) => {
     setHistory(prev => [entry, ...prev])
     // refresh device count in case tokens were cleaned up
@@ -583,7 +797,14 @@ export default function AdminSendNotification() {
 
   return (
     <AdminLayout title="Push Notifications">
+      <PremiumDispatchToast toast={toast} onClose={() => setToast((prev) => ({ ...prev, show: false }))} />
       <div className="space-y-6">
+
+        <div className="rounded-2xl border border-red-100 bg-gradient-to-r from-[#2a0f18] via-[#4b1024] to-[#7a1236] p-5 text-white shadow-lg">
+          <p className="text-xs uppercase tracking-[0.16em] text-rose-200">Campaign Studio</p>
+          <h1 className="text-xl sm:text-2xl font-bold mt-1">Premium Push Notification Center</h1>
+          <p className="text-sm text-rose-100 mt-1">Design, target, and dispatch high-visibility alerts with live delivery feedback.</p>
+        </div>
 
         {/* ── Stat cards ── */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -613,8 +834,8 @@ export default function AdminSendNotification() {
                 onClick={() => setActiveTab(t.id)}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition whitespace-nowrap ${
                   activeTab === t.id
-                    ? 'border-black text-black'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-red-600 text-red-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-red-300'
                 }`}
               >
                 {t.label}
@@ -632,7 +853,7 @@ export default function AdminSendNotification() {
           )}
 
           {activeTab === 'compose' && (
-            <ComposeTab onSuccess={handleSuccess} pushConfigured={pushHealth.configured} />
+            <ComposeTab onSuccess={handleSuccess} pushConfigured={pushHealth.configured} onNotify={notify} />
           )}
           {activeTab === 'devices' && (
             <DevicesTab />

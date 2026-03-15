@@ -144,6 +144,7 @@ export default function App(){
               <Route path="/book/:id" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
               <Route path="/booking-success" element={<BookingSuccess />} />
               <Route path="/my-bookings" element={<MyBookings />} />
+              <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/waitlist" element={<ProtectedRoute><Waitlist /></ProtectedRoute>} />
               <Route path="/create-event" element={<ProtectedRoute><CreateEventRequest /></ProtectedRoute>} />
               <Route path="/my-event-requests" element={<ProtectedRoute><MyEventRequests /></ProtectedRoute>} />
