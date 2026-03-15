@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, requireAdminRole } from "../middleware/authMiddleware.js";
+import { protect, requireAdminRole, requireRoles } from "../middleware/authMiddleware.js";
 import {
   getDashboardOverview,
   getTeamMembers,
@@ -21,7 +21,7 @@ import {
   getFcmDevices,
 } from "../controllers/adminController.js";
 import { sendNotification, listNotifications, listTemplates, saveTemplate } from "../controllers/notificationController.js";
-import { sendPushNotification } from "../controllers/pushNotificationController.js";
+import { sendPushNotification, getPushNotificationHealth } from "../controllers/pushNotificationController.js";
 import rateLimit from "express-rate-limit";
 
 // Limit push notification dispatches to 20 per hour per admin (prevents accidental spam)
@@ -77,7 +77,8 @@ router.get("/export/events", exportEventsData);
 router.get("/export/bookings", exportBookingsData);
 
 // ============ PUSH NOTIFICATIONS (FCM) ============
-router.get("/fcm-devices", getFcmDevices);
-router.post("/send-notification", pushNotificationLimiter, sendPushNotification);
+router.get("/fcm-devices", requireRoles("super_admin", "admin"), getFcmDevices);
+router.get("/push-notification/health", requireRoles("super_admin", "admin"), getPushNotificationHealth);
+router.post("/send-notification", requireRoles("super_admin", "admin"), pushNotificationLimiter, sendPushNotification);
 
 export default router;

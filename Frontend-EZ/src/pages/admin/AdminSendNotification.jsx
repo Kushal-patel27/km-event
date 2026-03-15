@@ -2,6 +2,52 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import AdminLayout from '../../components/layout/AdminLayout'
 import API from '../../services/api'
 
+const PUSH_TEMPLATES = [
+  {
+    id: 'event-reminder',
+    name: 'Event Reminder',
+    title: 'Event starts soon',
+    message: 'Your event begins in 1 hour. Please arrive 15 minutes early for a smooth check-in.'
+  },
+  {
+    id: 'ticket-live',
+    name: 'Tickets Live',
+    title: 'Tickets are now live',
+    message: 'Bookings are now open. Reserve your seat before tickets sell out.'
+  },
+  {
+    id: 'venue-update',
+    name: 'Venue Update',
+    title: 'Important venue update',
+    message: 'The event entry gate has changed. Open the app to view updated venue details.'
+  },
+  {
+    id: 'schedule-change',
+    name: 'Schedule Change',
+    title: 'Schedule updated',
+    message: 'There is a schedule update for this event. Check the app for the latest timeline.'
+  },
+  {
+    id: 'thank-you',
+    name: 'Post-Event Thank You',
+    title: 'Thanks for joining us',
+    message: 'Thank you for attending. We would love your feedback. Open the app to rate your experience.'
+  },
+]
+
+function mapApiErrorToMessage(err) {
+  const status = err?.response?.status
+  const apiMessage = err?.response?.data?.message
+  const apiDetail = err?.response?.data?.detail
+
+  if (status === 401) return 'Your admin session expired. Please log in again.'
+  if (status === 403) return apiMessage || 'You do not have permission to send notifications.'
+  if (status === 429) return apiMessage || 'Too many notification requests. Please wait and try again.'
+  if (status === 503 && apiDetail) return `${apiMessage || 'Push notification service is unavailable.'} ${apiDetail}`
+
+  return apiMessage || apiDetail || 'Failed to send notification. Please try again.'
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function StatCard({ icon, label, value, sub, color = 'gray' }) {
   const ring = {
@@ -245,11 +291,12 @@ function DevicesTab() {
 }
 
 // ─── ComposeTab ───────────────────────────────────────────────────────────────
-function ComposeTab({ onSuccess }) {
+function ComposeTab({ onSuccess, pushConfigured }) {
   const [title,    setTitle]    = useState('')
   const [message,  setMessage]  = useState('')
   const [target,   setTarget]   = useState('all')
   const [selectedUser, setSelectedUser] = useState(null)   // { _id, name, email }
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
 
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
@@ -259,6 +306,11 @@ function ComposeTab({ onSuccess }) {
     e.preventDefault()
     setError('')
     setResult(null)
+
+    if (!pushConfigured) {
+      setError('Push service is not configured. Add Firebase service account credentials on the server first.')
+      return
+    }
 
     if (!title.trim())   { setError('Title is required.');   return }
     if (!message.trim()) { setError('Message is required.'); return }
@@ -276,12 +328,20 @@ function ComposeTab({ onSuccess }) {
       const res = await API.post('/admin/send-notification', payload)
       setResult(res.data)
       onSuccess?.({ ...payload, sent: res.data.sent ?? 0, failed: res.data.failed ?? 0, sentAt: new Date().toISOString() })
-      setTitle(''); setMessage(''); setTarget('all'); setSelectedUser(null)
+      setTitle(''); setMessage(''); setTarget('all'); setSelectedUser(null); setSelectedTemplateId('')
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send notification. Please try again.')
+      setError(mapApiErrorToMessage(err))
     } finally {
       setLoading(false)
     }
+  }
+
+  const applyTemplate = (template) => {
+    setSelectedTemplateId(template.id)
+    setTitle(template.title)
+    setMessage(template.message)
+    setError('')
+    setResult(null)
   }
 
   return (
@@ -300,6 +360,30 @@ function ComposeTab({ onSuccess }) {
           )}
         </Alert>
       )}
+
+      {/* Title */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Quick Templates
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {PUSH_TEMPLATES.map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              onClick={() => applyTemplate(template)}
+              className={`text-left px-3 py-2 rounded-lg border text-sm transition ${
+                selectedTemplateId === template.id
+                  ? 'border-black bg-gray-50 text-gray-900'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <p className="font-semibold">{template.name}</p>
+              <p className="text-xs text-gray-500 truncate">{template.title}</p>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Title */}
       <div>
@@ -376,7 +460,7 @@ function ComposeTab({ onSuccess }) {
       <div className="flex items-center gap-3 pt-1">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !pushConfigured}
           className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 active:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {loading ? (
@@ -392,7 +476,7 @@ function ComposeTab({ onSuccess }) {
         {(title || message) && !loading && (
           <button
             type="button"
-            onClick={() => { setTitle(''); setMessage(''); setTarget('all'); setSelectedUser(null); setError(''); setResult(null) }}
+            onClick={() => { setTitle(''); setMessage(''); setTarget('all'); setSelectedUser(null); setSelectedTemplateId(''); setError(''); setResult(null) }}
             className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition"
           >
             Clear
@@ -400,6 +484,26 @@ function ComposeTab({ onSuccess }) {
         )}
       </div>
     </form>
+  )
+}
+
+function PushHealthBanner({ health }) {
+  if (!health?.checked) return null
+
+  if (health?.configured) {
+    return (
+      <Alert type="success">
+        Push service is ready. Firebase configured and {health.registeredDevices ?? 0} device token(s) registered.
+      </Alert>
+    )
+  }
+
+  return (
+    <Alert type="error">
+      <p className="font-semibold">Push service is not configured.</p>
+      <p className="mt-1">{health.message || 'Firebase credentials are missing or invalid.'}</p>
+      {health.detail && <p className="mt-1 text-xs">{health.detail}</p>}
+    </Alert>
   )
 }
 
@@ -435,12 +539,33 @@ export default function AdminSendNotification() {
   // Real device count from the API
   const [deviceCount, setDeviceCount]       = useState(null)
   const [deviceCountLoading, setDeviceCountLoading] = useState(true)
+  const [pushHealth, setPushHealth] = useState({ checked: false, configured: false, message: '', detail: '', registeredDevices: 0 })
 
   useEffect(() => {
     API.get('/admin/fcm-devices', { params: { limit: 1 } })
       .then(r => setDeviceCount(r.data?.total ?? 0))
       .catch(() => setDeviceCount(null))
       .finally(() => setDeviceCountLoading(false))
+
+    API.get('/admin/push-notification/health')
+      .then((r) => {
+        setPushHealth({
+          checked: true,
+          configured: !!r.data?.configured,
+          message: r.data?.message || '',
+          detail: r.data?.detail || '',
+          registeredDevices: r.data?.registeredDevices ?? 0,
+        })
+      })
+      .catch((err) => {
+        setPushHealth({
+          checked: true,
+          configured: false,
+          message: err?.response?.data?.message || 'Unable to verify push service health.',
+          detail: err?.response?.data?.detail || '',
+          registeredDevices: err?.response?.data?.registeredDevices ?? 0,
+        })
+      })
   }, [])
 
   const handleSuccess = (entry) => {
@@ -501,7 +626,13 @@ export default function AdminSendNotification() {
         {/* ── Tab content ── */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
           {activeTab === 'compose' && (
-            <ComposeTab onSuccess={handleSuccess} />
+            <div className="mb-4">
+              <PushHealthBanner health={pushHealth} />
+            </div>
+          )}
+
+          {activeTab === 'compose' && (
+            <ComposeTab onSuccess={handleSuccess} pushConfigured={pushHealth.configured} />
           )}
           {activeTab === 'devices' && (
             <DevicesTab />
