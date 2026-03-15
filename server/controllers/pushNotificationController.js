@@ -28,10 +28,11 @@ function chunkArray(items, size) {
  */
 export const sendPushNotification = async (req, res) => {
   try {
-    const { title, message, target = "all", userId } = req.body || {};
+    const { title, message, target = "all", userId, color } = req.body || {};
 
     const normalizedTitle = typeof title === "string" ? title.trim() : "";
     const normalizedMessage = typeof message === "string" ? message.trim() : "";
+    const normalizedColor = typeof color === "string" ? color.trim().toUpperCase() : "";
 
     if (!normalizedTitle || !normalizedMessage) {
       return res.status(400).json({ message: "title and message are required" });
@@ -43,6 +44,10 @@ export const sendPushNotification = async (req, res) => {
 
     if (normalizedMessage.length > 500) {
       return res.status(400).json({ message: "message must be 500 characters or fewer" });
+    }
+
+    if (normalizedColor && !/^#([0-9A-F]{6})$/.test(normalizedColor)) {
+      return res.status(400).json({ message: "color must be a valid hex color (for example: #E11D48)" });
     }
 
     if (!["all", "user"].includes(target)) {
@@ -92,11 +97,25 @@ export const sendPushNotification = async (req, res) => {
     const invalidTokens = [];
 
     for (const tokenChunk of tokenChunks) {
-      const response = await firebase.messaging().sendEachForMulticast({
+      const multicastPayload = {
         tokens: tokenChunk,
         notification: { title: normalizedTitle, body: normalizedMessage },
-        data: { click_action: "FLUTTER_NOTIFICATION_CLICK" },
-      });
+        data: {
+          click_action: "FLUTTER_NOTIFICATION_CLICK",
+          notificationColor: normalizedColor || "",
+        },
+        ...(normalizedColor
+          ? {
+              android: {
+                notification: {
+                  color: normalizedColor,
+                },
+              },
+            }
+          : {}),
+      };
+
+      const response = await firebase.messaging().sendEachForMulticast(multicastPayload);
 
       successCount += response.successCount;
       failureCount += response.failureCount;
@@ -120,6 +139,7 @@ export const sendPushNotification = async (req, res) => {
       sent: successCount,
       failed: failureCount,
       batches: tokenChunks.length,
+      color: normalizedColor || null,
       cleanedInvalidTokens: invalidTokens.length,
     });
   } catch (error) {
