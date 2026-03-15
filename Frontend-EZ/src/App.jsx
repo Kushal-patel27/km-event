@@ -43,6 +43,7 @@ import AdminFeatureToggles from './pages/admin/AdminFeatureToggles'
 import AdminCouponManager from './pages/admin/AdminCouponManager'
 import AdminEmailPreferences from './pages/admin/AdminEmailPreferences'
 import EventTemplates from './pages/admin/EventTemplates'
+import AdminSendNotification from './pages/admin/AdminSendNotification'
 // Public Event Pages
 import PublicEvent from './pages/public/PublicEvent'
 // Event Admin Pages
@@ -174,6 +175,7 @@ export default function App(){
               <Route path="/admin/event-admin-payouts" element={<ProtectedAdminRoute><EventAdminPayouts /></ProtectedAdminRoute>} />
               <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminCouponManager /></ProtectedAdminRoute>} />
               <Route path="/admin/templates" element={<ProtectedAdminRoute><EventTemplates /></ProtectedAdminRoute>} />
+              <Route path="/admin/send-notification" element={<ProtectedAdminRoute><AdminSendNotification /></ProtectedAdminRoute>} />
             
               {/* Event Admin routes */}
             <Route path="/event-admin/login" element={<EventAdminLogin />} />

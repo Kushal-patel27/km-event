@@ -240,6 +240,54 @@ export const getUsersEmailPreferences = async (req, res) => {
 };
 
 /**
+ * Get users who have a registered FCM device token.
+ * Used by the Push Notifications admin page for the stat card and user picker.
+ *
+ * GET /api/admin/fcm-devices?page=1&limit=20&search=
+ * Response: { total, users: [{_id, name, email, createdAt}], pagination }
+ */
+export const getFcmDevices = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = "" } = req.query;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter = { fcmToken: { $ne: null } };
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      User.find(filter)
+        .select("_id name email createdAt")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments(filter),
+    ]);
+
+    res.json({
+      total,
+      users,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
  * Create a new event admin or staff admin
  */
 export const createTeamMember = async (req, res) => {
